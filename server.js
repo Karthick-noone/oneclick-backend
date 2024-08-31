@@ -19,10 +19,10 @@ app.use(express.json());
 
 // MySQL connection
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'oneclick',
+  host: 'sql12.freesqldatabase.com',
+  user: 'sql12728767',
+  password: 'UGZRm9w2hF',
+  database: 'sql12728767',
 });
 
 db.connect((err) => {
