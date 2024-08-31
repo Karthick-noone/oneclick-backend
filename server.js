@@ -15,13 +15,12 @@ app.use(cors());  // Enable CORS for all routes
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-
 // MySQL connection configuration
 const dbConfig = {
-  host: 'sql12.freesqldatabase.com',
-  user: 'sql12728767',
-  password: 'UGZRm9w2hF',
-  database: 'sql12728767',
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'oneclick',
 };
 
 let db;
@@ -49,12 +48,13 @@ function handleDisconnect() {
 }
 
 handleDisconnect(); // Initial connection setup
+
 // // MySQL connection
 // const db = mysql.createConnection({
-//   host: 'sql12.freesqldatabase.com',
-//   user: 'sql12728767',
-//   password: 'UGZRm9w2hF',
-//   database: 'sql12728767',
+//   host: 'localhost',
+//   user: 'root',
+//   password: '',
+//   database: 'oneclick',
 // });
 
 // db.connect((err) => {
@@ -529,6 +529,39 @@ app.post('/remove-from-wishlist', (req, res) => {
 });
 
 
+
+app.get('/api/products', (req, res) => {
+  const queries = [
+    "SELECT * FROM tv LIMIT 1",
+    "SELECT * FROM mobiles LIMIT 1",
+    "SELECT * FROM headphones LIMIT 1",
+    "SELECT * FROM cctv LIMIT 1",
+    "SELECT * FROM computers LIMIT 1",
+    "SELECT * FROM watch LIMIT 1",
+    "SELECT * FROM printers LIMIT 1",
+    "SELECT * FROM speakers LIMIT 1",
+    "SELECT * FROM mobileaccessories LIMIT 1",
+    "SELECT * FROM computeraccessories LIMIT 1",
+  ];
+
+  // Create an array of promises for each query
+  const promises = queries.map(query => new Promise((resolve, reject) => {
+    db.query(query, (err, results) => {
+      if (err) return reject(err);
+      resolve(results[0]); // Resolve with the first row of the result
+    });
+  }));
+
+  // Execute all promises and return results
+  Promise.all(promises)
+    .then(results => {
+      res.json(results); // Send the results as JSON
+    })
+    .catch(err => {
+      console.error('Database error:', err);
+      res.status(500).json({ error: 'Database error' });
+    });
+});
 ///////////////////////////admin dashbord api's/////////////////////////////////////////////////////////
 
 app.use('/uploads', express.static('uploads'));
