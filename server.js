@@ -16,22 +16,54 @@ app.use(cors());  // Enable CORS for all routes
 app.use(express.json());
 
 
-
-// MySQL connection
-const db = mysql.createConnection({
+// MySQL connection configuration
+const dbConfig = {
   host: 'sql12.freesqldatabase.com',
   user: 'sql12728767',
   password: 'UGZRm9w2hF',
   database: 'sql12728767',
-});
+};
 
-db.connect((err) => {
-  if (err) {
-    console.error('Error connecting to MySQL:', err);
-    return;
-  }
-  console.log('Connected to MySQL');
-});
+let db;
+
+function handleDisconnect() {
+  db = mysql.createConnection(dbConfig); // Recreate the connection
+
+  db.connect((err) => {
+    if (err) {
+      console.error('Error connecting to MySQL:', err);
+      setTimeout(handleDisconnect, 2000); // Retry after 2 seconds if there's an error
+    } else {
+      console.log('Connected to MySQL');
+    }
+  });
+
+  db.on('error', (err) => {
+    console.error('MySQL error:', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.fatal) {
+      handleDisconnect(); // Reconnect if the connection is lost
+    } else {
+      throw err;
+    }
+  });
+}
+
+handleDisconnect(); // Initial connection setup
+// // MySQL connection
+// const db = mysql.createConnection({
+//   host: 'sql12.freesqldatabase.com',
+//   user: 'sql12728767',
+//   password: 'UGZRm9w2hF',
+//   database: 'sql12728767',
+// });
+
+// db.connect((err) => {
+//   if (err) {
+//     console.error('Error connecting to MySQL:', err);
+//     return;
+//   }
+//   console.log('Connected to MySQL');
+// });
 
 // Signup Route
 app.post('/signup', (req, res) => {
