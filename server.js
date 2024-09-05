@@ -532,16 +532,16 @@ app.post('/remove-from-wishlist', (req, res) => {
 
 app.get('/api/products', (req, res) => {
   const queries = [
-    "SELECT * FROM tv LIMIT 1",
-    "SELECT * FROM mobiles LIMIT 1",
-    "SELECT * FROM headphones LIMIT 1",
-    "SELECT * FROM cctv LIMIT 1",
-    "SELECT * FROM computers LIMIT 1",
-    "SELECT * FROM watch LIMIT 1",
-    "SELECT * FROM printers LIMIT 1",
-    "SELECT * FROM speakers LIMIT 1",
-    "SELECT * FROM mobileaccessories LIMIT 1",
-    "SELECT * FROM computeraccessories LIMIT 1",
+   "SELECT * FROM tv ORDER BY id DESC LIMIT 1",
+"SELECT * FROM mobiles ORDER BY id DESC LIMIT 1",
+"SELECT * FROM headphones ORDER BY id DESC LIMIT 1",
+"SELECT * FROM cctv ORDER BY id DESC LIMIT 1",
+"SELECT * FROM computers ORDER BY id DESC LIMIT 1",
+"SELECT * FROM watch ORDER BY id DESC LIMIT 1",
+"SELECT * FROM printers ORDER BY id DESC LIMIT 1",
+"SELECT * FROM speakers ORDER BY id DESC LIMIT 1",
+"SELECT * FROM mobileaccessories ORDER BY id DESC LIMIT 1",
+"SELECT * FROM computeraccessories ORDER BY id DESC LIMIT 1"
   ];
 
   // Create an array of promises for each query
@@ -1559,6 +1559,757 @@ app.delete('/deletecomputeraccessories/:id', (req, res) => {
     res.send('Product deleted');
   });
 });
+
+//////////////////edithomepage//////////////////////////////
+
+// Set up multer for file uploads (multiple files)
+const edithomepageStorageMultiple = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/edithomepage';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${Date.now()}${ext}`);
+  }
+});
+
+const edithomepageUploadMultiple = multer({ storage: edithomepageStorageMultiple }).array('images');
+
+// Set up multer for file uploads (single file)
+const edithomepageStorageSingle = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/edithomepage';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${Date.now()}${ext}`);
+  }
+});
+
+const edithomepageUploadSingle = multer({ storage: edithomepageStorageSingle }).single('image');
+
+
+// Route to fetch all products
+app.get('/fetchedithomepage', (req, res) => {
+  const sql = 'SELECT * FROM edithomepage ORDER By id DESC LIMIT 1 ';
+  db.query(sql, (err, results) => {
+    if (err) throw err;
+    res.json(results);
+  });
+});
+
+
+// Endpoint to add a new product with multiple images
+app.post('/edithomepage', edithomepageUploadMultiple, (req, res) => {
+  // console.log('Received files:', req.files);
+  // console.log('Request body:', req.body);
+
+  const { title, description, category } = req.body;
+  const images = req.files.map(file => file.filename);
+  const createdAt = new Date();
+
+  const sql = 'INSERT INTO edithomepage (title, description,category, image, created_at) VALUES (?, ?, ?, ?, ?)';
+  db.query(sql, [title, description, category, images.join(','), createdAt], (err, result) => {
+    if (err) {
+      console.error('Error inserting into database:', err);
+      return res.status(500).send(err);
+    }
+    // console.log('Product added:', result);
+    res.send('Product added');
+  });
+});
+
+// Endpoint to update a product with a single image
+app.put('/updateedithomepage/:id', edithomepageUploadSingle, (req, res) => {
+  const productId = req.params.id;
+  const { title, description, category } = req.body;
+  const image = req.file ? req.file.filename : null;
+
+  let sql = 'UPDATE edithomepage SET title = ?, description = ?, category = ?, created_at = ?';
+  let values = [title, description, category, new Date()];
+
+  if (image) {
+    const oldImageQuery = 'SELECT image FROM edithomepage WHERE id = ?';
+    db.query(oldImageQuery, [productId], (err, results) => {
+      if (err) {
+        // console.error('Error fetching old image:', err);
+        return res.status(500).send(err);
+      }
+
+      const oldImage = results[0]?.image;
+      if (oldImage && oldImage !== image) {
+        fs.unlink(`uploads/edithomepage/${oldImage}`, (err) => {
+          if (err) {
+            console.error('Failed to delete old image:', err);
+          } else {
+            console.log('Old image deleted:', oldImage);
+          }
+        });
+      }
+
+      sql += ', image = ? WHERE id = ?';
+      values.push(image, productId);
+
+      db.query(sql, values, (err, results) => {
+        if (err) {
+          console.error('Error updating database:', err);
+          return res.status(500).send(err);
+        }
+        console.log('Product updated:', results);
+        res.json({ message: 'Product updated successfully' });
+      });
+    });
+  } else {
+    sql += ' WHERE id = ?';
+    values.push(productId);
+
+    db.query(sql, values, (err, results) => {
+      if (err) {
+        console.error('Error updating database:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Product updated:', results);
+      res.json({ message: 'Product updated successfully' });
+    });
+  }
+});
+
+// Endpoint to delete a product
+app.delete('/deleteedithomepage/:id', (req, res) => {
+  const { id } = req.params;
+
+  const fetchImageQuery = 'SELECT image FROM edithomepage WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) {
+      console.error('Error fetching image for deletion:', err);
+      return res.status(500).send(err);
+    }
+
+    const image = results[0]?.image;
+    if (image) {
+      fs.unlink(`uploads/edithomepage/${image}`, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', image);
+        }
+      });
+    }
+
+    const sql = 'DELETE FROM edithomepage WHERE id = ?';
+    db.query(sql, [id], (err, result) => {
+      if (err) {
+        console.error('Error deleting product:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Product deleted:', result);
+      res.send('Product deleted');
+    });
+  });
+});
+
+app.put('/updateedithomepageimage/:id/:imageIndex', edithomepageUploadSingle, (req, res) => {
+  const productId = req.params.id;
+  const imageIndex = parseInt(req.params.imageIndex, 10);
+  const newImage = req.file ? req.file.filename : null;
+
+  if (!newImage) {
+    console.error('No image uploaded');
+    return res.status(400).json({ message: 'No image uploaded' });
+  }
+
+  const fetchImagesQuery = 'SELECT image FROM edithomepage WHERE id = ?';
+  db.query(fetchImagesQuery, [productId], (err, results) => {
+    if (err) {
+      console.error('Error fetching old images:', err);
+      return res.status(500).send(err);
+    }
+
+    const images = results[0]?.image ? results[0].image.split(',') : [];
+
+    if (images[imageIndex]) {
+      const oldImage = images[imageIndex];
+      fs.unlink(`uploads/edithomepage/${oldImage}`, (err) => {
+        if (err) {
+          console.error(`Failed to delete old image ${oldImage}:`, err);
+        } else {
+          console.log(`Old image deleted: ${oldImage}`);
+        }
+      });
+
+      images[imageIndex] = newImage;
+    } else {
+      images.push(newImage);
+    }
+
+    const updatedImages = images.join(',');
+    const updateQuery = 'UPDATE edithomepage SET image = ? WHERE id = ?';
+    db.query(updateQuery, [updatedImages, productId], (err, results) => {
+      if (err) {
+        console.error('Error updating image in database:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Image updated successfully:', results);
+      res.json({ updatedImages: images });
+    });
+  });
+});
+
+
+app.put('/deleteedithomepageimage/:id', (req, res) => {
+  const productId = req.params.id;
+  const updatedImages = req.body.images ? req.body.images.split(',') : [];
+
+  // Fetch the current images from the database
+  const fetchImageQuery = 'SELECT image FROM edithomepage WHERE id = ?';
+  db.query(fetchImageQuery, [productId], (err, results) => {
+    if (err) {
+      console.error('Error fetching image for deletion:', err);
+      return res.status(500).send(err);
+    }
+
+    const currentImages = results[0]?.image ? results[0].image.split(',') : [];
+
+    // Ensure the images are correctly synchronized
+    if (currentImages.length !== updatedImages.length + 1) {
+      console.error('Image count mismatch, skipping file deletion.');
+      return res.status(400).json({ message: 'Image count mismatch, skipping file deletion.' });
+    }
+
+    // Find the image to delete
+    const imageToDelete = currentImages.find(img => !updatedImages.includes(img));
+
+    if (imageToDelete) {
+      // Delete the image file from the filesystem
+      fs.unlink(`uploads/edithomepage/${imageToDelete}`, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imageToDelete);
+        }
+      });
+    }
+
+    // Update the image array in the database
+    const sql = 'UPDATE edithomepage SET image = ? WHERE id = ?';
+    db.query(sql, [updatedImages.join(','), productId], (err, result) => {
+      if (err) {
+        console.error('Error updating image in database:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Image updated:', result);
+      res.json({ message: 'Image deleted and updated successfully' });
+    });
+  });
+});
+/////////////////////////////////////////
+
+
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/edithomepage');
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + path.extname(file.originalname));
+    }
+  })
+});
+
+app.post('/uploadimage/:id', edithomepageUploadMultiple, (req, res) => {
+  const productId = req.params.id;
+  console.log('productId', productId);
+
+  const images = req.files.map(file => file.filename); // Get filenames from uploaded files
+
+  // Ensure that the images array is not empty
+  if (images.length === 0) {
+    return res.status(400).send('No images were uploaded.');
+  }
+
+  // Insert new images into the database
+  const sql = 'SELECT image FROM edithomepage WHERE id = ?';
+  db.query(sql, [productId], (err, result) => {
+    if (err) {
+      console.error('Error retrieving product from database:', err);
+      return res.status(500).send(err);
+    }
+
+    let existingImages = [];
+    if (result.length > 0) {
+      existingImages = result[0].image ? result[0].image.split(',') : [];
+    }
+
+    // Add new images to existing images
+    const updatedImages = [...existingImages, ...images];
+    
+    // Update the database with the new list of images
+    const updateSql = 'UPDATE edithomepage SET image = ? WHERE id = ?';
+    db.query(updateSql, [updatedImages.join(','), productId], (err, result) => {
+      if (err) {
+        console.error('Error updating database:', err);
+        return res.status(500).send(err);
+      }
+      res.send('Images uploaded successfully');
+    });
+  });
+});
+////////////////////doubleadpage/////////////////////////////////
+
+
+
+// Set up multer for file uploads (multiple files)
+const doubleadpageStorageMultiple = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/doubleadpage';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${Date.now()}${ext}`);
+  }
+});
+
+const doubleadpageUploadMultiple = multer({ storage: doubleadpageStorageMultiple }).array('images');
+
+// Set up multer for file uploads (single file)
+const doubleadpageStorageSingle = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/doubleadpage';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${Date.now()}${ext}`);
+  }
+});
+
+const doubleadpageUploadSingle = multer({ storage: doubleadpageStorageSingle }).single('image');
+
+
+// Route to fetch all products
+app.get('/fetchdoubleadpage', (req, res) => {
+  const sql = 'SELECT * FROM doubleadpage LIMIT 2';
+  db.query(sql, (err, results) => {
+    if (err) throw err;
+    res.json(results);
+  });
+});
+
+
+// Endpoint to add a new product with multiple images
+app.post('/doubleadpage', doubleadpageUploadMultiple, (req, res) => {
+  // console.log('Received files:', req.files);
+  // console.log('Request body:', req.body);
+
+  const { title, description, category } = req.body;
+  const images = req.files.map(file => file.filename);
+  const createdAt = new Date();
+
+  const sql = 'INSERT INTO doubleadpage (title, description, category, image, created_at) VALUES (?, ?, ?, ?)';
+  db.query(sql, [title, description, category, images.join(','), createdAt], (err, result) => {
+    if (err) {
+      console.error('Error inserting into database:', err);
+      return res.status(500).send(err);
+    }
+    // console.log('Product added:', result);
+    res.send('Product added');
+  });
+});
+
+// Endpoint to update a product with a single image
+app.put('/updatedoubleadpage/:id', doubleadpageUploadSingle, (req, res) => {
+  const productId = req.params.id;
+  const { title, description, category } = req.body;
+  const image = req.file ? req.file.filename : null;
+
+  let sql = 'UPDATE doubleadpage SET title = ?, description = ?, category =?, created_at = ?';
+  let values = [title, description, category, new Date()];
+
+  if (image) {
+    const oldImageQuery = 'SELECT image FROM doubleadpage WHERE id = ?';
+    db.query(oldImageQuery, [productId], (err, results) => {
+      if (err) {
+        // console.error('Error fetching old image:', err);
+        return res.status(500).send(err);
+      }
+
+      const oldImage = results[0]?.image;
+      if (oldImage && oldImage !== image) {
+        fs.unlink(`uploads/doubleadpage/${oldImage}`, (err) => {
+          if (err) {
+            console.error('Failed to delete old image:', err);
+          } else {
+            console.log('Old image deleted:', oldImage);
+          }
+        });
+      }
+
+      sql += ', image = ? WHERE id = ?';
+      values.push(image, productId);
+
+      db.query(sql, values, (err, results) => {
+        if (err) {
+          console.error('Error updating database:', err);
+          return res.status(500).send(err);
+        }
+        console.log('Product updated:', results);
+        res.json({ message: 'Product updated successfully' });
+      });
+    });
+  } else {
+    sql += ' WHERE id = ?';
+    values.push(productId);
+
+    db.query(sql, values, (err, results) => {
+      if (err) {
+        console.error('Error updating database:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Product updated:', results);
+      res.json({ message: 'Product updated successfully' });
+    });
+  }
+});
+
+// Endpoint to delete a product
+app.delete('/deletedoubleadpage/:id', (req, res) => {
+  const { id } = req.params;
+
+  const fetchImageQuery = 'SELECT image FROM doubleadpage WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) {
+      console.error('Error fetching image for deletion:', err);
+      return res.status(500).send(err);
+    }
+
+    const image = results[0]?.image;
+    if (image) {
+      fs.unlink(`uploads/doubleadpage/${image}`, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', image);
+        }
+      });
+    }
+
+    const sql = 'DELETE FROM doubleadpage WHERE id = ?';
+    db.query(sql, [id], (err, result) => {
+      if (err) {
+        console.error('Error deleting product:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Product deleted:', result);
+      res.send('Product deleted');
+    });
+  });
+});
+
+app.put('/updatedoubleadpageimage/:id/:imageIndex', doubleadpageUploadSingle, (req, res) => {
+  const productId = req.params.id;
+  const imageIndex = parseInt(req.params.imageIndex, 10);
+  const newImage = req.file ? req.file.filename : null;
+
+  if (!newImage) {
+    console.error('No image uploaded');
+    return res.status(400).json({ message: 'No image uploaded' });
+  }
+
+  const fetchImagesQuery = 'SELECT image FROM doubleadpage WHERE id = ?';
+  db.query(fetchImagesQuery, [productId], (err, results) => {
+    if (err) {
+      console.error('Error fetching old images:', err);
+      return res.status(500).send(err);
+    }
+
+    const images = results[0]?.image ? results[0].image.split(',') : [];
+
+    if (images[imageIndex]) {
+      const oldImage = images[imageIndex];
+      fs.unlink(`uploads/doubleadpage/${oldImage}`, (err) => {
+        if (err) {
+          console.error(`Failed to delete old image ${oldImage}:`, err);
+        } else {
+          console.log(`Old image deleted: ${oldImage}`);
+        }
+      });
+
+      images[imageIndex] = newImage;
+    } else {
+      images.push(newImage);
+    }
+
+    const updatedImages = images.join(',');
+    const updateQuery = 'UPDATE doubleadpage SET image = ? WHERE id = ?';
+    db.query(updateQuery, [updatedImages, productId], (err, results) => {
+      if (err) {
+        console.error('Error updating image in database:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Image updated successfully:', results);
+      res.json({ updatedImages: images });
+    });
+  });
+});
+
+
+app.put('/deletedoubleadpageimage/:id', (req, res) => {
+  const productId = req.params.id;
+  const updatedImages = req.body.images ? req.body.images.split(',') : [];
+
+  // Fetch the current images from the database
+  const fetchImageQuery = 'SELECT image FROM doubleadpage WHERE id = ?';
+  db.query(fetchImageQuery, [productId], (err, results) => {
+    if (err) {
+      console.error('Error fetching image for deletion:', err);
+      return res.status(500).send(err);
+    }
+
+    const currentImages = results[0]?.image ? results[0].image.split(',') : [];
+
+    // Ensure the images are correctly synchronized
+    if (currentImages.length !== updatedImages.length + 1) {
+      console.error('Image count mismatch, skipping file deletion.');
+      return res.status(400).json({ message: 'Image count mismatch, skipping file deletion.' });
+    }
+
+    // Find the image to delete
+    const imageToDelete = currentImages.find(img => !updatedImages.includes(img));
+
+    if (imageToDelete) {
+      // Delete the image file from the filesystem
+      fs.unlink(`uploads/doubleadpage/${imageToDelete}`, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imageToDelete);
+        }
+      });
+    }
+
+    // Update the image array in the database
+    const sql = 'UPDATE doubleadpage SET image = ? WHERE id = ?';
+    db.query(sql, [updatedImages.join(','), productId], (err, result) => {
+      if (err) {
+        console.error('Error updating image in database:', err);
+        return res.status(500).send(err);
+      }
+      console.log('Image updated:', result);
+      res.json({ message: 'Image deleted and updated successfully' });
+    });
+  });
+});
+/////////////////////////////////////////
+
+
+
+// // Configure multer for file uploads
+// const upload2 = multer({
+//   storage: multer.diskStorage({
+//     destination: (req, file, cb) => {
+//       cb(null, 'uploads/doubleadpage');
+//     },
+//     filename: (req, file, cb) => {
+//       cb(null, Date.now() + path.extname(file.originalname));
+//     }
+//   })
+// });
+
+// app.post('/uploadimage/:id', doubleadpageUploadMultiple, (req, res) => {
+//   const productId = req.params.id;
+//   console.log('productId', productId);
+
+//   const images = req.files.map(file => file.filename); // Get filenames from uploaded files
+
+//   // Ensure that the images array is not empty
+//   if (images.length === 0) {
+//     return res.status(400).send('No images were uploaded.');
+//   }
+
+//   // Insert new images into the database
+//   const sql = 'SELECT image FROM doubleadpage WHERE id = ?';
+//   db.query(sql, [productId], (err, result) => {
+//     if (err) {
+//       console.error('Error retrieving product from database:', err);
+//       return res.status(500).send(err);
+//     }
+
+//     let existingImages = [];
+//     if (result.length > 0) {
+//       existingImages = result[0].image ? result[0].image.split(',') : [];
+//     }
+
+//     // Add new images to existing images
+//     const updatedImages = [...existingImages, ...images];
+    
+//     // Update the database with the new list of images
+//     const updateSql = 'UPDATE doubleadpage SET image = ? WHERE id = ?';
+//     db.query(updateSql, [updatedImages.join(','), productId], (err, result) => {
+//       if (err) {
+//         console.error('Error updating database:', err);
+//         return res.status(500).send(err);
+//       }
+//       res.send('Images uploaded successfully');
+//     });
+//   });
+// });
+
+/////////////////////////////singleadpage /////////////////////////
+
+
+// Serve static files (for serving images)
+app.use('/uploads/singleadpage', express.static(path.join(__dirname, 'uploads/singleadpage')));
+
+// Multer setup for image upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/singleadpage/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload3 = multer({ storage: storage });
+
+// Fetch all single ad page images
+app.get('/fetchsingleadpage', (req, res) => {
+  const query = 'SELECT * FROM singleadpage';
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching images:', err);
+      res.status(500).json({ error: 'Failed to fetch images' });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+// Add a new image
+app.post('/singleadpage', upload3.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const image = req.file.filename;
+  const query = 'INSERT INTO singleadpage (image) VALUES (?)';
+  db.query(query, [image], (err, result) => {
+    if (err) {
+      console.error('Error inserting image:', err);
+      res.status(500).json({ error: 'Failed to add image' });
+    } else {
+      res.json({ message: 'Image added successfully', id: result.insertId });
+    }
+  });
+});
+
+// Update an existing image
+app.put('/updatesingleadpageimage/:id', upload3.single('image'), (req, res) => {
+  const { id } = req.params;
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const newImage = req.file.filename;
+
+  // First, fetch the current image filename from the database
+  const selectQuery = 'SELECT image FROM singleadpage WHERE id = ?';
+  db.query(selectQuery, [id], (selectErr, selectResult) => {
+    if (selectErr) {
+      console.error('Error fetching image:', selectErr);
+      return res.status(500).json({ error: 'Failed to fetch current image' });
+    }
+
+    if (selectResult.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    const oldImage = selectResult[0].image;
+
+    // Proceed with the update in the database
+    const updateQuery = 'UPDATE singleadpage SET image = ? WHERE id = ?';
+    db.query(updateQuery, [newImage, id], (updateErr, updateResult) => {
+      if (updateErr) {
+        console.error('Error updating image:', updateErr);
+        return res.status(500).json({ error: 'Failed to update image' });
+      }
+
+      // Delete the old image from the uploads folder
+      const oldImagePath = path.join(__dirname, 'uploads', 'singleadpage', oldImage);
+      fs.unlink(oldImagePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting old image:', unlinkErr);
+        }
+      });
+
+      res.json({ message: 'Image updated successfully', updatedImage: newImage });
+    });
+  });
+});
+
+
+// Delete an image
+app.delete('/deletesingleadpageimage/:id', (req, res) => {
+  const { id } = req.params;
+
+  // First, fetch the image filename from the database
+  const selectQuery = 'SELECT image FROM singleadpage WHERE id = ?';
+  db.query(selectQuery, [id], (selectErr, selectResult) => {
+    if (selectErr) {
+      console.error('Error fetching image:', selectErr);
+      return res.status(500).json({ error: 'Failed to fetch image' });
+    }
+
+    if (selectResult.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    const image = selectResult[0].image;
+
+    // Delete the image file from the folder
+    const imagePath = path.join(__dirname, 'uploads', 'singleadpage', image);
+    fs.unlink(imagePath, (unlinkErr) => {
+      if (unlinkErr) {
+        console.error('Error deleting image file:', unlinkErr);
+        return res.status(500).json({ error: 'Failed to delete image file' });
+      }
+
+      // Delete the entry from the database
+      const deleteQuery = 'DELETE FROM singleadpage WHERE id = ?';
+      db.query(deleteQuery, [id], (deleteErr, deleteResult) => {
+        if (deleteErr) {
+          console.error('Error deleting image from database:', deleteErr);
+          return res.status(500).json({ error: 'Failed to delete image from database' });
+        }
+
+        res.json({ message: 'Image deleted successfully' });
+      });
+    });
+  });
+});
+
 /////////////////changepassword///////////
 
 // Change Password API Endpoint
@@ -1591,8 +2342,38 @@ app.post('/api/change-password', (req, res) => {
     });
   });
 });
-//////////////////////////////////////////////////////////////////
+//////////////////////searchbox suggestion////////////////////////////////
+app.get('/api/suggestions', (req, res) => {
+  const query = req.query.query.toLowerCase();
+  
+  // Define categories and products
+  const suggestions = [
+    { term: "Computers", keywords: ["laptop","laptops", "desktop","desktops", "computer","computers", "notebook"] },
+    { term: "Mobiles", keywords: ["mobile", "smartphone", "phone", "android"] },
+    { term: "Headphones", keywords: ["headphone", "earphone", "earbuds", "headset", "wireless headphone","wired headphone"] },
+    { term: "Printers", keywords: ["printer", "scanner", "fax"] },
+    { term: "Speakers", keywords: ["speaker", "bluetooth speaker", "audio","home theatre"] },
+    { term: "TV", keywords: ["television", "tv", "tele"] },
+    { term: "CCTV", keywords: ["cctv", "security camera", "surveillance"] },
+    { term: "ComputerAccessories", keywords: ["keyboard", "mouse", "monitor", "webcam", "laptop charger", "adapter"] },
+    { term: "MobileAccessories", keywords: ["charger","mobile charger","back cover","back case","flip cover", "case", "screen protector", "power bank"] },
+  ];
 
+  // Find the matching category term based on the query
+  const matchingCategory = suggestions.find(({ keywords }) =>
+    keywords.some(keyword => keyword.includes(query))
+  );
+
+  // Return the category term if found, otherwise return a not found message
+  if (matchingCategory) {
+    res.json({ category: matchingCategory.term });
+  } else {
+    res.status(404).json({ message: "Product not found" });
+  }
+});
+
+
+////////////////////////////////////
 app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
