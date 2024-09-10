@@ -7,6 +7,7 @@ const port = 5000;
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 // Middleware
 app.use(bodyParser.json());
@@ -18,36 +19,40 @@ app.use(express.json());
 // MySQL connection configuration
 const dbConfig = {
   host: 'sql12.freesqldatabase.com',
-  user: 'sql12728767',
-  password: 'UGZRm9w2hF',
-  database: 'sql12728767',
+  user: 'sql12730517',
+  password: 'vhAGYSxNep',
+  database: 'sql12730517',
 };
 
-let db;
+// Create a MySQL connection
+const db = mysql.createConnection(dbConfig);
 
-function handleDisconnect() {
-  db = mysql.createConnection(dbConfig); // Recreate the connection
+// Connect to MySQL
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL:', err);
+    return;
+  }
+  console.log('Connected to MySQL');
+});
 
-  db.connect((err) => {
-    if (err) {
-      console.error('Error connecting to MySQL:', err);
-      setTimeout(handleDisconnect, 2000); // Retry after 2 seconds if there's an error
-    } else {
-      console.log('Connected to MySQL');
-    }
-  });
+// Middleware to handle MySQL errors
+db.on('error', (err) => {
+  console.error('MySQL error:', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    // Reconnect if the connection is lost
+    db.connect((err) => {
+      if (err) {
+        console.error('Error reconnecting to MySQL:', err);
+      } else {
+        console.log('Reconnected to MySQL');
+      }
+    });
+  } else {
+    throw err;
+  }
+});
 
-  db.on('error', (err) => {
-    console.error('MySQL error:', err);
-    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.fatal) {
-      handleDisconnect(); // Reconnect if the connection is lost
-    } else {
-      throw err;
-    }
-  });
-}
-
-handleDisconnect(); // Initial connection setup
 
 // // MySQL connection
 // const db = mysql.createConnection({
@@ -67,26 +72,55 @@ handleDisconnect(); // Initial connection setup
 
 // Signup Route
 app.post('/signup', (req, res) => {
-    const { username, email, password } = req.body;
-  
-    if (!username || !email || !password) {
-      return res.status(400).send('All fields are required');
-    }
-  
-    // Check if the email already exists
-    db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).send('All fields are required');
+  }
+
+  // Function to generate the next user_id
+  const generateUserId = (callback) => {
+    // Query to get the latest user_id
+    db.query('SELECT user_id FROM users ORDER BY user_id DESC LIMIT 1', (err, results) => {
       if (err) {
         console.error('Database error:', err);
+        return callback(err);
+      }
+
+      let nextUserId = 'usr000001'; // Default ID if no previous ID exists
+
+      if (results.length > 0 && results[0].user_id) {
+        const lastUserId = results[0].user_id;
+        const numberPart = parseInt(lastUserId.slice(3)); // Extract the numeric part
+        const newNumberPart = numberPart + 1;
+        
+        // Ensure the ID is padded to 6 digits
+        nextUserId = `usr${newNumberPart.toString().padStart(6, '0')}`;
+      }
+
+      callback(null, nextUserId);
+    });
+  };
+
+  // Check if the email already exists
+  db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).send('Server error');
+    }
+
+    if (results.length > 0) {
+      return res.status(400).send('Email already registered');
+    }
+
+    // Generate the next user_id and insert the new user
+    generateUserId((err, userId) => {
+      if (err) {
         return res.status(500).send('Server error');
       }
-  
-      if (results.length > 0) {
-        return res.status(400).send('Email already registered');
-      }
-  
-      // If email doesn't exist, proceed to insert the new user
-      const query = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
-      db.query(query, [username, email, password], (err) => {
+
+      const query = 'INSERT INTO users (username, email, password, user_id) VALUES (?, ?, ?, ?)';
+      db.query(query, [username, email, password, userId], (err) => {
         if (err) {
           console.error('Error creating user:', err);
           return res.status(500).send('Server error');
@@ -95,6 +129,7 @@ app.post('/signup', (req, res) => {
       });
     });
   });
+});
 // Signup Route
 app.post('/adminsignup', (req, res) => {
     const { username, email, password } = req.body;
@@ -153,8 +188,8 @@ app.post("/login", (req, res) => {
   
       // Compare plain text passwords
       if (password === user.password) {
-        const { username, email } = user;
-        return res.status(200).json({ username, email, message: "Login successful" });
+        const { username, email, user_id  } = user;
+        return res.status(200).json({ username, email, user_id , message: "Login successful" });
       } else {
         return res.status(400).json({ message: "Invalid credentials" });
       }
@@ -2370,6 +2405,420 @@ app.get('/api/suggestions', (req, res) => {
   } else {
     res.status(404).json({ message: "Product not found" });
   }
+});
+////////////useraddress/////////////////////
+
+// Route to handle address submission
+app.post('/useraddress', (req, res) => {
+  const { userId, address } = req.body;
+
+  if (!userId || !address) {
+    return res.status(400).send('User ID and address are required');
+  }
+
+  // Update all existing addresses for the user to not current
+  const updateQuery = 'UPDATE useraddress SET current_address = 0 WHERE user_id = ?';
+  
+  db.query(updateQuery, [userId], (err) => {
+    if (err) {
+      console.error('Error updating existing addresses:', err);
+      return res.status(500).send('Server error');
+    }
+
+    // Insert the new address and set it as the current address
+    const insertQuery = 'INSERT INTO useraddress (user_id, name, street, city, state, postal_code, country, phone, current_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const values = [userId, address.name, address.street, address.city, address.state, address.postal_code, address.country, address.phone, 1];
+
+    db.query(insertQuery, values, (err) => {
+      if (err) {
+        console.error('Error inserting address:', err);
+        return res.status(500).send('Server error');
+      }
+      res.status(200).send('Address added successfully');
+    });
+  });
+});
+
+// Update address
+app.put('/updateuseraddress/:id', (req, res) => {
+  const addressId = req.params.id;
+  const updatedAddress = req.body;
+  const sql = `
+    UPDATE useraddress 
+    SET name = ?, street = ?, city = ?, state = ?, postal_code = ?, country = ?, phone = ? 
+    WHERE address_id = ?
+  `;
+  db.query(sql, [
+    updatedAddress.name, 
+    updatedAddress.street, 
+    updatedAddress.city, 
+    updatedAddress.state, 
+    updatedAddress.postal_code, 
+    updatedAddress.country, 
+    updatedAddress.phone, 
+    addressId
+  ], (err, results) => {
+    if (err) {
+      console.error('Error updating address:', err);
+      return res.status(500).json({ message: 'Error updating address' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Address not found' });
+    }
+    res.json({ message: 'Address updated successfully' });
+  });
+});
+
+
+
+app.delete('/deleteuseraddress/:address_id', (req, res) => {
+  const addressId = req.params.address_id;
+
+  if (!addressId) {
+    return res.status(400).json({ message: 'Address ID is required' });
+  }
+
+  const sql = 'DELETE FROM useraddress WHERE address_id = ?';
+  db.query(sql, [addressId], (err, results) => {
+    if (err) {
+      console.error('Error deleting address:', err);
+      return res.status(500).json({ message: 'Error deleting address' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Address not found' });
+    }
+    res.json({ message: 'Address deleted successfully' });
+  });
+});
+
+
+// Fetch addresses for a specific user
+app.get('/useraddress/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const query = 'SELECT * FROM useraddress WHERE user_id = ? order by address_id DESC';
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching addresses:', err);
+      return res.status(500).send('Server Error');
+    }
+    res.json(results);
+  });
+});
+
+
+// Update the current address
+app.post('/update-current-address', async (req, res) => {
+  const { userId, addressId } = req.body;
+
+  try {
+    // Set all addresses to false
+    await db.query('UPDATE useraddress SET current_address = FALSE WHERE user_id = ?', [userId]);
+
+    // Set the selected address to true
+    await db.query('UPDATE useraddress SET current_address = TRUE WHERE user_id = ? AND address_id = ?', [userId, addressId]);
+
+    res.status(200).json({ message: 'Address updated successfully' });
+  } catch (error) {
+    console.error('Error updating address:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+app.get('/singleaddress/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const query = 'SELECT * FROM useraddress WHERE user_id = ? AND current_address = 1';
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching addresses:', err);
+      return res.status(500).send('Server Error');
+    }
+    res.json(results);
+  });
+});
+
+/////////////////////products order and store details /////////////////////
+
+
+// Function to generate unique ID
+const generateUniqueId = () => {
+  // Generate a random 8-digit number
+  const randomNumber = Math.floor(10000000 + Math.random() * 90000000);
+  // Format it as a string with prefix 'ORD'
+  return `ORD${randomNumber}`;
+};
+
+// Configure multer to store images in the 'uploads/products' folder
+const productStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/products'); // Destination folder
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname);
+    cb(null, filename);
+  }
+});
+
+const upload7 = multer({ storage: productStorage });
+
+app.post('/place-order', upload7.array('image'), (req, res) => {
+  const { user_id, total_amount, shipping_address, address_id, cartItems } = req.body;
+
+  // Ensure req.files exists
+  const files = req.files || [];
+  console.log('Uploaded Files:', files);
+
+  let items;
+  try {
+    items = Array.isArray(cartItems) ? cartItems : JSON.parse(cartItems);
+  } catch (e) {
+    console.error('Error parsing cartItems:', e);
+    return res.status(400).json({ message: 'Invalid cart items format' });
+  }
+
+  if (!user_id || !total_amount || !address_id || !items || items.length === 0) {
+    console.error('Invalid data provided:', { user_id, total_amount, shipping_address, address_id, items });
+    return res.status(400).json({ message: 'Invalid data' });
+  }
+
+  // Generate unique ID
+  const unique_id = generateUniqueId();
+
+  // Insert order
+  const orderQuery = 'INSERT INTO orders (unique_id, user_id, total_amount, shipping_address, address_id) VALUES (?, ?, ?, ?, ?)';
+  db.query(orderQuery, [unique_id, user_id, total_amount, shipping_address, address_id], (err, result) => {
+    if (err) {
+      console.error('Error inserting order:', err);
+      return res.status(500).json({ message: 'Error inserting order', error: err.message });
+    }
+
+    const order_id = result.insertId;
+
+    // Prepare values for order items
+    const orderItemsQuery = 'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ?';
+    const orderItemsValues = items.map(item => [
+      order_id,
+      item.id,
+      item.quantity,
+      item.price * item.quantity
+    ]);
+
+    // Prepare values for products with image paths
+    const productsQuery = `
+      INSERT INTO products (product_id, name, category, price, image_url, description) 
+      VALUES ? 
+      ON DUPLICATE KEY UPDATE 
+        name = VALUES(name), 
+        category = VALUES(category), 
+        image_url = VALUES(image_url), 
+        description = VALUES(description)
+    `;
+
+    const productsValues = items.map(item => {
+      const file = files.find(file => file.originalname === item.image);
+      return [
+        item.id,
+        item.name,
+        item.category,
+        item.price,
+        file ? file.filename : item.image, // Use filename if file exists
+        item.description
+      ];
+    });
+
+    // Insert order items
+    db.query(orderItemsQuery, [orderItemsValues], (err) => {
+      if (err) {
+        console.error('Error inserting order items:', err);
+        return res.status(500).json({ message: 'Error inserting order items', error: err.message });
+      }
+
+      // Insert or update products
+      db.query(productsQuery, [productsValues], (err) => {
+        if (err) {
+          console.error('Error inserting or updating products:', err);
+          return res.status(500).json({ message: 'Error inserting or updating products', error: err.message });
+        }
+
+        console.log('Order items and products inserted successfully');
+        res.status(200).json({ message: 'Order placed successfully', unique_id });
+      });
+    });
+  });
+});
+
+//////////////////////////
+
+app.get('/fetchorders', (req, res) => {
+  console.log('Received request to fetch orders');
+
+  const queryOrders = 'SELECT * FROM orders ORDER BY order_id DESC'; // Fetch all orders
+
+  db.query(queryOrders, (err, orders) => {
+    if (err) {
+      console.error('Error fetching orders:', err);
+      return res.status(500).json({ message: 'Error fetching orders' });
+    }
+
+    console.log('Orders fetched:', orders);
+
+    // Collect all unique user_ids from orders
+    const userIds = [...new Set(orders.map(order => order.user_id))];
+    console.log('Unique user IDs:', userIds);
+
+    if (userIds.length === 0) {
+      // No user_ids to fetch
+      console.log('No user IDs to fetch. Returning orders.');
+      return res.json(orders);
+    }
+
+    // Prepare query to fetch names from users table
+    const queryUsers = 'SELECT user_id, username FROM users WHERE user_id IN (?)';
+    console.log('Query to fetch user names:', queryUsers);
+    
+    db.query(queryUsers, [userIds], (err, users) => {
+      if (err) {
+        console.error('Error fetching users:', err);
+        return res.status(500).json({ message: 'Error fetching users' });
+      }
+
+      console.log('Users fetched:', users);
+
+      // Map user_id to name
+      const userMap = users.reduce((acc, user) => {
+        acc[user.user_id] = user.username;
+        return acc;
+      }, {});
+      console.log('User ID to name map:', userMap);
+
+      // Add customerName to orders based on user_id
+      const enrichedOrders = orders.map(order => ({
+        ...order,
+        customerName: userMap[order.user_id] || 'Unknown' // Default to 'Unknown' if name is not found
+      }));
+
+      console.log('Enriched orders:', enrichedOrders);
+
+      res.json(enrichedOrders);
+    });
+  });
+});
+
+
+// Fetch Orders Data
+app.get('/fetchordersdashboard', (req, res) => {
+  const query = 'SELECT * FROM orders'; // Adjust your query as needed
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching orders:', err);
+      res.status(500).send('Error fetching orders');
+      return;
+    }
+    res.json(results);
+  });
+});
+
+// Fetch Product Categories for Pie Chart
+app.get('/fetchcategories', (req, res) => {
+  const query = `
+    SELECT 
+      category, 
+      COUNT(*) AS total_amount 
+    FROM products
+    GROUP BY category
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching product categories:', err);
+      res.status(500).send('Error fetching product categories');
+      return;
+    }
+    res.json(results);
+  });
+});
+///////////reportspage////////////////
+
+// Sales Report API
+app.get('/api/salesreport', (req, res) => {
+  const query = `
+    SELECT p.name AS product_name, p.category, SUM(oi.price * oi.quantity) AS sales
+    FROM order_items oi
+    JOIN products p ON oi.product_id = p.product_id
+    JOIN orders o ON oi.order_id = o.order_id
+    GROUP BY p.name, p.category
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching sales report:', err);
+      res.status(500).send('Error fetching sales report');
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+// Orders Report API
+app.get('/api/ordersreport', (req, res) => {
+  const query = `
+    SELECT order_id, user_id, shipping_address, total_amount, status, order_date
+    FROM orders
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching orders report:', err);
+      res.status(500).send('Error fetching orders report');
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+// Customers Report API
+app.get('/api/customersreport', (req, res) => {
+  const query = `
+    SELECT user_id, COUNT(order_id) AS total_orders, SUM(total_amount) AS total_spent
+    FROM orders
+    GROUP BY user_id
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching customers report:', err);
+      res.status(500).send('Error fetching customers report');
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+
+
+// Fetch Users with their Addresses
+app.get('/api/users', (req, res) => {
+  const query = `
+    SELECT 
+      u.user_id, 
+      u.username, 
+      u.email, 
+      ua.address_id, 
+      ua.name AS address_name, 
+      ua.street, 
+      ua.city, 
+      ua.state, 
+      ua.postal_code, 
+      ua.country, 
+      ua.phone
+    FROM users u
+    LEFT JOIN useraddress ua ON u.user_id = ua.user_id
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching users:', err);
+      res.status(500).send('Error fetching users');
+    } else {
+      res.json(results);
+    }
+  });
 });
 
 
