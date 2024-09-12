@@ -3,7 +3,7 @@ const mysql = require('mysql');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
-const port = 5000;
+const port = 5001;
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -16,6 +16,14 @@ app.use(cors());  // Enable CORS for all routes
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+// // MySQL connection configuration
+// const dbConfig = {
+//   host: 'localhost',
+//   user: 'root',
+//   password: '',
+//   database: 'oneclick',
+// };
+
 // MySQL connection configuration
 const dbConfig = {
   host: 'sql12.freesqldatabase.com',
@@ -23,6 +31,7 @@ const dbConfig = {
   password: 'vhAGYSxNep',
   database: 'sql12730517',
 };
+
 
 // Create a MySQL connection
 const db = mysql.createConnection(dbConfig);
@@ -467,6 +476,7 @@ app.post('/remove-from-cart', (req, res) => {
         query: getQuery,
         params: [email]
       });
+
       return res.status(500).json({ message: "Internal server error" });
     }
 
@@ -476,7 +486,13 @@ app.post('/remove-from-cart', (req, res) => {
 
     let cartItems;
     try {
-      cartItems = JSON.parse(results[0].addtocart);
+      // Check if `addtocart` is null or empty and assign an empty array
+      const addToCart = results[0].addtocart;
+      if (!addToCart) {
+        cartItems = [];
+      } else {
+        cartItems = JSON.parse(addToCart);
+      }
     } catch (parseError) {
       return res.status(500).json({ message: "Error parsing cart items", error: parseError.message });
     }
@@ -622,17 +638,22 @@ const computersStorage = multer.diskStorage({
 
 const computersUpload = multer({ storage: computersStorage });
 
-
+const generateProductId = () => {
+  const prefix = 'PRD';
+  const randomDigits = Math.floor(10000 + Math.random() * 90000); // generates a random 5-digit number
+  return `${prefix}${randomDigits}`;
+};
 
 // Endpoint to add a new product
 app.post('/computers', computersUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO computers (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO computers (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -730,10 +751,11 @@ app.post('/mobiles', mobilesUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO mobiles (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO mobiles (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -829,10 +851,11 @@ app.post('/cctv', cctvUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO cctv (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO cctv (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -930,10 +953,11 @@ app.post('/tv', tvUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO tv (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO tv (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -1030,10 +1054,11 @@ app.post('/headphones', headphonesUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO headphones (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO headphones (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -1130,10 +1155,11 @@ app.post('/speakers', speakersUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO speakers (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO speakers (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -1228,10 +1254,11 @@ app.post('/watch', watchUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO watch (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO watch (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -1327,10 +1354,11 @@ app.post('/printers', printersUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO printers (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO printers (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -1426,10 +1454,11 @@ app.post('/mobileaccessories', mobileaccessoriesUpload.single('image'), (req, re
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO mobileaccessories (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO mobileaccessories (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -1525,10 +1554,11 @@ app.post('/computeraccessories', computeraccessoriesUpload.single('image'), (req
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  const sql = 'INSERT INTO computeraccessories (prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO computeraccessories (prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?)';
   const status = 'available'; // or any other status you might want to set
+  const prod_id = generateProductId();
 
-  db.query(sql, [name, features, price, image, status], (err, result) => {
+  db.query(sql, [prod_id, name, features, price, image, status], (err, result) => {
     if (err) throw err;
     res.send('Product added');
   });
@@ -2593,17 +2623,18 @@ app.post('/place-order', upload7.array('image'), (req, res) => {
       return res.status(500).json({ message: 'Error inserting order', error: err.message });
     }
 
-    const order_id = result.insertId;
+    // const unique_id = result.insertId;
+    // console.log("order_id",order_id)
 
     // Prepare values for order items
     const orderItemsQuery = 'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ?';
     const orderItemsValues = items.map(item => [
-      order_id,
-      item.id,
+      unique_id,
+      item.product_id,
       item.quantity,
       item.price * item.quantity
     ]);
-
+// console.log("orderItemsValues",orderItemsValues)
     // Prepare values for products with image paths
     const productsQuery = `
       INSERT INTO products (product_id, name, category, price, image_url, description) 
@@ -2618,7 +2649,7 @@ app.post('/place-order', upload7.array('image'), (req, res) => {
     const productsValues = items.map(item => {
       const file = files.find(file => file.originalname === item.image);
       return [
-        item.id,
+        item.product_id,
         item.name,
         item.category,
         item.price,
@@ -2761,8 +2792,8 @@ app.get('/api/salesreport', (req, res) => {
 // Orders Report API
 app.get('/api/ordersreport', (req, res) => {
   const query = `
-    SELECT order_id, user_id, shipping_address, total_amount, status, order_date
-    FROM orders
+    SELECT unique_id, user_id, shipping_address, total_amount, status, order_date
+    FROM orders ORDER BY order_id DESC
   `;
   db.query(query, (err, results) => {
     if (err) {
@@ -2777,8 +2808,8 @@ app.get('/api/ordersreport', (req, res) => {
 // Customers Report API
 app.get('/api/customersreport', (req, res) => {
   const query = `
-    SELECT user_id, COUNT(order_id) AS total_orders, SUM(total_amount) AS total_spent
-    FROM orders
+    SELECT user_id, COUNT(unique_id) AS total_orders, SUM(total_amount) AS total_spent
+    FROM orders 
     GROUP BY user_id
   `;
   db.query(query, (err, results) => {
@@ -2821,6 +2852,24 @@ app.get('/api/users', (req, res) => {
   });
 });
 
+
+app.get("/api/my-orders/:userId", (req, res) => {
+  const userId = req.params.userId;
+
+  // Query the orders table based on the userId
+  const ordersQuery = `SELECT * FROM orders WHERE user_id = ?`;
+  
+  db.query(ordersQuery, [userId], (error, results) => {
+    if (error) {
+      return res.status(500).json({ message: "Error fetching orders" });
+    }
+    if (results.length > 0) {
+      return res.status(200).json(results);
+    } else {
+      return res.status(404).json({ message: "No orders found for this user" });
+    }
+  });
+});
 
 ////////////////////////////////////
 app.get("/", (req, res) => {
