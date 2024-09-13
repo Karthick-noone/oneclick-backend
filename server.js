@@ -8,6 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 // Middleware
 app.use(bodyParser.json());
@@ -16,14 +17,6 @@ app.use(cors());  // Enable CORS for all routes
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// // MySQL connection configuration
-// const dbConfig = {
-//   host: 'localhost',
-//   user: 'root',
-//   password: '',
-//   database: 'oneclick',
-// };
-
 // MySQL connection configuration
 const dbConfig = {
   host: 'sql12.freesqldatabase.com',
@@ -31,6 +24,14 @@ const dbConfig = {
   password: 'vhAGYSxNep',
   database: 'sql12730517',
 };
+
+// // MySQL connection configuration
+// const dbConfig = {
+//   host: 'sql12.freesqldatabase.com',
+//   user: 'sql12730517',
+//   password: 'vhAGYSxNep',
+//   database: 'sql12730517',
+// };
 
 
 // Create a MySQL connection
@@ -78,6 +79,76 @@ db.on('error', (err) => {
 //   }
 //   console.log('Connected to MySQL');
 // });
+
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: "karthick.mindtek@gmail.com",
+    pass: "clrs yxco eozh idqd",
+  },
+});
+
+// Route to send email
+app.post("/send-email", (req, res) => {
+  const { name, number, email, subject, message } = req.body;
+
+  const mailOptions = {
+    from: email,
+    to: "karthick.mindtek@gmail.com",
+    subject: subject,
+    text: `
+      Name: ${name}
+      Number: ${number}
+      Email: ${email}
+      Message: ${message}
+    `,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error sending email:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to send email", details: error.message });
+    } else {
+      console.log("Email sent:", info.response);
+      res.status(200).json({ message: "Email sent successfully" });
+    }
+  });
+});
+
+app.post('/submit-careers-form', (req, res) => {
+  const { name, email, phone, position, startDate, resumeLink } = req.body;
+  console.log("req.body", req.body);
+
+  // Combine first and last name into a single name field
+  // const name = `${firstName} ${lastName}`;
+
+  // Check if email already exists
+  const checkEmailQuery = 'SELECT * FROM careers WHERE email = ?';
+  db.query(checkEmailQuery, [email], (err, results) => {
+    if (err) {
+      console.error('Error checking email:', err);
+      return res.status(500).json({ message: 'Error checking email.' });
+    }
+    if (results.length > 0) {
+      return res.status(400).json({ message: 'Email already exists.' });
+    }
+
+    const insertQuery = `
+      INSERT INTO careers (name, email, phone, position, startDate, resumeLink)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(insertQuery, [name, email, phone, position, startDate, resumeLink], (err, results) => {
+      if (err) {
+        console.error('Error inserting data:', err);
+        return res.status(500).json({ message: 'Error submitting form.' });
+      }
+      res.status(200).json({ message: 'Form submitted successfully!' });
+    });
+  });
+});
 
 // Signup Route
 app.post('/signup', (req, res) => {
