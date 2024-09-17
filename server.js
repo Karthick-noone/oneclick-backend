@@ -2687,8 +2687,8 @@ app.post('/place-order', upload7.array('image'), (req, res) => {
   const unique_id = generateUniqueId();
 
   // Insert order
-  const orderQuery = 'INSERT INTO orders (unique_id, user_id, total_amount, shipping_address, address_id) VALUES (?, ?, ?, ?, ?)';
-  db.query(orderQuery, [unique_id, user_id, total_amount, shipping_address, address_id], (err, result) => {
+  const orderQuery = 'INSERT INTO orders (unique_id, user_id, total_amount, shipping_address, address_id, status) VALUES (?, ?, ?, ?, ?, ?)';
+  db.query(orderQuery, [unique_id, user_id, total_amount, shipping_address, address_id, 'Paid'], (err, result) => {
     if (err) {
       console.error('Error inserting order:', err);
       return res.status(500).json({ message: 'Error inserting order', error: err.message });
@@ -2928,7 +2928,7 @@ app.get("/api/my-orders/:userId", (req, res) => {
   const userId = req.params.userId;
 
   // Query the orders table based on the userId
-  const ordersQuery = `SELECT * FROM orders WHERE user_id = ?`;
+  const ordersQuery = `SELECT * FROM orders WHERE user_id = ? ORDER BY order_id DESC`;
   
   db.query(ordersQuery, [userId], (error, results) => {
     if (error) {
@@ -2940,6 +2940,106 @@ app.get("/api/my-orders/:userId", (req, res) => {
       return res.status(404).json({ message: "No orders found for this user" });
     }
   });
+});
+
+
+///////////////////////////////////
+app.get('/getProductByOrderId/:orderId', (req, res) => {
+  const { orderId } = req.params;
+  console.log("Fetching Product ID for Order ID:", orderId);
+
+  // Define the SQL query to fetch product_id from order_items where order_id matches the unique_id in orders
+  const query = `
+    SELECT oi.product_id
+    FROM order_items oi
+    JOIN orders o ON o.unique_id = oi.order_id
+    WHERE o.unique_id = ?
+  `;
+
+  console.log("SQL Query to fetch product ID:", query);
+
+  db.query(query, [orderId], (err, result) => {
+    if (err) {
+      console.error("Error fetching product by order ID:", err);
+      res.status(500).json({ error: 'Failed to fetch product details' });
+    } else {
+      console.log("Product ID fetched:", result);
+      if (result.length === 0) {
+        console.warn("No product ID found for order ID:", orderId);
+      }
+      res.json(result[0] || {}); // Ensure response is always an object
+    }
+  });
+});
+
+
+
+app.get('/getProductDetails', (req, res) => {
+  const { product_id } = req.query;
+  console.log("Fetching Product Details with Product ID:", product_id);
+
+  // List of tables to search for the product_id
+  const tables = [
+    'computers',
+    'mobiles',
+    'speakers',
+    'headphones',
+    'cctv',
+    'tv',
+    'printers',
+    'watch',
+    'computeraccessories',
+    'mobileaccessories',
+  ];
+
+  // Generate queries for each table
+  const queries = tables.map(table => {
+    return {
+      tableName: table,
+      query: `
+        SELECT '${table}' AS table_name, prod_name, prod_features, prod_price, prod_img, category
+        FROM ${table}
+        WHERE prod_id = ?
+      `
+    };
+  });
+
+  let results = [];
+  let completedQueries = 0;
+
+  const checkProductDetails = (queryIndex) => {
+    if (queryIndex >= queries.length) {
+      // All queries have been processed
+      if (results.length === 0) {
+        console.log("Product not found in any table");
+        return res.status(404).json({ error: 'Product not found in any table' });
+      }
+      console.log("Product Details fetched:", results[0]);
+      return res.json(results[0]); // Return the first match (assuming one product per ID)
+    }
+
+    const { tableName, query } = queries[queryIndex];
+    console.log("Executing SQL Query:", query);
+
+    db.query(query, [product_id], (err, result) => {
+      if (err) {
+        console.error(`Error fetching product details from table ${tableName}:`, err);
+        return res.status(500).json({ error: 'Failed to fetch product details' });
+      }
+
+      if (result.length > 0) {
+        results = result; // Store the result
+        console.log(`Product found in table ${tableName}`);
+        return res.json(result[0]); // Return the first match immediately
+      }
+
+      completedQueries++;
+      checkProductDetails(queryIndex + 1); // Proceed to the next table
+    });
+  };
+
+  // Start checking product details from the first table
+  checkProductDetails(0);
 });
 
 ////////////////////////////////////
