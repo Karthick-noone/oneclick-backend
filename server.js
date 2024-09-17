@@ -2483,18 +2483,19 @@ app.get('/api/suggestions', (req, res) => {
   const query = req.query.query.toLowerCase();
   
   // Define categories and products
+  // Define categories and products
   const suggestions = [
     { term: "Computers", keywords: ["laptop","laptops", "desktop","desktops", "computer","computers", "notebook"] },
-    { term: "Mobiles", keywords: ["mobile", "smartphone", "phone", "android"] },
-    { term: "Headphones", keywords: ["headphone", "earphone", "earbuds", "headset", "wireless headphone","wired headphone"] },
+    { term: "Mobiles", keywords: ["mobile", "mobiles", "smartphone","smartphones", "phones", "phone", "android"] },
+    { term: "Headphones", keywords: ["headphone", "headphones", "earphone","earphones", "earbuds", "headset", "wireless headphone", "wired headphone" ,"wired headphones"] },
     { term: "Printers", keywords: ["printer", "scanner", "fax"] },
-    { term: "Speakers", keywords: ["speaker", "bluetooth speaker", "audio","home theatre"] },
+    { term: "Speaker", keywords: ["speaker", "speakers","bluetooth speaker", "audio","home theatre"] },
     { term: "Television", keywords: ["television", "tv", "tele"] },
+    { term: "Watch", keywords: ["watch", "smart watch", "time", "clock", 'wall clock',] },
     { term: "CCTV", keywords: ["cctv", "security camera", "surveillance"] },
     { term: "ComputerAccessories", keywords: ["keyboard", "mouse", "monitor", "webcam", "laptop charger", "adapter"] },
     { term: "MobileAccessories", keywords: ["charger","mobile charger","back cover","back case","flip cover", "case", "screen protector", "power bank", 'c type charger' ] },
   ];
-
   // Find the most specific matching category term based on the query
   const matchingCategory = suggestions.find(({ keywords }) =>
     keywords.some(keyword => keyword.includes(query))
