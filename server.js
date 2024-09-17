@@ -20,9 +20,9 @@ app.use(express.json());
 // MySQL connection configuration
 const dbConfig = {
   host: 'sql12.freesqldatabase.com',
-  user: 'sql12730517',
-  password: 'vhAGYSxNep',
-  database: 'sql12730517',
+  user: 'sql12731822',
+  password: 'DKAWGV5Dg6',
+  database: 'sql12731822',
 };
 
 // // MySQL connection configuration
