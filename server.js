@@ -182,15 +182,20 @@ app.post('/signup', (req, res) => {
     });
   };
 
-  // Check if the email already exists
-  db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+  // Check if the email or username already exists
+  db.query('SELECT * FROM users WHERE email = ? OR username = ?', [email, username], (err, results) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({ error: 'Server error' });
     }
 
     if (results.length > 0) {
-      return res.status(400).json({ error: 'Email already exists' });
+      if (results.some(user => user.email === email)) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      if (results.some(user => user.username === username)) {
+        return res.status(400).json({ error: 'Username already exists' });
+      }
     }
 
     // Generate the next user_id and insert the new user
@@ -210,6 +215,8 @@ app.post('/signup', (req, res) => {
     });
   });
 });
+
+
 // Signup Route
 app.post('/adminsignup', (req, res) => {
     const { username, email, password } = req.body;
