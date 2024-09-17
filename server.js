@@ -150,12 +150,12 @@ app.post('/submit-careers-form', (req, res) => {
   });
 });
 
-// Signup Route
 app.post('/signup', (req, res) => {
   const { username, email, password } = req.body;
 
+  // Validate input
   if (!username || !email || !password) {
-    return res.status(400).send('All fields are required');
+    return res.status(400).json({ error: 'All fields are required' });
   }
 
   // Function to generate the next user_id
@@ -186,26 +186,26 @@ app.post('/signup', (req, res) => {
   db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
     if (err) {
       console.error('Database error:', err);
-      return res.status(500).send('Server error');
+      return res.status(500).json({ error: 'Server error' });
     }
 
     if (results.length > 0) {
-      return res.status(400).send('Email already registered');
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     // Generate the next user_id and insert the new user
     generateUserId((err, userId) => {
       if (err) {
-        return res.status(500).send('Server error');
+        return res.status(500).json({ error: 'Server error' });
       }
 
       const query = 'INSERT INTO users (username, email, password, user_id) VALUES (?, ?, ?, ?)';
       db.query(query, [username, email, password, userId], (err) => {
         if (err) {
           console.error('Error creating user:', err);
-          return res.status(500).send('Server error');
+          return res.status(500).json({ error: 'Server error' });
         }
-        res.status(200).send('User created successfully');
+        res.status(200).json({ message: 'User created successfully' });
       });
     });
   });
@@ -744,7 +744,7 @@ app.put('/updatecomputers/:id', computersUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
-
+console.log("req.body",req.body)
   let sql = 'UPDATE computers SET prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
   let values = [name, features, price, status];
 
@@ -2489,13 +2489,13 @@ app.get('/api/suggestions', (req, res) => {
     { term: "Headphones", keywords: ["headphone", "earphone", "earbuds", "headset", "wireless headphone","wired headphone"] },
     { term: "Printers", keywords: ["printer", "scanner", "fax"] },
     { term: "Speakers", keywords: ["speaker", "bluetooth speaker", "audio","home theatre"] },
-    { term: "TV", keywords: ["television", "tv", "tele"] },
+    { term: "Television", keywords: ["television", "tv", "tele"] },
     { term: "CCTV", keywords: ["cctv", "security camera", "surveillance"] },
     { term: "ComputerAccessories", keywords: ["keyboard", "mouse", "monitor", "webcam", "laptop charger", "adapter"] },
-    { term: "MobileAccessories", keywords: ["charger","mobile charger","back cover","back case","flip cover", "case", "screen protector", "power bank"] },
+    { term: "MobileAccessories", keywords: ["charger","mobile charger","back cover","back case","flip cover", "case", "screen protector", "power bank", 'c type charger' ] },
   ];
 
-  // Find the matching category term based on the query
+  // Find the most specific matching category term based on the query
   const matchingCategory = suggestions.find(({ keywords }) =>
     keywords.some(keyword => keyword.includes(query))
   );
@@ -2507,6 +2507,7 @@ app.get('/api/suggestions', (req, res) => {
     res.status(404).json({ message: "Product not found" });
   }
 });
+
 ////////////useraddress/////////////////////
 
 // Route to handle address submission
