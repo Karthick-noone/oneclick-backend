@@ -89,7 +89,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Route to send email
-app.post("/send-email", (req, res) => {
+app.post("/backend/send-email", (req, res) => {
   const { name, number, email, subject, message } = req.body;
 
   const mailOptions = {
@@ -116,13 +116,42 @@ app.post("/send-email", (req, res) => {
     }
   });
 });
+// Set up multer for resume uploads
+const resumeStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/resumes';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir); // Directory to save resumes
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${Date.now()}${ext}`); // Generate a unique file name
+  }
+});
 
-app.post('/submit-careers-form', (req, res) => {
-  const { name, email, phone, position, startDate, resumeLink } = req.body;
-  console.log("req.body", req.body);
+// Create a multer instance for resume upload
+const resumeUpload = multer({
+  storage: resumeStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /pdf|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
 
-  // Combine first and last name into a single name field
-  // const name = `${firstName} ${lastName}`;
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .pdf, .doc, and .docx files are allowed.'));
+    }
+  }
+});
+
+// Endpoint to submit careers form with resume upload
+app.post('/backend/submit-careers-form', resumeUpload.single('resume'), (req, res) => {
+  const { name, email, phone, position, startDate } = req.body;
+  const resumeLink = req.file ? req.file.filename : ''; // Get the uploaded file name
 
   // Check if email already exists
   const checkEmailQuery = 'SELECT * FROM careers WHERE email = ?';
@@ -140,6 +169,7 @@ app.post('/submit-careers-form', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `;
 
+    // Save the form data into the database, including the resume link
     db.query(insertQuery, [name, email, phone, position, startDate, resumeLink], (err, results) => {
       if (err) {
         console.error('Error inserting data:', err);
@@ -150,7 +180,27 @@ app.post('/submit-careers-form', (req, res) => {
   });
 });
 
-app.post('/signup', (req, res) => {
+app.get('/backend/api/careers', (req, res) => {
+  const query = 'SELECT * FROM careers';
+  db.query(query, (err, results) => {
+    if (err) throw err;
+    res.json(results);
+    console.log("resume",results)
+  });
+});
+
+// // Error handler middleware for multer
+// app.use((err, req, res, next) => {
+//   if (err instanceof multer.MulterError) {
+//     // Multer-specific errors
+//     return res.status(400).json({ message: err.message });
+//   } else if (err) {
+//     // Other errors
+//     return res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
+app.post('/backend/signup', (req, res) => {
   const { username, email, password } = req.body;
 
   // Validate input
@@ -216,9 +266,8 @@ app.post('/signup', (req, res) => {
   });
 });
 
-
 // Signup Route
-app.post('/adminsignup', (req, res) => {
+app.post('/backend/adminsignup', (req, res) => {
     const { username, email, password } = req.body;
   
     if (!username || !email || !password) {
@@ -250,7 +299,7 @@ app.post('/adminsignup', (req, res) => {
 
 
 // Login Route
-app.post("/login", (req, res) => {
+app.post("/backend/login", (req, res) => {
     console.log("Received login request:", req.body); // Log incoming request
   
     const { username, password } = req.body;
@@ -283,7 +332,7 @@ app.post("/login", (req, res) => {
     });
   });
 // Login Route
-app.post("/adminlogin", (req, res) => {
+app.post("/backend/adminlogin", (req, res) => {
     console.log("Received login request:", req.body); // Log incoming request
   
     const { username, password } = req.body;
@@ -317,7 +366,7 @@ app.post("/adminlogin", (req, res) => {
   });
   
 // Forgot password route
-app.post('/forgot-password', (req, res) => {
+app.post('/backend/forgot-password', (req, res) => {
     const { email, newPassword } = req.body;
   
     if (!email || !newPassword) {
@@ -348,7 +397,7 @@ app.post('/forgot-password', (req, res) => {
 
 
 // Forgot password route
-app.post('/adminforgotpassword', (req, res) => {
+app.post('/backend/adminforgotpassword', (req, res) => {
     const { email, newPassword } = req.body;
   
     if (!email || !newPassword) {
@@ -379,7 +428,7 @@ app.post('/adminforgotpassword', (req, res) => {
 
 
 // Verify user endpoint
-app.post('/verify-user', (req, res) => {
+app.post('/backend/verify-user', (req, res) => {
   const { email, username } = req.body;
 
   // Check if email and username are provided
@@ -404,7 +453,7 @@ app.post('/verify-user', (req, res) => {
 });
 
 // Update user's cart endpoint
-app.post('/update-user-cart', (req, res) => {
+app.post('/backend/update-user-cart', (req, res) => {
   const { email, username, product } = req.body;
 
   if (!email || !username || !product) {
@@ -450,7 +499,7 @@ app.post('/update-user-cart', (req, res) => {
 
 
 // Update user's wishlist endpoint
-app.post('/update-user-wishlist', (req, res) => {
+app.post('/backend/update-user-wishlist', (req, res) => {
   const { email, username, product, action } = req.body;
 
   if (!email || !username || !product || !action) {
@@ -502,7 +551,7 @@ app.post('/update-user-wishlist', (req, res) => {
 });
 
 // API endpoint to get cart items
-app.get('/cart', (req, res) => {
+app.get('/backend/cart', (req, res) => {
   const { email, username } = req.query;
 
   if (!email || !username) {
@@ -520,7 +569,7 @@ app.get('/cart', (req, res) => {
 });
 
 // API endpoint to get wishlist items
-app.get('/wishlist', (req, res) => {
+app.get('/backend/wishlist', (req, res) => {
   const { email, username } = req.query;
 
   if (!email || !username) {
@@ -537,7 +586,7 @@ app.get('/wishlist', (req, res) => {
   });
 });
 
-app.post('/remove-from-cart', (req, res) => {
+app.post('/backend/remove-from-cart', (req, res) => {
   const { email, itemId } = req.body;
 
   if (!email || !itemId) {
@@ -601,7 +650,7 @@ app.post('/remove-from-cart', (req, res) => {
 });
 
 
-app.post('/remove-from-wishlist', (req, res) => {
+app.post('/backend/remove-from-wishlist', (req, res) => {
   const { email, itemId } = req.body;
 
   if (!email || !itemId) {
@@ -659,7 +708,7 @@ app.post('/remove-from-wishlist', (req, res) => {
 
 
 
-app.get('/api/products', (req, res) => {
+app.get('/backend/api/products', (req, res) => {
   const queries = [
    "SELECT * FROM tv ORDER BY id DESC LIMIT 1",
 "SELECT * FROM mobiles ORDER BY id DESC LIMIT 1",
@@ -693,7 +742,7 @@ app.get('/api/products', (req, res) => {
 });
 ///////////////////////////admin dashbord api's/////////////////////////////////////////////////////////
 
-app.use('/uploads', express.static('uploads'));
+app.use('/backend/uploads', express.static('uploads'));
 
 
 
@@ -723,7 +772,7 @@ const generateProductId = () => {
 };
 
 // Endpoint to add a new product
-app.post('/computers', computersUpload.single('image'), (req, res) => {
+app.post('/backend/computers', computersUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -738,16 +787,20 @@ app.post('/computers', computersUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchcomputers', (req, res) => {
+app.get('/backend/fetchcomputers', (req, res) => {
   const sql = 'SELECT * FROM computers ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatecomputers/:id', computersUpload.single('image'), (req, res) => {
+app.put('/backend/updatecomputers/:id', computersUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -787,17 +840,35 @@ console.log("req.body",req.body)
 });
 
 // Endpoint to delete a product
-app.delete('/deletecomputers/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletecomputers/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM computers WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM computers WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/computers/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM computers WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
-
 
 ////////////////mobiles////////////////////////////
 
@@ -825,7 +896,7 @@ const mobilesUpload = multer({ storage: mobilesStorage });
 
 
 // Endpoint to add a new product
-app.post('/mobiles', mobilesUpload.single('image'), (req, res) => {
+app.post('/backend/mobiles', mobilesUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -840,16 +911,20 @@ app.post('/mobiles', mobilesUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchmobiles', (req, res) => {
+app.get('/backend/fetchmobiles', (req, res) => {
   const sql = 'SELECT * FROM mobiles ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatemobiles/:id', mobilesUpload.single('image'), (req, res) => {
+app.put('/backend/updatemobiles/:id', mobilesUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -889,14 +964,32 @@ app.put('/updatemobiles/:id', mobilesUpload.single('image'), (req, res) => {
 });
 
 // Endpoint to delete a product
-app.delete('/deletemobiles/:id', (req, res) => {
+app.delete('/backend/deletemobiles/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM mobiles WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM mobiles WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/mobiles/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM mobiles WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
 ///////////cctv///////////////////////////////////////////////
@@ -925,7 +1018,7 @@ const cctvUpload = multer({ storage: cctvStorage });
 
 
 // Endpoint to add a new product
-app.post('/cctv', cctvUpload.single('image'), (req, res) => {
+app.post('/backend/cctv', cctvUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -940,16 +1033,20 @@ app.post('/cctv', cctvUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchcctv', (req, res) => {
+app.get('/backend/fetchcctv', (req, res) => {
   const sql = 'SELECT * FROM cctv ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatecctv/:id', cctvUpload.single('image'), (req, res) => {
+app.put('/backend/updatecctv/:id', cctvUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -989,17 +1086,35 @@ app.put('/updatecctv/:id', cctvUpload.single('image'), (req, res) => {
 });
 
 // Endpoint to delete a product
-app.delete('/deletecctv/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletecctv/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM cctv WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM cctv WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/cctv/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM cctv WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
-
 
 /////////////////////////tv///////////////////
 
@@ -1027,7 +1142,7 @@ const tvUpload = multer({ storage: tvStorage });
 
 
 // Endpoint to add a new product
-app.post('/tv', tvUpload.single('image'), (req, res) => {
+app.post('/backend/tv', tvUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1042,16 +1157,20 @@ app.post('/tv', tvUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchtv', (req, res) => {
+app.get('/backend/fetchtv', (req, res) => {
   const sql = 'SELECT * FROM tv ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatetv/:id', tvUpload.single('image'), (req, res) => {
+app.put('/backend/updatetv/:id', tvUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1091,17 +1210,35 @@ app.put('/updatetv/:id', tvUpload.single('image'), (req, res) => {
 });
 
 // Endpoint to delete a product
-app.delete('/deletetv/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletetv/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM tv WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM tv WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/tv/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM tv WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
-
 ////////////////headphones///////////////
 
 
@@ -1128,7 +1265,7 @@ const headphonesUpload = multer({ storage: headphonesStorage });
 
 
 // Endpoint to add a new product
-app.post('/headphones', headphonesUpload.single('image'), (req, res) => {
+app.post('/backend/headphones', headphonesUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1143,16 +1280,20 @@ app.post('/headphones', headphonesUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchheadphones', (req, res) => {
+app.get('/backend/fetchheadphones', (req, res) => {
   const sql = 'SELECT * FROM headphones ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updateheadphones/:id', headphonesUpload.single('image'), (req, res) => {
+app.put('/backend/updateheadphones/:id', headphonesUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1192,17 +1333,35 @@ app.put('/updateheadphones/:id', headphonesUpload.single('image'), (req, res) =>
 });
 
 // Endpoint to delete a product
-app.delete('/deleteheadphones/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deleteheadphones/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM headphones WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM headphones WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/headphones/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM headphones WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
-
 /////////////speaker////////////////
 
 
@@ -1229,7 +1388,7 @@ const speakersUpload = multer({ storage: speakersStorage });
 
 
 // Endpoint to add a new product
-app.post('/speakers', speakersUpload.single('image'), (req, res) => {
+app.post('/backend/speakers', speakersUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1244,16 +1403,20 @@ app.post('/speakers', speakersUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchspeakers', (req, res) => {
+app.get('/backend/fetchspeakers', (req, res) => {
   const sql = 'SELECT * FROM speakers ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatespeakers/:id', speakersUpload.single('image'), (req, res) => {
+app.put('/backend/updatespeakers/:id', speakersUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1293,14 +1456,33 @@ app.put('/updatespeakers/:id', speakersUpload.single('image'), (req, res) => {
 });
 
 // Endpoint to delete a product
-app.delete('/deletespeakers/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletespeakers/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM speakers WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM speakers WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/speakers/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM speakers WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
 /////////////watch///////////////////////
@@ -1328,7 +1510,7 @@ const watchUpload = multer({ storage: watchStorage });
 
 
 // Endpoint to add a new product
-app.post('/watch', watchUpload.single('image'), (req, res) => {
+app.post('/backend/watch', watchUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1343,16 +1525,20 @@ app.post('/watch', watchUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchwatch', (req, res) => {
+app.get('/backend/fetchwatch', (req, res) => {
   const sql = 'SELECT * FROM watch ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatewatch/:id', watchUpload.single('image'), (req, res) => {
+app.put('/backend/updatewatch/:id', watchUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1364,11 +1550,17 @@ app.put('/updatewatch/:id', watchUpload.single('image'), (req, res) => {
     // Update image and remove the old image file
     const oldImageQuery = 'SELECT prod_img FROM watch WHERE id = ?';
     db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
+      if (err) return res.status(500).send('Failed to fetch old image');
+
       const oldImage = results[0]?.prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/watch/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+      if (oldImage) {
+        const oldImagePath = `uploads/watch/${oldImage}`;
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            console.error('Failed to delete old image:', err);
+          } else {
+            console.log('Old image deleted:', oldImagePath);
+          }
         });
       }
 
@@ -1376,7 +1568,7 @@ app.put('/updatewatch/:id', watchUpload.single('image'), (req, res) => {
       values.push(image, productId);
 
       db.query(sql, values, (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send('Failed to update product');
         res.json({ message: 'Product updated successfully' });
       });
     });
@@ -1385,21 +1577,40 @@ app.put('/updatewatch/:id', watchUpload.single('image'), (req, res) => {
     values.push(productId);
 
     db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
+      if (err) return res.status(500).send('Failed to update product');
       res.json({ message: 'Product updated successfully' });
     });
   }
 });
 
 // Endpoint to delete a product
-app.delete('/deletewatch/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletewatch/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM watch WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM watch WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/watch/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM watch WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
 
@@ -1428,7 +1639,7 @@ const printersUpload = multer({ storage: printersStorage });
 
 
 // Endpoint to add a new product
-app.post('/printers', printersUpload.single('image'), (req, res) => {
+app.post('/backend/printers', printersUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1443,16 +1654,20 @@ app.post('/printers', printersUpload.single('image'), (req, res) => {
 });
 
 // Route to fetch all products
-app.get('/fetchprinters', (req, res) => {
+app.get('/backend/fetchprinters', (req, res) => {
   const sql = 'SELECT * FROM printers ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updateprinters/:id', printersUpload.single('image'), (req, res) => {
+app.put('/backend/updateprinters/:id', printersUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1492,17 +1707,34 @@ app.put('/updateprinters/:id', printersUpload.single('image'), (req, res) => {
 });
 
 // Endpoint to delete a product
-app.delete('/deleteprinters/:id', (req, res) => {
+app.delete('/backend/deleteprinters/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM printers WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM printers WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/printers/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM printers WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
-
 /////////////mobileaccessories////////////////////
 
 
@@ -1528,7 +1760,7 @@ const mobileaccessoriesUpload = multer({ storage: mobileaccessoriesStorage });
 
 
 // Endpoint to add a new product
-app.post('/mobileaccessories', mobileaccessoriesUpload.single('image'), (req, res) => {
+app.post('/backend/mobileaccessories', mobileaccessoriesUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1543,16 +1775,20 @@ app.post('/mobileaccessories', mobileaccessoriesUpload.single('image'), (req, re
 });
 
 // Route to fetch all products
-app.get('/fetchmobileaccessories', (req, res) => {
+app.get('/backend/fetchmobileaccessories', (req, res) => {
   const sql = 'SELECT * FROM mobileaccessories ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatemobileaccessories/:id', mobileaccessoriesUpload.single('image'), (req, res) => {
+app.put('/backend/updatemobileaccessories/:id', mobileaccessoriesUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1592,14 +1828,33 @@ app.put('/updatemobileaccessories/:id', mobileaccessoriesUpload.single('image'),
 });
 
 // Endpoint to delete a product
-app.delete('/deletemobileaccessories/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletemobileaccessories/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM mobileaccessories WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM mobileaccessories WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/mobileaccessories/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM mobileaccessories WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
 
@@ -1628,7 +1883,7 @@ const computeraccessoriesUpload = multer({ storage: computeraccessoriesStorage }
 
 
 // Endpoint to add a new product
-app.post('/computeraccessories', computeraccessoriesUpload.single('image'), (req, res) => {
+app.post('/backend/computeraccessories', computeraccessoriesUpload.single('image'), (req, res) => {
   const { name, features, price } = req.body;
   const image = req.file ? req.file.filename : '';
 
@@ -1643,16 +1898,20 @@ app.post('/computeraccessories', computeraccessoriesUpload.single('image'), (req
 });
 
 // Route to fetch all products
-app.get('/fetchcomputeraccessories', (req, res) => {
+app.get('/backend/fetchcomputeraccessories', (req, res) => {
   const sql = 'SELECT * FROM computeraccessories ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 // Update product route
-app.put('/updatecomputeraccessories/:id', computeraccessoriesUpload.single('image'), (req, res) => {
+app.put('/backend/updatecomputeraccessories/:id', computeraccessoriesUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const { name, features, price, status } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1692,14 +1951,33 @@ app.put('/updatecomputeraccessories/:id', computeraccessoriesUpload.single('imag
 });
 
 // Endpoint to delete a product
-app.delete('/deletecomputeraccessories/:id', (req, res) => {
+// Endpoint to delete a product
+app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM computeraccessories WHERE id = ?';
+  // Fetch the product to get the image file name
+  const fetchImageQuery = 'SELECT prod_img FROM computeraccessories WHERE id = ?';
+  db.query(fetchImageQuery, [id], (err, results) => {
+    if (err) return res.status(500).send('Failed to fetch product image');
 
-  db.query(sql, [id], (err, result) => {
-    if (err) throw err;
-    res.send('Product deleted');
+    const image = results[0]?.prod_img;
+    if (image) {
+      const imagePath = `uploads/computeraccessories/${image}`;
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
+    }
+
+    // Proceed to delete the product after the image is handled
+    const deleteQuery = 'DELETE FROM computeraccessories WHERE id = ?';
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) return res.status(500).send('Failed to delete product');
+      res.json({ message: 'Product deleted successfully' });
+    });
   });
 });
 
@@ -1743,17 +2021,21 @@ const edithomepageUploadSingle = multer({ storage: edithomepageStorageSingle }).
 
 
 // Route to fetch all products
-app.get('/fetchedithomepage', (req, res) => {
+app.get('/backend/fetchedithomepage', (req, res) => {
   const sql = 'SELECT * FROM edithomepage ORDER By id DESC LIMIT 1 ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 
 // Endpoint to add a new product with multiple images
-app.post('/edithomepage', edithomepageUploadMultiple, (req, res) => {
+app.post('/backend/edithomepage', edithomepageUploadMultiple, (req, res) => {
   // console.log('Received files:', req.files);
   // console.log('Request body:', req.body);
 
@@ -1773,7 +2055,7 @@ app.post('/edithomepage', edithomepageUploadMultiple, (req, res) => {
 });
 
 // Endpoint to update a product with a single image
-app.put('/updateedithomepage/:id', edithomepageUploadSingle, (req, res) => {
+app.put('/backend/updateedithomepage/:id', edithomepageUploadSingle, (req, res) => {
   const productId = req.params.id;
   const { title, description, category } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -1828,7 +2110,7 @@ app.put('/updateedithomepage/:id', edithomepageUploadSingle, (req, res) => {
 });
 
 // Endpoint to delete a product
-app.delete('/deleteedithomepage/:id', (req, res) => {
+app.delete('/backend/deleteedithomepage/:id', (req, res) => {
   const { id } = req.params;
 
   const fetchImageQuery = 'SELECT image FROM edithomepage WHERE id = ?';
@@ -1861,7 +2143,7 @@ app.delete('/deleteedithomepage/:id', (req, res) => {
   });
 });
 
-app.put('/updateedithomepageimage/:id/:imageIndex', edithomepageUploadSingle, (req, res) => {
+app.put('/backend/updateedithomepageimage/:id/:imageIndex', edithomepageUploadSingle, (req, res) => {
   const productId = req.params.id;
   const imageIndex = parseInt(req.params.imageIndex, 10);
   const newImage = req.file ? req.file.filename : null;
@@ -1909,7 +2191,7 @@ app.put('/updateedithomepageimage/:id/:imageIndex', edithomepageUploadSingle, (r
 });
 
 
-app.put('/deleteedithomepageimage/:id', (req, res) => {
+app.put('/backend/deleteedithomepageimage/:id', (req, res) => {
   const productId = req.params.id;
   const updatedImages = req.body.images ? req.body.images.split(',') : [];
 
@@ -1955,6 +2237,24 @@ app.put('/deleteedithomepageimage/:id', (req, res) => {
     });
   });
 });
+
+
+
+// server.js or routes.js (Backend API)
+app.delete('/backend/api/deletehomepagead/:id', (req, res) => {
+  const productId = req.params.id;
+  const deleteQuery = 'DELETE FROM edithomepage WHERE id = ?';
+
+  db.query(deleteQuery, [productId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete product' });
+    }
+
+    return res.status(200).json({ message: 'Product deleted successfully' });
+  });
+});
+
 /////////////////////////////////////////
 
 
@@ -1971,7 +2271,7 @@ const upload = multer({
   })
 });
 
-app.post('/uploadimage/:id', edithomepageUploadMultiple, (req, res) => {
+app.post('/backend/uploadimage/:id', edithomepageUploadMultiple, (req, res) => {
   const productId = req.params.id;
   console.log('productId', productId);
 
@@ -2051,17 +2351,21 @@ const doubleadpageUploadSingle = multer({ storage: doubleadpageStorageSingle }).
 
 
 // Route to fetch all products
-app.get('/fetchdoubleadpage', (req, res) => {
-  const sql = 'SELECT * FROM doubleadpage LIMIT 2';
+app.get('/backend/fetchdoubleadpage', (req, res) => {
+  const sql = 'SELECT * FROM doubleadpage ORDER BY id DESC LIMIT 2 ';
   db.query(sql, (err, results) => {
-    if (err) throw err;
+     if (err) {
+      console.error('Error fetching product:', err);
+      return res.status(500).json({ message: 'Failed to fetch product' });
+    }
+
     res.json(results);
   });
 });
 
 
 // Endpoint to add a new product with multiple images
-app.post('/doubleadpage', doubleadpageUploadMultiple, (req, res) => {
+app.post('/backend/doubleadpage', doubleadpageUploadMultiple, (req, res) => {
   // console.log('Received files:', req.files);
   // console.log('Request body:', req.body);
 
@@ -2069,7 +2373,7 @@ app.post('/doubleadpage', doubleadpageUploadMultiple, (req, res) => {
   const images = req.files.map(file => file.filename);
   const createdAt = new Date();
 
-  const sql = 'INSERT INTO doubleadpage (title, description, category, image, created_at) VALUES (?, ?, ?, ?)';
+  const sql = 'INSERT INTO doubleadpage (title, description, category, image, created_at) VALUES (?, ?, ?, ?, ?)';
   db.query(sql, [title, description, category, images.join(','), createdAt], (err, result) => {
     if (err) {
       console.error('Error inserting into database:', err);
@@ -2081,7 +2385,7 @@ app.post('/doubleadpage', doubleadpageUploadMultiple, (req, res) => {
 });
 
 // Endpoint to update a product with a single image
-app.put('/updatedoubleadpage/:id', doubleadpageUploadSingle, (req, res) => {
+app.put('/backend/updatedoubleadpage/:id', doubleadpageUploadSingle, (req, res) => {
   const productId = req.params.id;
   const { title, description, category } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -2135,41 +2439,57 @@ app.put('/updatedoubleadpage/:id', doubleadpageUploadSingle, (req, res) => {
   }
 });
 
-// Endpoint to delete a product
-app.delete('/deletedoubleadpage/:id', (req, res) => {
-  const { id } = req.params;
+// // Endpoint to delete a product
+// app.delete('/backend/deletedoubleadpage/:id', (req, res) => {
+//   const { id } = req.params;
 
-  const fetchImageQuery = 'SELECT image FROM doubleadpage WHERE id = ?';
-  db.query(fetchImageQuery, [id], (err, results) => {
+//   const fetchImageQuery = 'SELECT image FROM doubleadpage WHERE id = ?';
+//   db.query(fetchImageQuery, [id], (err, results) => {
+//     if (err) {
+//       console.error('Error fetching image for deletion:', err);
+//       return res.status(500).send(err);
+//     }
+
+//     const image = results[0]?.image;
+//     if (image) {
+//       fs.unlink(`uploads/doubleadpage/${image}`, (err) => {
+//         if (err) {
+//           console.error('Failed to delete image:', err);
+//         } else {
+//           console.log('Image deleted:', image);
+//         }
+//       });
+//     }
+
+//     const sql = 'DELETE FROM doubleadpage WHERE id = ?';
+//     db.query(sql, [id], (err, result) => {
+//       if (err) {
+//         console.error('Error deleting product:', err);
+//         return res.status(500).send(err);
+//       }
+//       console.log('Product deleted:', result);
+//       res.send('Product deleted');
+//     });
+//   });
+// });
+
+// server.js or routes.js (Backend API)
+app.delete('/backend/api/deletedoubleadpage/:id', (req, res) => {
+  const productId = req.params.id;
+  const deleteQuery = 'DELETE FROM doubleadpage WHERE id = ?';
+
+  db.query(deleteQuery, [productId], (err, result) => {
     if (err) {
-      console.error('Error fetching image for deletion:', err);
-      return res.status(500).send(err);
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete product' });
     }
 
-    const image = results[0]?.image;
-    if (image) {
-      fs.unlink(`uploads/doubleadpage/${image}`, (err) => {
-        if (err) {
-          console.error('Failed to delete image:', err);
-        } else {
-          console.log('Image deleted:', image);
-        }
-      });
-    }
-
-    const sql = 'DELETE FROM doubleadpage WHERE id = ?';
-    db.query(sql, [id], (err, result) => {
-      if (err) {
-        console.error('Error deleting product:', err);
-        return res.status(500).send(err);
-      }
-      console.log('Product deleted:', result);
-      res.send('Product deleted');
-    });
+    return res.status(200).json({ message: 'Product deleted successfully' });
   });
 });
 
-app.put('/updatedoubleadpageimage/:id/:imageIndex', doubleadpageUploadSingle, (req, res) => {
+
+app.put('/backend/updatedoubleadpageimage/:id/:imageIndex', doubleadpageUploadSingle, (req, res) => {
   const productId = req.params.id;
   const imageIndex = parseInt(req.params.imageIndex, 10);
   const newImage = req.file ? req.file.filename : null;
@@ -2217,7 +2537,7 @@ app.put('/updatedoubleadpageimage/:id/:imageIndex', doubleadpageUploadSingle, (r
 });
 
 
-app.put('/deletedoubleadpageimage/:id', (req, res) => {
+app.put('/backend/deletedoubleadpageimage/:id', (req, res) => {
   const productId = req.params.id;
   const updatedImages = req.body.images ? req.body.images.split(',') : [];
 
@@ -2279,7 +2599,7 @@ app.put('/deletedoubleadpageimage/:id', (req, res) => {
 //   })
 // });
 
-// app.post('/uploadimage/:id', doubleadpageUploadMultiple, (req, res) => {
+// app.post('/backend/uploadimage/:id', doubleadpageUploadMultiple, (req, res) => {
 //   const productId = req.params.id;
 //   console.log('productId', productId);
 
@@ -2322,7 +2642,7 @@ app.put('/deletedoubleadpageimage/:id', (req, res) => {
 
 
 // Serve static files (for serving images)
-app.use('/uploads/singleadpage', express.static(path.join(__dirname, 'uploads/singleadpage')));
+app.use('/backend/uploads/singleadpage', express.static(path.join(__dirname, 'uploads/singleadpage')));
 
 // Multer setup for image upload
 const storage = multer.diskStorage({
@@ -2337,7 +2657,7 @@ const storage = multer.diskStorage({
 const upload3 = multer({ storage: storage });
 
 // Fetch all single ad page images
-app.get('/fetchsingleadpage', (req, res) => {
+app.get('/backend/fetchsingleadpage', (req, res) => {
   const query = 'SELECT * FROM singleadpage';
   db.query(query, (err, results) => {
     if (err) {
@@ -2350,7 +2670,7 @@ app.get('/fetchsingleadpage', (req, res) => {
 });
 
 // Add a new image
-app.post('/singleadpage', upload3.single('image'), (req, res) => {
+app.post('/backend/singleadpage', upload3.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -2368,7 +2688,7 @@ app.post('/singleadpage', upload3.single('image'), (req, res) => {
 });
 
 // Update an existing image
-app.put('/updatesingleadpageimage/:id', upload3.single('image'), (req, res) => {
+app.put('/backend/updatesingleadpageimage/:id', upload3.single('image'), (req, res) => {
   const { id } = req.params;
   
   if (!req.file) {
@@ -2414,7 +2734,7 @@ app.put('/updatesingleadpageimage/:id', upload3.single('image'), (req, res) => {
 
 
 // Delete an image
-app.delete('/deletesingleadpageimage/:id', (req, res) => {
+app.delete('/backend/deletesingleadpageimage/:id', (req, res) => {
   const { id } = req.params;
 
   // First, fetch the image filename from the database
@@ -2456,7 +2776,7 @@ app.delete('/deletesingleadpageimage/:id', (req, res) => {
 /////////////////changepassword///////////
 
 // Change Password API Endpoint
-app.post('/api/change-password', (req, res) => {
+app.post('/backend/api/change-password', (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   if (!oldPassword || !newPassword) {
@@ -2486,10 +2806,9 @@ app.post('/api/change-password', (req, res) => {
   });
 });
 //////////////////////searchbox suggestion////////////////////////////////
-app.get('/api/suggestions', (req, res) => {
+app.get('/backend/api/suggestions', (req, res) => {
   const query = req.query.query.toLowerCase();
   
-  // Define categories and products
   // Define categories and products
   const suggestions = [
     { term: "Computers", keywords: ["laptop","laptops", "desktop","desktops", "computer","computers", "notebook"] },
@@ -2503,6 +2822,7 @@ app.get('/api/suggestions', (req, res) => {
     { term: "ComputerAccessories", keywords: ["keyboard", "mouse", "monitor", "webcam", "laptop charger", "adapter"] },
     { term: "MobileAccessories", keywords: ["charger","mobile charger","back cover","back case","flip cover", "case", "screen protector", "power bank", 'c type charger' ] },
   ];
+
   // Find the most specific matching category term based on the query
   const matchingCategory = suggestions.find(({ keywords }) =>
     keywords.some(keyword => keyword.includes(query))
@@ -2519,7 +2839,7 @@ app.get('/api/suggestions', (req, res) => {
 ////////////useraddress/////////////////////
 
 // Route to handle address submission
-app.post('/useraddress', (req, res) => {
+app.post('/backend/useraddress', (req, res) => {
   const { userId, address } = req.body;
 
   if (!userId || !address) {
@@ -2550,7 +2870,7 @@ app.post('/useraddress', (req, res) => {
 });
 
 // Update address
-app.put('/updateuseraddress/:id', (req, res) => {
+app.put('/backend/updateuseraddress/:id', (req, res) => {
   const addressId = req.params.id;
   const updatedAddress = req.body;
   const sql = `
@@ -2581,7 +2901,7 @@ app.put('/updateuseraddress/:id', (req, res) => {
 
 
 
-app.delete('/deleteuseraddress/:address_id', (req, res) => {
+app.delete('/backend/deleteuseraddress/:address_id', (req, res) => {
   const addressId = req.params.address_id;
 
   if (!addressId) {
@@ -2603,7 +2923,7 @@ app.delete('/deleteuseraddress/:address_id', (req, res) => {
 
 
 // Fetch addresses for a specific user
-app.get('/useraddress/:userId', (req, res) => {
+app.get('/backend/useraddress/:userId', (req, res) => {
   const userId = req.params.userId;
   const query = 'SELECT * FROM useraddress WHERE user_id = ? order by address_id DESC';
   db.query(query, [userId], (err, results) => {
@@ -2617,7 +2937,7 @@ app.get('/useraddress/:userId', (req, res) => {
 
 
 // Update the current address
-app.post('/update-current-address', async (req, res) => {
+app.post('/backend/update-current-address', async (req, res) => {
   const { userId, addressId } = req.body;
 
   try {
@@ -2635,7 +2955,7 @@ app.post('/update-current-address', async (req, res) => {
 });
 
 
-app.get('/singleaddress/:userId', (req, res) => {
+app.get('/backend/singleaddress/:userId', (req, res) => {
   const userId = req.params.userId;
   const query = 'SELECT * FROM useraddress WHERE user_id = ? AND current_address = 1';
   db.query(query, [userId], (err, results) => {
@@ -2672,7 +2992,7 @@ const productStorage = multer.diskStorage({
 
 const upload7 = multer({ storage: productStorage });
 
-app.post('/place-order', upload7.array('image'), (req, res) => {
+app.post('/backend/place-order', upload7.array('image'), (req, res) => {
   const { user_id, total_amount, shipping_address, address_id, cartItems } = req.body;
 
   // Ensure req.files exists
@@ -2761,7 +3081,7 @@ app.post('/place-order', upload7.array('image'), (req, res) => {
 
 //////////////////////////
 
-app.get('/fetchorders', (req, res) => {
+app.get('/backend/fetchorders', (req, res) => {
   console.log('Received request to fetch orders');
 
   const queryOrders = 'SELECT * FROM orders ORDER BY order_id DESC'; // Fetch all orders
@@ -2818,7 +3138,7 @@ app.get('/fetchorders', (req, res) => {
 
 
 // Fetch Orders Data
-app.get('/fetchordersdashboard', (req, res) => {
+app.get('/backend/fetchordersdashboard', (req, res) => {
   const query = 'SELECT * FROM orders'; // Adjust your query as needed
   db.query(query, (err, results) => {
     if (err) {
@@ -2831,7 +3151,7 @@ app.get('/fetchordersdashboard', (req, res) => {
 });
 
 // Fetch Product Categories for Pie Chart
-app.get('/fetchcategories', (req, res) => {
+app.get('/backend/fetchcategories', (req, res) => {
   const query = `
     SELECT 
       category, 
@@ -2851,7 +3171,7 @@ app.get('/fetchcategories', (req, res) => {
 ///////////reportspage////////////////
 
 // Sales Report API
-app.get('/api/salesreport', (req, res) => {
+app.get('/backend/api/salesreport', (req, res) => {
   const query = `
     SELECT p.name AS product_name, p.category, SUM(oi.price * oi.quantity) AS sales
     FROM order_items oi
@@ -2865,12 +3185,13 @@ app.get('/api/salesreport', (req, res) => {
       res.status(500).send('Error fetching sales report');
     } else {
       res.json(results);
+      console.log('results',results)
     }
   });
 });
 
 // Orders Report API
-app.get('/api/ordersreport', (req, res) => {
+app.get('/backend/api/ordersreport', (req, res) => {
   const query = `
     SELECT unique_id, user_id, shipping_address, total_amount, status, order_date
     FROM orders ORDER BY order_id DESC
@@ -2886,7 +3207,7 @@ app.get('/api/ordersreport', (req, res) => {
 });
 
 // Customers Report API
-app.get('/api/customersreport', (req, res) => {
+app.get('/backend/api/customersreport', (req, res) => {
   const query = `
     SELECT user_id, COUNT(unique_id) AS total_orders, SUM(total_amount) AS total_spent
     FROM orders 
@@ -2905,7 +3226,7 @@ app.get('/api/customersreport', (req, res) => {
 
 
 // Fetch Users with their Addresses
-app.get('/api/users', (req, res) => {
+app.get('/backend/api/users', (req, res) => {
   const query = `
     SELECT 
       u.user_id, 
@@ -2933,7 +3254,7 @@ app.get('/api/users', (req, res) => {
 });
 
 
-app.get("/api/my-orders/:userId", (req, res) => {
+app.get("/backend/api/my-orders/:userId", (req, res) => {
   const userId = req.params.userId;
 
   // Query the orders table based on the userId
@@ -2953,7 +3274,7 @@ app.get("/api/my-orders/:userId", (req, res) => {
 
 
 ///////////////////////////////////
-app.get('/getProductByOrderId/:orderId', (req, res) => {
+app.get('/backend/getProductByOrderId/:orderId', (req, res) => {
   const { orderId } = req.params;
   console.log("Fetching Product ID for Order ID:", orderId);
 
@@ -2983,7 +3304,7 @@ app.get('/getProductByOrderId/:orderId', (req, res) => {
 
 
 
-app.get('/getProductDetails', (req, res) => {
+app.get('/backend/getProductDetails', (req, res) => {
   const { product_id } = req.query;
   console.log("Fetching Product Details with Product ID:", product_id);
 
@@ -3052,7 +3373,7 @@ app.get('/getProductDetails', (req, res) => {
 });
 
 ////////////////////////////////////
-app.get("/", (req, res) => {
+app.get("/backend/", (req, res) => {
   res.send("Hello, World!");
 });
 
