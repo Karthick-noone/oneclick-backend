@@ -181,13 +181,17 @@ app.post('/backend/submit-careers-form', resumeUpload.single('resume'), (req, re
 });
 
 app.get('/backend/api/careers', (req, res) => {
-  const query = 'SELECT * FROM careers';
+  const query = 'SELECT * FROM careers ORDER BY id DESC';
   db.query(query, (err, results) => {
-    if (err) throw err;
-    res.json(results);
-    console.log("resume",results)
-  });
+    if (err) {
+     console.error('Error fetching product:', err);
+     return res.status(500).json({ message: 'Failed to fetch product' });
+   }
+
+   res.json(results);
+ });
 });
+
 
 // // Error handler middleware for multer
 // app.use((err, req, res, next) => {
@@ -3150,6 +3154,22 @@ app.get('/backend/fetchordersdashboard', (req, res) => {
   });
 });
 
+
+app.delete('/backend/deleteOrder/:orderId', (req, res) => {
+  const { orderId } = req.params;
+  
+  // Query to delete the order from the database
+  const sql = `DELETE FROM orders WHERE unique_id = ?`;
+  
+  db.query(sql, [orderId], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error deleting order' });
+    }
+    res.json({ message: 'Order deleted successfully' });
+  });
+});
+
+
 // Fetch Product Categories for Pie Chart
 app.get('/backend/fetchcategories', (req, res) => {
   const query = `
@@ -3225,6 +3245,7 @@ app.get('/backend/api/customersreport', (req, res) => {
 
 
 
+
 // Fetch Users with their Addresses
 app.get('/backend/api/users', (req, res) => {
   const query = `
@@ -3241,7 +3262,7 @@ app.get('/backend/api/users', (req, res) => {
       ua.country, 
       ua.phone
     FROM users u
-    LEFT JOIN useraddress ua ON u.user_id = ua.user_id
+    LEFT JOIN useraddress ua ON u.user_id = ua.user_id 
   `;
   db.query(query, (err, results) => {
     if (err) {
@@ -3252,7 +3273,6 @@ app.get('/backend/api/users', (req, res) => {
     }
   });
 });
-
 
 app.get("/backend/api/my-orders/:userId", (req, res) => {
   const userId = req.params.userId;
