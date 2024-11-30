@@ -10,6 +10,7 @@ const fs = require('fs');
 // const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const axios = require('axios'); // Import axios
+const sendOtpSms = require("./smsService"); // Import the SMS service
 
 // Middleware
 app.use(bodyParser.json());
@@ -561,141 +562,117 @@ app.post("/backend/adminlogin", (req, res) => {
     });
   });
 
-// // Generate a random 6-digit OTP
-// const generateOTP = () => {
-//   const otp = Math.floor(100000 + Math.random() * 900000);
-//   console.log(`Generated OTP: ${otp}`); // Log the generated OTP
-//   return otp;
-// };
 
-// // Store OTPs and their corresponding phone numbers (you can use a map if needed)
-// const otpMap = new Map();
 
-// app.post("/backend/sendotp", async (req, res) => {
-//   try {
-//     const { number } = req.body;
-//     console.log(`Received OTP request for number: ${number}`);
+// Generate a random 6-digit OTP
+const generateOTP = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  console.log(`Generated OTP: ${otp}`); // Log the generated OTP
+  return otp;
+};
 
-//     // Check if the provided mobile number exists in the 'oneclick_users' table
-//     console.log("Checking if the mobile number exists in the database...");
-//     db.query(
-//       "SELECT * FROM oneclick_users WHERE contact_number = ?",
-//       [number],
-//       async (error, results) => {
-//         if (error) {
-//           console.error("Error fetching user details from the database:", error);
-//           return res.status(500).send("Failed to send OTP");
-//         }
+app.post("/backend/sendotp", async (req, res) => {
+  try {
+    const { number } = req.body;
+    console.log(`Received OTP request for number: ${number}`);
 
-//         console.log(`Query executed successfully. Results: ${JSON.stringify(results)}`);
+    db.query(
+      "SELECT * FROM oneclick_users WHERE contact_number = ?",
+      [number],
+      async (error, results) => {
+        if (error) {
+          console.error("Error fetching user details from the database:", error);
+          return res.status(500).send("Failed to send OTP");
+        }
 
-//         if (!results || results.length === 0) {
-//           // If the number is not found in the database, send an error message to the client
-//           console.log(`Mobile number ${number} does not exist in the oneclick_users table.`);
-//           const errorMessage = "This number is not associated with any users.";
-//           console.log(`Sending response to client: ${errorMessage}`);
-//           return res.status(400).send(errorMessage); // Send message to the frontend
-//         }
+        if (!results || results.length === 0) {
+          console.log(`Mobile number ${number} does not exist in the oneclick_users table.`);
+          return res.status(400).send("This number is not associated with any users.");
+        }
 
-//         // Generate OTP
-//         const otp = generateOTP();
-//         console.log(`Generated OTP: ${otp}`);
+        const otp = generateOTP();
+        db.query("UPDATE oneclick_users SET otp = ? WHERE contact_number = ?", [otp, number], async (dbError) => {
+          if (dbError) {
+            console.error("Error storing OTP in the database:", dbError);
+            return res.status(500).send("Failed to store OTP in the database");
+          }
 
-//         // Store OTP in the database for the user
-//         console.log(`Storing OTP for mobile number ${number} in the database...`);
-//         db.query("UPDATE oneclick_users SET otp = ? WHERE contact_number = ?", [
-//           otp,
-//           number,
-//         ], (dbError, dbResults) => {
-//           if (dbError) {
-//             console.error("Error storing OTP in the database:", dbError);
-//             return res.status(500).send("Failed to store OTP in the database");
-//           }
-
-//           console.log(`OTP ${otp} successfully stored in the database for mobile number ${number}.`);
-
-//           // Send OTP to the provided number (SMS API)
-//           console.log(`Sending OTP ${otp} to mobile number ${number} via SMS API...`);
-//           axios.get(
-//             `http://login.smsgatewayhub.com/api/mt/SendSMS?user=Seasensesoftwares&password=Stripl@1&senderid=SEASEN&channel=Trans&DCS=0&flashsms=0&number=${number}&text=Dear ${otp}, Many more happy returns of the day. With regards Sea Sense Group.&route=47&DLTTemplateId=1707161044624969443&PEID=1701159125640974053`
-//           )
-//           .then((response) => {
-//             console.log(`OTP ${otp} sent to ${number} successfully. Response: ${JSON.stringify(response.data)}`);
-//             res.status(200).send("OTP sent successfully");
-//           })
-//           .catch((smsError) => {
-//             console.error("Error sending OTP via SMS:", smsError);
-//             console.log(`SMS Error Details: ${JSON.stringify(smsError.response?.data || smsError.message)}`);
-//             res.status(500).send("Failed to send OTP");
-//           });
-//         });
-//       }
-//     );
-//   } catch (error) {
-//     console.error("Error in OTP sending process:", error);
-//     res.status(500).send("Failed to send OTP");
-//   }
-// });
+          try {
+            await sendOtpSms(number, otp); // Use the SMS service to send OTP
+            res.status(200).send("OTP sent successfully");
+          } catch (smsError) {
+            console.error("Error in SMS service:", smsError.message);
+            res.status(500).send("Failed to send OTP");
+          }
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Error in OTP sending process:", error.message);
+    res.status(500).send("Failed to send OTP");
+  }
+});
 
 
 
-// app.post("/backend/verifyotp", async (req, res) => {
-//   try {
-//     const { number, otp } = req.body;
-//     console.log(`Received OTP verification request for number: ${number} with OTP: ${otp}`); // Log OTP verification request
 
-//     // Retrieve the user details from the database
-//     db.query(
-//       "SELECT * FROM oneclick_users WHERE contact_number = ? ORDER BY id DESC",
-//       [number],
-//       async (error, matchingUsers) => {
-//         if (error) {
-//           console.error("Error fetching matching user details:", error);
-//           return res.status(500).send("Failed to verify OTP");
-//         }
+app.post("/backend/verifyotp", async (req, res) => {
+  try {
+    const { number, otp } = req.body;
+    console.log(`Received OTP verification request for number: ${number} with OTP: ${otp}`); // Log OTP verification request
 
-//         console.log(`Retrieved ${matchingUsers.length} matching user(s) for number: ${number}`);
+    // Retrieve the user details from the database
+    db.query(
+      "SELECT * FROM oneclick_users WHERE contact_number = ? ORDER BY id DESC",
+      [number],
+      async (error, matchingUsers) => {
+        if (error) {
+          console.error("Error fetching matching user details:", error);
+          return res.status(500).send("Failed to verify OTP");
+        }
 
-//         // Check if there are any matching rows
-//         if (matchingUsers && matchingUsers.length > 0) {
-//           // Check if the provided OTP matches the stored OTP for the user
-//           const matchedUsers = matchingUsers.filter(
-//             (user) => user.otp === otp
-//           );
+        console.log(`Retrieved ${matchingUsers.length} matching user(s) for number: ${number}`);
 
-//           if (matchedUsers.length > 0) {
-//             // Update the OTP_verified field to true (mark OTP as verified)
-//             db.query("UPDATE oneclick_users SET otp_verified = ? WHERE contact_number = ?", [
-//               true,
-//               number,
-//             ], (updateError) => {
-//               if (updateError) {
-//                 console.error("Error updating OTP_verified status:", updateError);
-//                 return res.status(500).send("Failed to update OTP verification status");
-//               }
+        // Check if there are any matching rows
+        if (matchingUsers && matchingUsers.length > 0) {
+          // Check if the provided OTP matches the stored OTP for the user
+          const matchedUsers = matchingUsers.filter(
+            (user) => user.otp === otp
+          );
 
-//               console.log(`OTP for ${number} verified successfully. OTP Verified status updated.`);
+          if (matchedUsers.length > 0) {
+            // Update the OTP_verified field to true (mark OTP as verified)
+            db.query("UPDATE oneclick_users SET otp_verified = ? WHERE contact_number = ?", [
+              true,
+              number,
+            ], (updateError) => {
+              if (updateError) {
+                console.error("Error updating OTP_verified status:", updateError);
+                return res.status(500).send("Failed to update OTP verification status");
+              }
 
-//               // Log user details after OTP verification
-//               console.log("Verified User details:", matchedUsers);
+              console.log(`OTP for ${number} verified successfully. OTP Verified status updated.`);
 
-//               res.status(200).send("OTP verified successfully"); // Send success message
-//             });
-//           } else {
-//             console.log(`Invalid OTP for ${number}`);
-//             res.status(400).send("Invalid OTP");
-//           }
-//         } else {
-//           console.log(`No matching records found for number ${number}`);
-//           res.status(400).send("No matching records for the provided number");
-//         }
-//       }
-//     );
-//   } catch (error) {
-//     console.error("Failed to verify OTP:", error);
-//     res.status(500).send("Failed to verify OTP");
-//   }
-// });
+              // Log user details after OTP verification
+              console.log("Verified User details:", matchedUsers);
+
+              res.status(200).send("OTP verified successfully"); // Send success message
+            });
+          } else {
+            console.log(`Invalid OTP for ${number}`);
+            res.status(400).send("Invalid OTP");
+          }
+        } else {
+          console.log(`No matching records found for number ${number}`);
+          res.status(400).send("No matching records for the provided number");
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Failed to verify OTP:", error);
+    res.status(500).send("Failed to verify OTP");
+  }
+});
 
 
   
