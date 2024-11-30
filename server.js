@@ -10,7 +10,7 @@ const fs = require('fs');
 // const crypto = require('crypto');
 // const nodemailer = require('nodemailer');
 // const axios = require('axios'); // Import axios
-// const sendOtpSms = require("./smsService"); // Import the SMS service
+const sendOtpSms = require("./smsService"); // Import the SMS service
 
 // Middleware
 app.use(bodyParser.json());
@@ -564,54 +564,54 @@ app.post("/backend/adminlogin", (req, res) => {
 
 
 
-// // Generate a random 6-digit OTP
-// const generateOTP = () => {
-//   const otp = Math.floor(100000 + Math.random() * 900000);
-//   console.log(`Generated OTP: ${otp}`); // Log the generated OTP
-//   return otp;
-// };
+// Generate a random 6-digit OTP
+const generateOTP = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  console.log(`Generated OTP: ${otp}`); // Log the generated OTP
+  return otp;
+};
 
-// app.post("/backend/sendotp", async (req, res) => {
-//   try {
-//     const { number } = req.body;
-//     console.log(`Received OTP request for number: ${number}`);
+app.post("/backend/sendotp", async (req, res) => {
+  try {
+    const { number } = req.body;
+    console.log(`Received OTP request for number: ${number}`);
 
-//     db.query(
-//       "SELECT * FROM oneclick_users WHERE contact_number = ?",
-//       [number],
-//       async (error, results) => {
-//         if (error) {
-//           console.error("Error fetching user details from the database:", error);
-//           return res.status(500).send("Failed to send OTP");
-//         }
+    db.query(
+      "SELECT * FROM oneclick_users WHERE contact_number = ?",
+      [number],
+      async (error, results) => {
+        if (error) {
+          console.error("Error fetching user details from the database:", error);
+          return res.status(500).send("Failed to send OTP");
+        }
 
-//         if (!results || results.length === 0) {
-//           console.log(`Mobile number ${number} does not exist in the oneclick_users table.`);
-//           return res.status(400).send("This number is not associated with any users.");
-//         }
+        if (!results || results.length === 0) {
+          console.log(`Mobile number ${number} does not exist in the oneclick_users table.`);
+          return res.status(400).send("This number is not associated with any users.");
+        }
 
-//         const otp = generateOTP();
-//         db.query("UPDATE oneclick_users SET otp = ? WHERE contact_number = ?", [otp, number], async (dbError) => {
-//           if (dbError) {
-//             console.error("Error storing OTP in the database:", dbError);
-//             return res.status(500).send("Failed to store OTP in the database");
-//           }
+        const otp = generateOTP();
+        db.query("UPDATE oneclick_users SET otp = ? WHERE contact_number = ?", [otp, number], async (dbError) => {
+          if (dbError) {
+            console.error("Error storing OTP in the database:", dbError);
+            return res.status(500).send("Failed to store OTP in the database");
+          }
 
-//           try {
-//             await sendOtpSms(number, otp); // Use the SMS service to send OTP
-//             res.status(200).send("OTP sent successfully");
-//           } catch (smsError) {
-//             console.error("Error in SMS service:", smsError.message);
-//             res.status(500).send("Failed to send OTP");
-//           }
-//         });
-//       }
-//     );
-//   } catch (error) {
-//     console.error("Error in OTP sending process:", error.message);
-//     res.status(500).send("Failed to send OTP");
-//   }
-// });
+          try {
+            await sendOtpSms(number, otp); // Use the SMS service to send OTP
+            res.status(200).send("OTP sent successfully");
+          } catch (smsError) {
+            console.error("Error in SMS service:", smsError.message);
+            res.status(500).send("Failed to send OTP");
+          }
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Error in OTP sending process:", error.message);
+    res.status(500).send("Failed to send OTP");
+  }
+});
 
 
 
