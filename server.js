@@ -8,9 +8,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 // const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+// const nodemailer = require('nodemailer');
 const axios = require('axios'); // Import axios
-const sendOtpSms = require("./smsService"); // Import the SMS service
+// const sendOtpSms = require("./smsService"); // Import the SMS service
 
 // Middleware
 app.use(bodyParser.json());
@@ -564,6 +564,101 @@ app.post("/backend/adminlogin", (req, res) => {
 
 
 
+// // Generate a random 6-digit OTP
+// const generateOTP = () => {
+//   const otp = Math.floor(100000 + Math.random() * 900000);
+//   console.log(`Generated OTP: ${otp}`); // Log the generated OTP
+//   return otp;
+// };
+
+// app.post("/backend/sendotp", async (req, res) => {
+//   try {
+//     const { number } = req.body;
+//     console.log(`Received OTP request for number: ${number}`);
+
+//     db.query(
+//       "SELECT * FROM oneclick_users WHERE contact_number = ?",
+//       [number],
+//       async (error, results) => {
+//         if (error) {
+//           console.error("Error fetching user details from the database:", error);
+//           return res.status(500).send("Failed to send OTP");
+//         }
+
+//         if (!results || results.length === 0) {
+//           console.log(`Mobile number ${number} does not exist in the oneclick_users table.`);
+//           return res.status(400).send("This number is not associated with any users.");
+//         }
+
+//         const otp = generateOTP();
+//         db.query("UPDATE oneclick_users SET otp = ? WHERE contact_number = ?", [otp, number], async (dbError) => {
+//           if (dbError) {
+//             console.error("Error storing OTP in the database:", dbError);
+//             return res.status(500).send("Failed to store OTP in the database");
+//           }
+
+//           try {
+//             await sendOtpSms(number, otp); // Use the SMS service to send OTP
+//             res.status(200).send("OTP sent successfully");
+//           } catch (smsError) {
+//             console.error("Error in SMS service:", smsError.message);
+//             res.status(500).send("Failed to send OTP");
+//           }
+//         });
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Error in OTP sending process:", error.message);
+//     res.status(500).send("Failed to send OTP");
+//   }
+// });
+
+
+// Configuration for the SMS Gateway
+const smsGatewayConfig = {
+  user: process.env.SMS_USER || "Seasensesoftwares",
+  password: process.env.SMS_PASSWORD || "Stripl@1",
+  senderid: process.env.SMS_SENDERID || "SEASEN",
+  DLTTemplateId: process.env.DLT_TEMPLATE_ID || "1707161044624969443",
+  PEID: process.env.PEID || "1701159125640974053",
+};
+
+// Function to send SMS
+async function sendSms(number, msg) {
+  try {
+    const response = await axios.get(
+      `https://login.smsgatewayhub.com/api/mt/SendSMS`,
+      {
+        params: {
+          user: smsGatewayConfig.user,
+          password: smsGatewayConfig.password,
+          senderid: smsGatewayConfig.senderid,
+          channel: "Trans",
+          DCS: "0",
+          flashsms: "0",
+          number: number,
+          text: `Dear ${msg}, Many more happy returns of the day. With regards Sea Sense Group.`,
+          route: "47",
+          DLTTemplateId: smsGatewayConfig.DLTTemplateId,
+          PEID: smsGatewayConfig.PEID,
+        },
+      }
+    );
+    console.log(`SMS sent successfully to ${number}. Response:`, response.data);
+  } catch (error) {
+    const logError = `Error sending SMS to ${number}: ${error.message}`;
+    fs.appendFileSync("sms-errors.log", logError + "\n");
+    if (error.response) {
+      console.error("Response Error:", error.response.data);
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+    } else {
+      console.error("Unexpected Error:", error.message);
+    }
+    throw new Error("Error sending SMS");
+  }
+}
+
 // Generate a random 6-digit OTP
 const generateOTP = () => {
   const otp = Math.floor(100000 + Math.random() * 900000);
@@ -571,11 +666,13 @@ const generateOTP = () => {
   return otp;
 };
 
+// API to handle OTP requests
 app.post("/backend/sendotp", async (req, res) => {
   try {
     const { number } = req.body;
     console.log(`Received OTP request for number: ${number}`);
 
+    // Query the database to validate the user
     db.query(
       "SELECT * FROM oneclick_users WHERE contact_number = ?",
       [number],
@@ -591,6 +688,8 @@ app.post("/backend/sendotp", async (req, res) => {
         }
 
         const otp = generateOTP();
+
+        // Update the OTP in the database
         db.query("UPDATE oneclick_users SET otp = ? WHERE contact_number = ?", [otp, number], async (dbError) => {
           if (dbError) {
             console.error("Error storing OTP in the database:", dbError);
@@ -598,7 +697,8 @@ app.post("/backend/sendotp", async (req, res) => {
           }
 
           try {
-            await sendOtpSms(number, otp); // Use the SMS service to send OTP
+            // Send OTP using the updated SMS sending function
+            await sendSms(number, otp);
             res.status(200).send("OTP sent successfully");
           } catch (smsError) {
             console.error("Error in SMS service:", smsError.message);
@@ -612,7 +712,6 @@ app.post("/backend/sendotp", async (req, res) => {
     res.status(500).send("Failed to send OTP");
   }
 });
-
 
 
 
@@ -1266,7 +1365,7 @@ app.post('/backend/computers', computersUpload.array('images', 5), (req, res) =>
       coupon,
       label,
       actual_price,
-      'computers',
+      'Computers',
       prod_id,
       name,
       price,
@@ -1639,34 +1738,70 @@ app.put('/backend/updatecomputers/:id', (req, res) => {
         console.log("Product updated successfully in `oneclick_product_category`.");
         console.log("Affected rows:", updateResults.affectedRows);
 
-        // Log fields for `oneclick_mobile_features`
-        console.log("Field values for `oneclick_mobile_features`:");
-        console.log({ memory, storage, processor,  display,  os,  others });
-
-        // SQL query for updating the `oneclick_mobile_features` table
-        const updateFeaturesSql = `
-          UPDATE oneclick_mobile_features 
-          SET memory = ?, storage = ?, processor = ?, 
-              display = ?,  os = ?,  others = ? 
-          WHERE prod_id = ?`;
-        const updateFeatureValues = [
-          memory || '', storage || '', processor || '', 
-          display || '', os || '',  others || '', productId
-        ];
-
-        db.query(updateFeaturesSql, updateFeatureValues, (featuresUpdateErr, featuresUpdateResults) => {
-          if (featuresUpdateErr) {
-            console.error("Error updating features in `oneclick_mobile_features`:", featuresUpdateErr);
-            return res.status(500).send({ message: "Failed to update product features.", error: featuresUpdateErr });
+        // Check if features exist in the `oneclick_mobile_features` table
+        const checkFeaturesSql = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
+        db.query(checkFeaturesSql, [productId], (checkFeaturesErr, checkFeaturesResults) => {
+          if (checkFeaturesErr) {
+            console.error("Error checking product features in `oneclick_mobile_features`:", checkFeaturesErr);
+            return res.status(500).send({ message: "Failed to check product features.", error: checkFeaturesErr });
           }
 
-          console.log("Product features updated successfully in `oneclick_mobile_features`.");
-          res.json({ success: true, message: "Product and features updated successfully." });
+          if (checkFeaturesResults.length === 0) {
+            // Features don't exist, insert them
+            console.log("Features not found, inserting new features.");
+
+            const insertFeaturesSql = `
+              INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, display, os, others)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`;
+            const insertFeaturesValues = [
+              productId, 
+              memory || '', 
+              storage || '', 
+              processor || '', 
+              display || '', 
+              os || '', 
+              others || ''
+            ];
+
+            db.query(insertFeaturesSql, insertFeaturesValues, (featuresInsertErr, featuresInsertResults) => {
+              if (featuresInsertErr) {
+                console.error("Error inserting features in `oneclick_mobile_features`:", featuresInsertErr);
+                return res.status(500).send({ message: "Failed to insert product features.", error: featuresInsertErr });
+              }
+
+              console.log("Product features inserted successfully in `oneclick_mobile_features`.");
+              res.json({ success: true, message: "Product updated and features inserted successfully." });
+            });
+          } else {
+            // Update features if they exist
+            console.log("Features found, updating product features.");
+
+            const updateFeaturesSql = `
+              UPDATE oneclick_mobile_features 
+              SET memory = ?, storage = ?, processor = ?, 
+                  display = ?, os = ?, others = ? 
+              WHERE prod_id = ?`;
+            const updateFeatureValues = [
+              memory || '', storage || '', processor || '', 
+              display || '', os || '', others || '', productId
+            ];
+
+            db.query(updateFeaturesSql, updateFeatureValues, (featuresUpdateErr, featuresUpdateResults) => {
+              if (featuresUpdateErr) {
+                console.error("Error updating features in `oneclick_mobile_features`:", featuresUpdateErr);
+                return res.status(500).send({ message: "Failed to update product features.", error: featuresUpdateErr });
+              }
+
+              console.log("Product features updated successfully in `oneclick_mobile_features`.");
+              res.json({ success: true, message: "Product and features updated successfully." });
+            });
+          }
         });
       });
     }
   });
 });
+
 
 // Endpoint to delete a product
 // Endpoint to delete a product
@@ -2157,8 +2292,8 @@ app.put('/backend/updatemobiles/:id', (req, res) => {
 
         // Now insert features
         const insertFeaturesSql = `
-          INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, camera, display, 
-                                                battery, os, network, others)
+          INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, camera, display, battery, 
+                                                 os, network, others)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         const insertFeaturesValues = [
           productId, 
@@ -2207,29 +2342,67 @@ app.put('/backend/updatemobiles/:id', (req, res) => {
         console.log("Product updated successfully in `oneclick_product_category`.");
         console.log("Affected rows:", updateResults.affectedRows);
 
-        // Log fields for `oneclick_mobile_features`
-        console.log("Field values for `oneclick_mobile_features`:");
-        console.log({ memory, storage, processor, camera, display, battery, os, network, others });
-
-        // SQL query for updating the `oneclick_mobile_features` table
-        const updateFeaturesSql = `
-          UPDATE oneclick_mobile_features 
-          SET memory = ?, storage = ?, processor = ?, camera = ?, 
-              display = ?, battery = ?, os = ?, network = ?, others = ? 
-          WHERE prod_id = ?`;
-        const updateFeatureValues = [
-          memory || '', storage || '', processor || '', camera || '',
-          display || '', battery || '', os || '', network || '', others || '', productId
-        ];
-
-        db.query(updateFeaturesSql, updateFeatureValues, (featuresUpdateErr, featuresUpdateResults) => {
-          if (featuresUpdateErr) {
-            console.error("Error updating features in `oneclick_mobile_features`:", featuresUpdateErr);
-            return res.status(500).send({ message: "Failed to update product features.", error: featuresUpdateErr });
+        // Check if features exist in the `oneclick_mobile_features` table
+        const checkFeaturesSql = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
+        db.query(checkFeaturesSql, [productId], (checkFeaturesErr, checkFeaturesResults) => {
+          if (checkFeaturesErr) {
+            console.error("Error checking product features in `oneclick_mobile_features`:", checkFeaturesErr);
+            return res.status(500).send({ message: "Failed to check product features.", error: checkFeaturesErr });
           }
 
-          console.log("Product features updated successfully in `oneclick_mobile_features`.");
-          res.json({ success: true, message: "Product and features updated successfully." });
+          if (checkFeaturesResults.length === 0) {
+            // Features don't exist, insert them
+            console.log("Features not found, inserting new features.");
+
+            const insertFeaturesSql = `
+              INSERT INTO oneclick_mobile_features (prod_id, camera, battery, network, memory, storage, processor, display, os, others)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            const insertFeaturesValues = [
+              productId, 
+              camera || '', 
+              battery || '', 
+              network || '', 
+              memory || '', 
+              storage || '', 
+              processor || '', 
+              display || '', 
+              os || '', 
+              others || ''
+            ];
+
+            db.query(insertFeaturesSql, insertFeaturesValues, (featuresInsertErr, featuresInsertResults) => {
+              if (featuresInsertErr) {
+                console.error("Error inserting features in `oneclick_mobile_features`:", featuresInsertErr);
+                return res.status(500).send({ message: "Failed to insert product features.", error: featuresInsertErr });
+              }
+
+              console.log("Product features inserted successfully in `oneclick_mobile_features`.");
+              res.json({ success: true, message: "Product updated and features inserted successfully." });
+            });
+          } else {
+            // Update features if they exist
+            console.log("Features found, updating product features.");
+
+            const updateFeaturesSql = `
+              UPDATE oneclick_mobile_features 
+              SET camera = ?, battery = ?, network = ?, memory = ?, storage = ?, processor = ?, 
+                  display = ?, os = ?, others = ? 
+              WHERE prod_id = ?`;
+            const updateFeatureValues = [
+              camera || '', battery || '', network || '', memory || '', storage || '', processor || '', 
+              display || '', os || '', others || '', productId
+            ];
+
+            db.query(updateFeaturesSql, updateFeatureValues, (featuresUpdateErr, featuresUpdateResults) => {
+              if (featuresUpdateErr) {
+                console.error("Error updating features in `oneclick_mobile_features`:", featuresUpdateErr);
+                return res.status(500).send({ message: "Failed to update product features.", error: featuresUpdateErr });
+              }
+
+              console.log("Product features updated successfully in `oneclick_mobile_features`.");
+              res.json({ success: true, message: "Product and features updated successfully." });
+            });
+          }
         });
       });
     }
