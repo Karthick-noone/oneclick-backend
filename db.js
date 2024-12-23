@@ -3,9 +3,9 @@ const mysql = require('mysql');
 // MySQL connection configuration
 const dbConfig = {
   host: 'sql12.freesqldatabase.com',
-  user: 'sql12748648',
-  password: 'EVfk91b2HX',
-  database: 'sql12748648',
+  user: 'sql12753687',
+  password: 'wKSH8crbyC',
+  database: 'sql12753687',
 };
 
 // Create a MySQL connection
