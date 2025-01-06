@@ -1,0 +1,270 @@
+[LOG] 2024-12-21T04:54:56.068Z - Server is starting...
+[ERROR] 2024-12-21T04:54:56.069Z - This is a test error log.
+[LOG] 2024-12-21T04:54:56.082Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T04:54:56.105Z - Connected to MySQL
+[LOG] 2024-12-21T04:55:04.358Z - Server is starting...
+[ERROR] 2024-12-21T04:55:04.359Z - This is a test error log.
+[LOG] 2024-12-21T04:55:04.372Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T04:55:04.413Z - Connected to MySQL
+[LOG] 2024-12-21T04:55:27.486Z - Received request to fetch homepage data
+[LOG] 2024-12-21T04:55:27.504Z - Fetching 10 products for category: Mobiles
+[LOG] 2024-12-21T04:55:27.504Z - Fetching 10 products for category: Computers
+[LOG] 2024-12-21T04:55:27.504Z - Fetching 10 products for category: CCTV
+[LOG] 2024-12-21T04:55:27.504Z - Fetching 10 products for category: Printers
+[LOG] 2024-12-21T04:55:27.504Z - Fetching 2 products for category: ComputerAccessories
+[LOG] 2024-12-21T04:55:27.512Z - Fetching 2 products for category: MobileAccessories
+[LOG] 2024-12-21T04:55:27.512Z - Fetching 2 products for category: CCTVAccessories
+[LOG] 2024-12-21T04:55:27.512Z - Fetching 2 products for category: PrinterAccessories
+[LOG] 2024-12-21T04:55:27.512Z - Fetching 5 products for category: Speakers
+[LOG] 2024-12-21T04:55:27.513Z - Fetching 5 products for category: Headphones
+[LOG] 2024-12-21T04:55:27.528Z - Fetched results: [object Object],[object Object]
+[LOG] 2024-12-21T04:55:27.540Z - Fetched 10 products for category: Mobiles
+[LOG] 2024-12-21T04:55:27.550Z - Fetched 10 products for category: Computers
+[LOG] 2024-12-21T04:55:27.551Z - Fetched 3 products for category: CCTV
+[LOG] 2024-12-21T04:55:27.551Z - Fetched 3 products for category: Printers
+[LOG] 2024-12-21T04:55:27.552Z - Fetched 2 products for category: ComputerAccessories
+[LOG] 2024-12-21T04:55:27.553Z - Fetched 2 products for category: MobileAccessories
+[LOG] 2024-12-21T04:55:27.554Z - Fetched 2 products for category: CCTVAccessories
+[LOG] 2024-12-21T04:55:27.555Z - Fetched 0 products for category: PrinterAccessories
+[LOG] 2024-12-21T04:55:27.555Z - Fetched 3 products for category: Speakers
+[LOG] 2024-12-21T04:55:27.556Z - Fetched 3 products for category: Headphones
+[LOG] 2024-12-21T04:55:27.556Z - Successfully fetched all product categories: [object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],,[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]
+[LOG] 2024-12-21T04:55:27.908Z - Received request for coupons with product ID: PRD94002
+[LOG] 2024-12-21T04:55:27.913Z - Received request for coupons with product ID: PRD81267
+[LOG] 2024-12-21T04:55:27.914Z - Received request for coupons with product ID: PRD35668
+[LOG] 2024-12-21T04:55:27.915Z - Received request for coupons with product ID: PRD54342
+[LOG] 2024-12-21T04:55:27.916Z - Received request for coupons with product ID: PRD43969
+[LOG] 2024-12-21T04:55:27.923Z - Received request for coupons with product ID: PRD43995
+[LOG] 2024-12-21T04:55:28.140Z - Fetched 0 coupons for product ID: PRD94002
+[LOG] 2024-12-21T04:55:28.145Z - Fetched 0 coupons for product ID: PRD81267
+[LOG] 2024-12-21T04:55:28.147Z - Fetched 1 coupons for product ID: PRD35668
+[LOG] 2024-12-21T04:55:28.148Z - Fetched 0 coupons for product ID: PRD54342
+[LOG] 2024-12-21T04:55:28.149Z - Fetched 1 coupons for product ID: PRD43969
+[LOG] 2024-12-21T04:55:28.152Z - Fetched 0 coupons for product ID: PRD43995
+[LOG] 2024-12-21T04:55:28.160Z - Received request for coupons with product ID: PRD90874
+[LOG] 2024-12-21T04:55:28.161Z - Received request for coupons with product ID: PRD52932
+[LOG] 2024-12-21T04:55:28.162Z - Received request for coupons with product ID: PRD66242
+[LOG] 2024-12-21T04:55:28.163Z - Received request for coupons with product ID: PRD21026
+[LOG] 2024-12-21T04:55:28.164Z - Received request for coupons with product ID: PRD65659
+[LOG] 2024-12-21T04:55:28.164Z - Received request for coupons with product ID: PRD65432
+[LOG] 2024-12-21T04:55:28.165Z - Fetched 0 coupons for product ID: PRD90874
+[LOG] 2024-12-21T04:55:28.166Z - Fetched 0 coupons for product ID: PRD52932
+[LOG] 2024-12-21T04:55:28.167Z - Fetched 0 coupons for product ID: PRD66242
+[LOG] 2024-12-21T04:55:28.168Z - Fetched 0 coupons for product ID: PRD21026
+[LOG] 2024-12-21T04:55:28.169Z - Fetched 0 coupons for product ID: PRD65659
+[LOG] 2024-12-21T04:55:28.170Z - Fetched 0 coupons for product ID: PRD65432
+[LOG] 2024-12-21T04:55:28.176Z - Received request for coupons with product ID: PRD74486
+[LOG] 2024-12-21T04:55:28.177Z - Received request for coupons with product ID: PRD39822
+[LOG] 2024-12-21T04:55:28.179Z - Received request for coupons with product ID: PRD95731
+[LOG] 2024-12-21T04:55:28.180Z - Received request for coupons with product ID: PRD10740
+[LOG] 2024-12-21T04:55:28.180Z - Fetched 0 coupons for product ID: PRD74486
+[LOG] 2024-12-21T04:55:28.182Z - Received request for coupons with product ID: PRD13342
+[LOG] 2024-12-21T04:55:28.182Z - Fetched 5 coupons for product ID: PRD39822
+[LOG] 2024-12-21T04:55:28.184Z - Received request for coupons with product ID: PRD79641
+[LOG] 2024-12-21T04:55:28.184Z - Fetched 0 coupons for product ID: PRD95731
+[LOG] 2024-12-21T04:55:28.185Z - Fetched 1 coupons for product ID: PRD10740
+[LOG] 2024-12-21T04:55:28.186Z - Fetched 0 coupons for product ID: PRD13342
+[LOG] 2024-12-21T04:55:28.187Z - Fetched 0 coupons for product ID: PRD79641
+[LOG] 2024-12-21T04:55:28.191Z - Received request for coupons with product ID: PRD93476
+[LOG] 2024-12-21T04:55:28.192Z - Fetched 1 coupons for product ID: PRD93476
+[LOG] 2024-12-21T04:55:28.194Z - Received request for coupons with product ID: PRD12884
+[LOG] 2024-12-21T04:55:28.194Z - Received request for coupons with product ID: PRD94834
+[LOG] 2024-12-21T04:55:28.195Z - Received request for coupons with product ID: PRD91752
+[LOG] 2024-12-21T04:55:28.195Z - Fetched 0 coupons for product ID: PRD12884
+[LOG] 2024-12-21T04:55:28.196Z - Received request for coupons with product ID: PRD60000
+[LOG] 2024-12-21T04:55:28.197Z - Received request for coupons with product ID: PRD17372
+[LOG] 2024-12-21T04:55:28.197Z - Fetched 0 coupons for product ID: PRD94834
+[LOG] 2024-12-21T04:55:28.198Z - Received request for coupons with product ID: PRD14234
+[LOG] 2024-12-21T04:55:28.199Z - Received request for coupons with product ID: PRD23227
+[LOG] 2024-12-21T04:55:28.199Z - Fetched 0 coupons for product ID: PRD91752
+[LOG] 2024-12-21T04:55:28.200Z - Received request for coupons with product ID: PRD54285
+[LOG] 2024-12-21T04:55:28.200Z - Fetched 0 coupons for product ID: PRD60000
+[LOG] 2024-12-21T04:55:28.201Z - Fetched 0 coupons for product ID: PRD17372
+[LOG] 2024-12-21T04:55:28.202Z - Fetched 2 coupons for product ID: PRD14234
+[LOG] 2024-12-21T04:55:28.203Z - Fetched 0 coupons for product ID: PRD23227
+[LOG] 2024-12-21T04:55:28.204Z - Fetched 0 coupons for product ID: PRD54285
+[LOG] 2024-12-21T04:55:28.207Z - Received request for coupons with product ID: PRD66512
+[LOG] 2024-12-21T04:55:28.207Z - Fetched 0 coupons for product ID: PRD66512
+[LOG] 2024-12-21T04:55:28.208Z - Received request for coupons with product ID: PRD55033
+[LOG] 2024-12-21T04:55:28.209Z - Received request for coupons with product ID: PRD85628
+[LOG] 2024-12-21T04:55:28.209Z - Received request for coupons with product ID: PRD38508
+[LOG] 2024-12-21T04:55:28.209Z - Received request for coupons with product ID: PRD77923
+[LOG] 2024-12-21T04:55:28.210Z - Received request for coupons with product ID: PRD28555
+[LOG] 2024-12-21T04:55:28.210Z - Fetched 0 coupons for product ID: PRD55033
+[LOG] 2024-12-21T04:55:28.211Z - Fetched 0 coupons for product ID: PRD85628
+[LOG] 2024-12-21T04:55:28.212Z - Fetched 1 coupons for product ID: PRD38508
+[LOG] 2024-12-21T04:55:28.212Z - Fetched 6 coupons for product ID: PRD77923
+[LOG] 2024-12-21T04:55:28.213Z - Fetched 3 coupons for product ID: PRD28555
+[LOG] 2024-12-21T04:55:28.217Z - Received request for coupons with product ID: PRD50402
+[LOG] 2024-12-21T04:55:28.218Z - Received request for coupons with product ID: PRD87518
+[LOG] 2024-12-21T04:55:28.218Z - Fetched 0 coupons for product ID: PRD50402
+[LOG] 2024-12-21T04:55:28.219Z - Received request for coupons with product ID: PRD15368
+[LOG] 2024-12-21T04:55:28.219Z - Received request for coupons with product ID: PRD14157
+[LOG] 2024-12-21T04:55:28.220Z - Received request for coupons with product ID: PRD88265
+[LOG] 2024-12-21T04:55:28.220Z - Fetched 0 coupons for product ID: PRD87518
+[LOG] 2024-12-21T04:55:28.221Z - Fetched 0 coupons for product ID: PRD15368
+[LOG] 2024-12-21T04:55:28.221Z - Fetched 0 coupons for product ID: PRD14157
+[LOG] 2024-12-21T04:55:28.222Z - Fetched 0 coupons for product ID: PRD88265
+[LOG] 2024-12-21T04:55:32.808Z - Received request to fetch homepage data
+[LOG] 2024-12-21T04:55:32.808Z - Fetched results: [object Object],[object Object]
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 10 products for category: Mobiles
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 10 products for category: Computers
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 10 products for category: CCTV
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 10 products for category: Printers
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 2 products for category: ComputerAccessories
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 2 products for category: MobileAccessories
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 2 products for category: CCTVAccessories
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 2 products for category: PrinterAccessories
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 5 products for category: Speakers
+[LOG] 2024-12-21T04:55:32.824Z - Fetching 5 products for category: Headphones
+[LOG] 2024-12-21T04:55:32.826Z - Fetched 10 products for category: Mobiles
+[LOG] 2024-12-21T04:55:32.827Z - Fetched 10 products for category: Computers
+[LOG] 2024-12-21T04:55:32.828Z - Fetched 3 products for category: CCTV
+[LOG] 2024-12-21T04:55:32.829Z - Fetched 3 products for category: Printers
+[LOG] 2024-12-21T04:55:32.830Z - Fetched 2 products for category: ComputerAccessories
+[LOG] 2024-12-21T04:55:32.831Z - Fetched 2 products for category: MobileAccessories
+[LOG] 2024-12-21T04:55:32.831Z - Fetched 2 products for category: CCTVAccessories
+[LOG] 2024-12-21T04:55:32.832Z - Fetched 0 products for category: PrinterAccessories
+[LOG] 2024-12-21T04:55:32.833Z - Fetched 3 products for category: Speakers
+[LOG] 2024-12-21T04:55:32.834Z - Fetched 3 products for category: Headphones
+[LOG] 2024-12-21T04:55:32.834Z - Successfully fetched all product categories: [object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],,[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]
+[LOG] 2024-12-21T04:55:32.932Z - Received request for coupons with product ID: PRD94002
+[LOG] 2024-12-21T04:55:32.933Z - Received request for coupons with product ID: PRD43995
+[LOG] 2024-12-21T04:55:32.933Z - Fetched 0 coupons for product ID: PRD94002
+[LOG] 2024-12-21T04:55:32.934Z - Fetched 0 coupons for product ID: PRD43995
+[LOG] 2024-12-21T04:55:32.937Z - Received request for coupons with product ID: PRD81267
+[LOG] 2024-12-21T04:55:32.937Z - Received request for coupons with product ID: PRD35668
+[LOG] 2024-12-21T04:55:32.938Z - Received request for coupons with product ID: PRD54342
+[LOG] 2024-12-21T04:55:32.938Z - Fetched 0 coupons for product ID: PRD81267
+[LOG] 2024-12-21T04:55:32.940Z - Received request for coupons with product ID: PRD52932
+[LOG] 2024-12-21T04:55:32.940Z - Fetched 1 coupons for product ID: PRD35668
+[LOG] 2024-12-21T04:55:32.942Z - Received request for coupons with product ID: PRD43969
+[LOG] 2024-12-21T04:55:32.943Z - Received request for coupons with product ID: PRD90874
+[LOG] 2024-12-21T04:55:32.943Z - Fetched 0 coupons for product ID: PRD54342
+[LOG] 2024-12-21T04:55:32.944Z - Fetched 0 coupons for product ID: PRD52932
+[LOG] 2024-12-21T04:55:32.949Z - Fetched 1 coupons for product ID: PRD43969
+[LOG] 2024-12-21T04:55:32.951Z - Fetched 0 coupons for product ID: PRD90874
+[LOG] 2024-12-21T04:55:32.956Z - Received request for coupons with product ID: PRD66242
+[LOG] 2024-12-21T04:55:32.960Z - Fetched 0 coupons for product ID: PRD66242
+[LOG] 2024-12-21T04:55:32.987Z - Received request for coupons with product ID: PRD14157
+[LOG] 2024-12-21T04:55:32.988Z - Fetched 0 coupons for product ID: PRD14157
+[LOG] 2024-12-21T04:55:32.988Z - Received request for coupons with product ID: PRD88265
+[LOG] 2024-12-21T04:55:32.989Z - Received request for coupons with product ID: PRD14234
+[LOG] 2024-12-21T04:55:32.989Z - Received request for coupons with product ID: PRD94834
+[LOG] 2024-12-21T04:55:32.990Z - Received request for coupons with product ID: PRD21026
+[LOG] 2024-12-21T04:55:32.990Z - Received request for coupons with product ID: PRD91752
+[LOG] 2024-12-21T04:55:32.990Z - Fetched 0 coupons for product ID: PRD88265
+[LOG] 2024-12-21T04:55:32.992Z - Fetched 2 coupons for product ID: PRD14234
+[LOG] 2024-12-21T04:55:32.992Z - Fetched 0 coupons for product ID: PRD94834
+[LOG] 2024-12-21T04:55:32.993Z - Fetched 0 coupons for product ID: PRD21026
+[LOG] 2024-12-21T04:55:32.994Z - Fetched 0 coupons for product ID: PRD91752
+[LOG] 2024-12-21T04:55:32.995Z - Received request for coupons with product ID: PRD60000
+[LOG] 2024-12-21T04:55:32.996Z - Fetched 0 coupons for product ID: PRD60000
+[LOG] 2024-12-21T04:55:33.004Z - Received request for coupons with product ID: PRD65659
+[LOG] 2024-12-21T04:55:33.006Z - Fetched 0 coupons for product ID: PRD65659
+[LOG] 2024-12-21T04:55:33.008Z - Received request for coupons with product ID: PRD65432
+[LOG] 2024-12-21T04:55:33.009Z - Received request for coupons with product ID: PRD74486
+[LOG] 2024-12-21T04:55:33.009Z - Received request for coupons with product ID: PRD50402
+[LOG] 2024-12-21T04:55:33.009Z - Fetched 0 coupons for product ID: PRD65432
+[LOG] 2024-12-21T04:55:33.010Z - Received request for coupons with product ID: PRD28555
+[LOG] 2024-12-21T04:55:33.011Z - Fetched 0 coupons for product ID: PRD74486
+[LOG] 2024-12-21T04:55:33.012Z - Received request for coupons with product ID: PRD77923
+[LOG] 2024-12-21T04:55:33.012Z - Fetched 0 coupons for product ID: PRD50402
+[LOG] 2024-12-21T04:55:33.013Z - Fetched 3 coupons for product ID: PRD28555
+[LOG] 2024-12-21T04:55:33.014Z - Received request for coupons with product ID: PRD39822
+[LOG] 2024-12-21T04:55:33.015Z - Fetched 6 coupons for product ID: PRD77923
+[LOG] 2024-12-21T04:55:33.016Z - Received request for coupons with product ID: PRD95731
+[LOG] 2024-12-21T04:55:33.016Z - Received request for coupons with product ID: PRD10740
+[LOG] 2024-12-21T04:55:33.017Z - Received request for coupons with product ID: PRD17372
+[LOG] 2024-12-21T04:55:33.017Z - Fetched 5 coupons for product ID: PRD39822
+[LOG] 2024-12-21T04:55:33.018Z - Received request for coupons with product ID: PRD13342
+[LOG] 2024-12-21T04:55:33.018Z - Received request for coupons with product ID: PRD87518
+[LOG] 2024-12-21T04:55:33.018Z - Fetched 0 coupons for product ID: PRD95731
+[LOG] 2024-12-21T04:55:33.019Z - Received request for coupons with product ID: PRD23227
+[LOG] 2024-12-21T04:55:33.019Z - Fetched 1 coupons for product ID: PRD10740
+[LOG] 2024-12-21T04:55:33.020Z - Received request for coupons with product ID: PRD15368
+[LOG] 2024-12-21T04:55:33.021Z - Fetched 0 coupons for product ID: PRD17372
+[LOG] 2024-12-21T04:55:33.021Z - Fetched 0 coupons for product ID: PRD13342
+[LOG] 2024-12-21T04:55:33.022Z - Fetched 0 coupons for product ID: PRD87518
+[LOG] 2024-12-21T04:55:33.022Z - Fetched 0 coupons for product ID: PRD23227
+[LOG] 2024-12-21T04:55:33.023Z - Fetched 0 coupons for product ID: PRD15368
+[LOG] 2024-12-21T04:55:33.024Z - Received request for coupons with product ID: PRD79641
+[LOG] 2024-12-21T04:55:33.025Z - Received request for coupons with product ID: PRD38508
+[LOG] 2024-12-21T04:55:33.025Z - Fetched 0 coupons for product ID: PRD79641
+[LOG] 2024-12-21T04:55:33.026Z - Received request for coupons with product ID: PRD66512
+[LOG] 2024-12-21T04:55:33.026Z - Fetched 1 coupons for product ID: PRD38508
+[LOG] 2024-12-21T04:55:33.027Z - Received request for coupons with product ID: PRD93476
+[LOG] 2024-12-21T04:55:33.028Z - Received request for coupons with product ID: PRD55033
+[LOG] 2024-12-21T04:55:33.028Z - Fetched 0 coupons for product ID: PRD66512
+[LOG] 2024-12-21T04:55:33.029Z - Received request for coupons with product ID: PRD85628
+[LOG] 2024-12-21T04:55:33.030Z - Fetched 1 coupons for product ID: PRD93476
+[LOG] 2024-12-21T04:55:33.032Z - Fetched 0 coupons for product ID: PRD55033
+[LOG] 2024-12-21T04:55:33.033Z - Fetched 0 coupons for product ID: PRD85628
+[LOG] 2024-12-21T04:55:33.034Z - Received request for coupons with product ID: PRD12884
+[LOG] 2024-12-21T04:55:33.035Z - Received request for coupons with product ID: PRD54285
+[LOG] 2024-12-21T04:55:33.035Z - Fetched 0 coupons for product ID: PRD12884
+[LOG] 2024-12-21T04:55:33.036Z - Fetched 0 coupons for product ID: PRD54285
+[LOG] 2024-12-21T04:55:49.275Z - Server is starting...
+[ERROR] 2024-12-21T04:55:49.275Z - This is a test error log.
+[LOG] 2024-12-21T04:55:49.288Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T04:55:49.298Z - Connected to MySQL
+[LOG] 2024-12-21T04:56:22.889Z - Server is starting...
+[ERROR] 2024-12-21T04:56:22.889Z - This is a test error log.
+[LOG] 2024-12-21T04:56:22.904Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T04:56:22.915Z - Connected to MySQL
+[LOG] 2024-12-21T04:57:46.213Z - Received request for coupons with product ID: PRD14234
+[LOG] 2024-12-21T04:57:46.235Z - Fetched 2 coupons for product ID: PRD14234
+[LOG] 2024-12-21T04:57:46.239Z - Fetching related products for category: Computers
+[LOG] 2024-12-21T04:59:09.631Z - Received request for coupons with product ID: PRD31871
+[LOG] 2024-12-21T04:59:09.632Z - Fetched 1 coupons for product ID: PRD31871
+[LOG] 2024-12-21T05:13:50.674Z - Server is starting...
+[ERROR] 2024-12-21T05:13:50.674Z - This is a test error log.
+[LOG] 2024-12-21T05:13:50.689Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:13:50.716Z - Connected to MySQL
+[LOG] 2024-12-21T05:16:53.083Z - Server is starting...
+[ERROR] 2024-12-21T05:16:53.083Z - This is a test error log.
+[LOG] 2024-12-21T05:16:53.097Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:16:53.118Z - Connected to MySQL
+[LOG] 2024-12-21T05:17:02.461Z - Server is starting...
+[ERROR] 2024-12-21T05:17:02.461Z - This is a test error log.
+[LOG] 2024-12-21T05:17:02.475Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:17:02.490Z - Connected to MySQL
+[LOG] 2024-12-21T05:17:04.373Z - Server is starting...
+[ERROR] 2024-12-21T05:17:04.374Z - This is a test error log.
+[LOG] 2024-12-21T05:17:04.389Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:17:04.403Z - Connected to MySQL
+[LOG] 2024-12-21T05:17:46.382Z - Server is starting...
+[ERROR] 2024-12-21T05:17:46.382Z - This is a test error log.
+[LOG] 2024-12-21T05:17:46.398Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:17:46.418Z - Connected to MySQL
+[LOG] 2024-12-21T05:17:46.419Z - File written successfully
+[LOG] 2024-12-21T05:17:47.742Z - Server is starting...
+[ERROR] 2024-12-21T05:17:47.742Z - This is a test error log.
+[LOG] 2024-12-21T05:17:47.757Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:17:47.773Z - Connected to MySQL
+[LOG] 2024-12-21T05:17:47.777Z - File written successfully
+[LOG] 2024-12-21T05:17:48.486Z - Server is starting...
+[ERROR] 2024-12-21T05:17:48.486Z - This is a test error log.
+[LOG] 2024-12-21T05:17:48.503Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:17:48.516Z - Connected to MySQL
+[LOG] 2024-12-21T05:17:48.522Z - File written successfully
+[LOG] 2024-12-21T05:19:21.035Z - Server is starting...
+[ERROR] 2024-12-21T05:19:21.035Z - This is a test error log.
+[LOG] 2024-12-21T05:19:21.051Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:19:21.069Z - Connected to MySQL
+[LOG] 2024-12-21T05:19:21.070Z - File written successfully
+[LOG] 2024-12-21T05:19:56.913Z - Server is starting...
+[ERROR] 2024-12-21T05:19:56.914Z - This is a test error log.
+[LOG] 2024-12-21T05:19:56.927Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:19:56.941Z - Connected to MySQL
+[LOG] 2024-12-21T05:19:56.942Z - File written successfully
+[LOG] 2024-12-21T05:32:08.752Z - Server is starting...
+[ERROR] 2024-12-21T05:32:08.752Z - This is a test error log.
+[LOG] 2024-12-21T05:32:08.767Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:32:08.780Z - File written successfully
+[LOG] 2024-12-21T05:32:08.786Z - Connected to MySQL
+[LOG] 2024-12-21T05:32:56.405Z - Server is starting...
+[ERROR] 2024-12-21T05:32:56.406Z - This is a test error log.
+[LOG] 2024-12-21T05:32:56.422Z - Server running on http://localhost:5001
+[LOG] 2024-12-21T05:32:56.438Z - Connected to MySQL
+[LOG] 2024-12-21T05:32:56.438Z - File written successfully
