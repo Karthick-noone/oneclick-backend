@@ -8930,7 +8930,7 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
 
   // Insert order into `oneclick_orders` table
   const orderQuery = 'INSERT INTO oneclick_orders ( payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
-  db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Confirmed'], (err, result) => {
+  db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err, result) => {
     if (err) {
       console.error('Error inserting order:', err);
       return res.status(500).json({ message: 'Error inserting order', error: err.message });
@@ -10798,6 +10798,37 @@ app.get("/backend/pending-payment", (req, res) => {
       totalPendingAmount: totalPendingAmount,
     });
     console.log("Pending payments total: ", totalPendingAmount);
+  });
+});
+////////////cancel order ///////////
+app.post("/backend/cancelOrder", (req, res) => {
+  const { orderId } = req.body;
+
+  // Validate input
+  if (!orderId) {
+    return res.status(400).json({ error: "Order ID is required." });
+  }
+
+  // Query to update the order's delivery_status to "Cancelled"
+  const query = `
+    UPDATE oneclick_orders
+    SET delivery_status = 'Cancelled'
+    WHERE unique_id = ? AND delivery_status != 'Cancelled'
+  `;
+
+  db.query(query, [orderId], (error, result) => {
+    if (error) {
+      console.error("Error cancelling order:", error);
+      return res.status(500).json({ error: "Internal server error." });
+    }
+
+    if (result.affectedRows > 0) {
+      return res.json({ message: "Order successfully cancelled." });
+    } else {
+      return res
+        .status(400)
+        .json({ error: "Order cancellation failed or already cancelled." });
+    }
   });
 });
 
