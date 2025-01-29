@@ -7,8 +7,9 @@ const port = 5001;
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-// const crypto = require('crypto');
-// const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const bcrypt = require("bcrypt");
+const nodemailer = require('nodemailer');
 const axios = require('axios'); // Import axios
 // const sendOtpSms = require("./smsService"); // Import the SMS service
 // const config = require('./config'); // Import your config file
@@ -1045,11 +1046,62 @@ app.post('/backend/update-user-cart', (req, res) => {
 
 
 // Update user's wishlist endpoint
-app.post('/backend/update-user-wishlist', (req, res) => {
-  const { email, username, product, action } = req.body;
+// app.post('/backend/update-user-wishlist', (req, res) => {
+//   const { email, username, product, action } = req.body;
 
-  if (!email || !username || !product || !action) {
-    return res.status(400).json({ error: 'Email, username, product, and action are required' });
+//   if (!email || !username || !product || !action) {
+//     return res.status(400).json({ error: 'Email, username, product, and action are required' });
+//   }
+
+//   // Step 1: Retrieve the current wishlist
+//   db.query('SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?', [email, username], (err, results) => {
+//     if (err) {
+//       console.error('Error retrieving wishlist:', err);
+//       return res.status(500).json({ error: 'Internal Server Error' });
+//     }
+
+//     if (results.length === 0) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     let wishlist = results[0].wishlist || [];
+
+//     // Step 2: Update the wishlist in application code
+//     try {
+//       wishlist = JSON.parse(wishlist);
+//     } catch (parseError) {
+//       wishlist = [];
+//     }
+
+//     if (action === 'add') {
+//       // Add product to wishlist
+//       if (!wishlist.find(item => item.id === product.id)) {
+//         wishlist.push(product);
+//       }
+//     } else if (action === 'remove') {
+//       // Remove product from wishlist
+//       wishlist = wishlist.filter(item => item.id !== product.id);
+//     }
+
+//     // Step 3: Save the updated wishlist
+//     const updatedWishlist = JSON.stringify(wishlist);
+
+//     db.query('UPDATE oneclick_users SET wishlist = ? WHERE email = ? AND username = ?', [updatedWishlist, email, username], (err) => {
+//       if (err) {
+//         console.error('Error updating wishlist:', err);
+//         return res.status(500).json({ error: 'Internal Server Error' });
+//       }
+
+//       res.json({ success: true });
+//     });
+//   });
+// });
+
+app.post('/backend/update-user-wishlist', (req, res) => {
+  const { email, username, prod_id, action } = req.body;
+
+  if (!email || !username || !prod_id || !action) {
+    return res.status(400).json({ error: 'Email, username, prod_id, and action are required' });
   }
 
   // Step 1: Retrieve the current wishlist
@@ -1073,13 +1125,13 @@ app.post('/backend/update-user-wishlist', (req, res) => {
     }
 
     if (action === 'add') {
-      // Add product to wishlist
-      if (!wishlist.find(item => item.id === product.id)) {
-        wishlist.push(product);
+      // Add prod_id to wishlist
+      if (!wishlist.includes(prod_id)) {
+        wishlist.push(prod_id);
       }
     } else if (action === 'remove') {
-      // Remove product from wishlist
-      wishlist = wishlist.filter(item => item.id !== product.id);
+      // Remove prod_id from wishlist
+      wishlist = wishlist.filter(id => id !== prod_id);
     }
 
     // Step 3: Save the updated wishlist
@@ -1096,161 +1148,634 @@ app.post('/backend/update-user-wishlist', (req, res) => {
   });
 });
 
-// API endpoint to get cart items
-app.get('/backend/cart', (req, res) => {
-  const { email, username } = req.query;
+// Fetch user's wishlist product details
+app.post('/backend/fetch-wishlist', (req, res) => {
+  const { email, username } = req.body;
 
   if (!email || !username) {
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
-  const query = 'SELECT * FROM oneclick_users WHERE email = ? AND username = ?';
-  db.query(query, [email, username], (err, results) => {
-    if (err) {
-      console.error('Error fetching cart items:', err);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-    res.json(results);
-  });
-});
+  // Step 1: Retrieve wishlist IDs from oneclick_users table
+  db.query(
+    'SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?',
+    [email, username],
+    (err, results) => {
+      if (err) {
+        console.error('Error retrieving wishlist:', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
 
-// API endpoint to get wishlist items
-app.get('/backend/wishlist', (req, res) => {
-  const { email, username } = req.query;
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
 
-  if (!email || !username) {
-    return res.status(400).json({ error: 'Email and username are required' });
-  }
+      let wishlist = results[0].wishlist || '[]';
 
-  const query = 'SELECT * FROM oneclick_users WHERE email = ? AND username = ?';
-  db.query(query, [email, username], (err, results) => {
-    if (err) {
-      console.error('Error fetching wishlist items:', err);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-    res.json(results);
-  });
-});
+      try {
+        wishlist = JSON.parse(wishlist);
+      } catch (parseError) {
+        wishlist = [];
+      }
 
-app.post('/backend/remove-from-cart', (req, res) => {
-  const { email, itemId } = req.body;
+      if (wishlist.length === 0) {
+        return res.json({ products: [] });
+      }
 
-  if (!email || !itemId) {
-    return res.status(400).json({ message: "Email and itemId are required" });
-  }
+      // Step 2: Fetch product details from oneclick_product_category table
+      const placeholders = wishlist.map(() => '?').join(',');
+      const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
 
-  // SQL query to get the addtocart column from the users table
-  const getQuery = 'SELECT addtocart FROM oneclick_users WHERE email = ?';
+      db.query(query, wishlist, (err, productResults) => {
+        if (err) {
+          console.error('Error fetching product details:', err);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
 
-  db.query(getQuery, [email], (err, results) => {
-    if (err) {
-      console.error("Error retrieving cart items:", {
-        message: err.message,
-        query: getQuery,
-        params: [email]
+        res.json({ products: productResults });
       });
+    }
+  );
+});
 
-      return res.status(500).json({ message: "Internal server error" });
+app.post('/backend/add-to-cart', (req, res) => {
+  const { email, productId, quantity } = req.body; // Get email, productId, and quantity from the request body
+
+  // Basic validation
+  if (!email || !productId || quantity === undefined) {
+    return res.status(400).json({ message: 'Email, Product ID, and Quantity are required' });
+  }
+
+  // Get the current cart (addtocart) field from the database
+  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, result) => {
+    if (err) {
+      console.error('Error fetching cart:', err);
+      return res.status(500).json({ message: 'Error fetching cart data' });
+    }
+
+    // If the user exists and has an existing cart
+    if (result.length > 0) {
+      let currentCart = result[0].addtocart ? JSON.parse(result[0].addtocart) : [];
+
+      // Check if the product is already in the cart
+      const productEntry = `${productId}-${quantity}`; // Format the string as "productId-quantity"
+      const existingProductIndex = currentCart.findIndex(item => item.startsWith(`${productId}-`));
+
+      if (existingProductIndex !== -1) {
+        // Product is already in the cart, update the quantity
+        const existingProduct = currentCart[existingProductIndex];
+        const [existingProductId, existingQuantity] = existingProduct.split('-');
+        const updatedQuantity = parseInt(existingQuantity) + quantity;
+        currentCart[existingProductIndex] = `${existingProductId}-${updatedQuantity}`;
+      } else {
+        // Product is not in the cart, add it to the cart array
+        currentCart.push(productEntry);
+      }
+
+      // Update the cart in the database
+      db.query(
+        'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+        [JSON.stringify(currentCart), email],
+        (updateErr) => {
+          if (updateErr) {
+            console.error('Error updating cart:', updateErr);
+            return res.status(500).json({ message: 'Error updating cart' });
+          }
+          return res.status(200).json({ message: 'Product added to cart successfully' });
+        }
+      );
+    } else {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  });
+});
+
+app.post('/backend/get-cart-items', (req, res) => {
+  const { email, username } = req.body;
+
+  if (!email || !username) {
+    return res.status(400).json({ error: 'Email and username are required' });
+  }
+
+  // Step 1: Retrieve cart items (IDs with quantities) from oneclick_users table
+  db.query(
+    'SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?',
+    [email, username],
+    (err, results) => {
+      if (err) {
+        console.error('Error retrieving cart items:', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      let cartItems = results[0].addtocart || '[]'; // Ensure you're using the correct field name
+
+      try {
+        cartItems = JSON.parse(cartItems); // Parse the cart items as an array of "productId-quantity"
+      } catch (parseError) {
+        cartItems = [];
+      }
+
+      if (cartItems.length === 0) {
+        return res.json({ products: [] });
+      }
+
+      // Step 2: Prepare to fetch product details from oneclick_product_category table
+      // Extract the product IDs from the "productId-quantity" format
+      const productIds = cartItems.map(item => item.split('-')[0]); // Extract only the productId
+
+      // Step 3: Fetch product details from oneclick_product_category table
+      const placeholders = productIds.map(() => '?').join(',');
+      const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
+
+      db.query(query, productIds, (err, productResults) => {
+        if (err) {
+          console.error('Error fetching product details:', err);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
+
+        // Step 4: Map the product results to include the quantity from the cart
+        const productsWithQuantity = productResults.map(product => {
+          // Find the corresponding cart item with productId-quantity format
+          const cartItem = cartItems.find(item => item.startsWith(`${product.id}-`));
+          const quantity = cartItem ? parseInt(cartItem.split('-')[1]) : 0; // Extract the quantity
+
+          return {
+            ...product,
+            quantity: quantity, // Add quantity to the product data
+          };
+        });
+
+        // Return the products with their quantities
+        res.json({ products: productsWithQuantity });
+      });
+    }
+  );
+});
+
+
+app.post('/backend/get-cart-quantity-sum', (req, res) => {
+  const { email, username } = req.body;
+
+  if (!email || !username) {
+    return res.status(400).json({ error: 'Email and username are required' });
+  }
+
+  // Step 1: Retrieve cart items (IDs with quantities) from oneclick_users table
+  db.query(
+    'SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?',
+    [email, username],
+    (err, results) => {
+      if (err) {
+        console.error('Error retrieving cart items:', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      let cartItems = results[0].addtocart || '[]'; // Ensure the correct field name is used
+
+      try {
+        cartItems = JSON.parse(cartItems); // Parse the cart items as an array of "productId-quantity"
+      } catch (parseError) {
+        console.error('Error parsing cart items:', parseError);
+        return res.status(400).json({ error: 'Invalid cart format' });
+      }
+
+      // Step 2: Calculate the total quantity
+      const totalQuantity = cartItems.reduce((sum, item) => {
+        const quantity = parseInt(item.split('-')[1]); // Extract quantity from "productId-quantity"
+        return sum + (isNaN(quantity) ? 0 : quantity); // Add only valid quantities
+      }, 0);
+
+      // Step 3: Return the total quantity
+      res.json({ totalQuantity });
+    }
+  );
+});
+
+
+// app.post('/backend/update-cart-item-quantity', (req, res) => {
+
+
+//   const { email, itemId, newQuantity } = req.body;
+
+//   if (!email || !itemId || newQuantity < 1) {
+//     return res.status(400).json({ error: 'Invalid data provided' });
+//   }
+
+//   // Update the cart item quantity in the database
+//   db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, results) => {
+//     if (err) {
+//       console.error('Error updating cart:', err);
+//       return res.status(500).json({ error: 'Internal Server Error' });
+//     }
+
+//     if (results.length === 0) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     let cartItems = JSON.parse(results[0].addtocart || '[]');
+
+//     // Find the item and update its quantity
+//     const itemIndex = cartItems.findIndex(item => item.id === itemId);
+//     if (itemIndex !== -1) {
+//       cartItems[itemIndex].quantity = newQuantity;
+//     }
+
+//     // Update the cart in the database
+//     db.query(
+//       'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+//       [JSON.stringify(cartItems), email],
+//       (err) => {
+//         if (err) {
+//           console.error('Error updating cart in database:', err);
+//           return res.status(500).json({ error: 'Failed to update cart' });
+//         }
+//         res.status(200).json({ message: 'Cart updated successfully' });
+//       }
+//     );
+//   });
+// });
+
+app.post('/backend/update-cart-quantity', (req, res) => {
+  const { email, itemId, quantity } = req.body;
+
+  if (!email || !itemId || quantity === undefined) {
+    return res.status(400).json({ error: 'Email, itemId, and quantity are required' });
+  }
+
+  // Step 1: Retrieve the current cart (addtocart) from the database
+  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, results) => {
+    if (err) {
+      console.error('Error retrieving cart:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
 
     if (results.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    let cartItems;
-    try {
-      // Check if `addtocart` is null or empty and assign an empty array
-      const addToCart = results[0].addtocart;
-      if (!addToCart) {
-        cartItems = [];
-      } else {
-        cartItems = JSON.parse(addToCart);
-      }
-    } catch (parseError) {
-      return res.status(500).json({ message: "Error parsing cart items", error: parseError.message });
+    // Step 2: Parse the addtocart field to get the cart items
+    let cartItems = results[0].addtocart ? JSON.parse(results[0].addtocart) : [];
+
+    // Step 3: Update the quantity of the specified item in the cart
+    const itemIndex = cartItems.findIndex(item => item.startsWith(`${itemId}-`));
+    
+    if (itemIndex !== -1) {
+      // Item exists, update its quantity
+      const updatedItem = `${itemId}-${quantity}`;
+      cartItems[itemIndex] = updatedItem; // Update the item in the array
+    } else {
+      // If the item doesn't exist in the cart, you can choose to add it
+      cartItems.push(`${itemId}-${quantity}`);
     }
 
-    // Filter out the item to be removed
-    const updatedCartItems = cartItems.filter(item => item.id !== itemId);
+    // Step 4: Update the cart in the database with the modified cartItems array
+    db.query(
+      'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+      [JSON.stringify(cartItems), email],
+      (updateErr) => {
+        if (updateErr) {
+          console.error('Error updating cart:', updateErr);
+          return res.status(500).json({ error: 'Failed to update cart' });
+        }
 
-    // SQL query to update the addtocart column with the new JSON data
-    const updateQuery = 'UPDATE oneclick_users SET addtocart = ? WHERE email = ?';
-
-    db.query(updateQuery, [JSON.stringify(updatedCartItems), email], (err, results) => {
-      if (err) {
-        console.error("Error updating cart items:", {
-          message: err.message,
-          query: updateQuery,
-          params: [JSON.stringify(updatedCartItems), email]
-        });
-        return res.status(500).json({ message: "Internal server error" });
+        res.status(200).json({ message: 'Cart quantity updated successfully' });
       }
-
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ message: "Failed to update cart" });
-      }
-
-      res.status(200).json({ message: "Item removed from cart" });
-    });
+    );
   });
 });
+
+// Route to fetch the wishlist for a user
+app.post('/backend/fetchwishlist', (req, res) => {
+  const { email, username } = req.body;
+
+  if (!email || !username) {
+    return res.status(400).json({ message: 'Email and username are required' });
+  }
+
+  // Query to fetch the user's wishlist from the database
+  const query = 'SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?';
+
+  db.query(query, [email, username], (err, result) => {
+    if (err) {
+      console.error('Error fetching wishlist: ', err);
+      return res.status(500).json({ message: 'Error fetching wishlist' });
+    }
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    try {
+      // Parse the wishlist JSON field
+      let wishlist = result[0].wishlist ? JSON.parse(result[0].wishlist) : [];
+
+      // Sort the wishlist array in descending order
+      wishlist = wishlist.sort((a, b) => b - a);
+
+      return res.json({ wishlist });
+    } catch (parseError) {
+      console.error('Error parsing wishlist: ', parseError);
+      return res.status(500).json({ message: 'Error parsing wishlist' });
+    }
+  });
+});
+
+
+
+// // API endpoint to get cart items
+// app.get('/backend/cart', (req, res) => {
+//   const { email, username } = req.query;
+
+//   if (!email || !username) {
+//     return res.status(400).json({ error: 'Email and username are required' });
+//   }
+
+//   const query = 'SELECT * FROM oneclick_users WHERE email = ? AND username = ?';
+//   db.query(query, [email, username], (err, results) => {
+//     if (err) {
+//       console.error('Error fetching cart items:', err);
+//       return res.status(500).json({ error: 'Internal server error' });
+//     }
+//     res.json(results);
+//   });
+// });
+
+// // API endpoint to get wishlist items
+// app.get('/backend/wishlist', (req, res) => {
+//   const { email, username } = req.query;
+
+//   if (!email || !username) {
+//     return res.status(400).json({ error: 'Email and username are required' });
+//   }
+
+//   const query = 'SELECT * FROM oneclick_users WHERE email = ? AND username = ?';
+//   db.query(query, [email, username], (err, results) => {
+//     if (err) {
+//       console.error('Error fetching wishlist items:', err);
+//       return res.status(500).json({ error: 'Internal server error' });
+//     }
+//     res.json(results);
+//   });
+// });
+
+// app.post('/backend/remove-from-cart', (req, res) => {
+//   const { email, itemId } = req.body;
+
+//   if (!email || !itemId) {
+//     return res.status(400).json({ message: "Email and itemId are required" });
+//   }
+
+//   // SQL query to get the addtocart column from the users table
+//   const getQuery = 'SELECT addtocart FROM oneclick_users WHERE email = ?';
+
+//   db.query(getQuery, [email], (err, results) => {
+//     if (err) {
+//       console.error("Error retrieving cart items:", {
+//         message: err.message,
+//         query: getQuery,
+//         params: [email]
+//       });
+
+//       return res.status(500).json({ message: "Internal server error" });
+//     }
+
+//     if (results.length === 0) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     let cartItems;
+//     try {
+//       // Check if `addtocart` is null or empty and assign an empty array
+//       const addToCart = results[0].addtocart;
+//       if (!addToCart) {
+//         cartItems = [];
+//       } else {
+//         cartItems = JSON.parse(addToCart);
+//       }
+//     } catch (parseError) {
+//       return res.status(500).json({ message: "Error parsing cart items", error: parseError.message });
+//     }
+
+//     // Filter out the item to be removed
+//     const updatedCartItems = cartItems.filter(item => item.id !== itemId);
+
+//     // SQL query to update the addtocart column with the new JSON data
+//     const updateQuery = 'UPDATE oneclick_users SET addtocart = ? WHERE email = ?';
+
+//     db.query(updateQuery, [JSON.stringify(updatedCartItems), email], (err, results) => {
+//       if (err) {
+//         console.error("Error updating cart items:", {
+//           message: err.message,
+//           query: updateQuery,
+//           params: [JSON.stringify(updatedCartItems), email]
+//         });
+//         return res.status(500).json({ message: "Internal server error" });
+//       }
+
+//       if (results.affectedRows === 0) {
+//         return res.status(404).json({ message: "Failed to update cart" });
+//       }
+
+//       res.status(200).json({ message: "Item removed from cart" });
+//     });
+//   });
+// });
+
+app.post('/backend/remove-from-cart', (req, res) => {
+  const { email, itemId, quantity } = req.body;
+
+  if (!email || !itemId || !quantity) {
+    return res.status(400).json({ error: 'Email, ItemId, and Quantity are required' });
+  }
+
+  // Step 1: Retrieve the user's cart (addtocart) from the database
+  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, results) => {
+    if (err) {
+      console.error('Error retrieving cart:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Step 2: Parse the addtocart field into an array
+    let cartItems = [];
+    try {
+      cartItems = JSON.parse(results[0].addtocart || '[]');
+    } catch (error) {
+      console.error('Error parsing cart items:', error);
+      return res.status(500).json({ error: 'Failed to parse cart items' });
+    }
+
+    // Step 3: Find the item in the cart that matches the provided itemId
+    let itemIndex = cartItems.findIndex(item => item.startsWith(`${itemId}-`));
+
+    if (itemIndex !== -1) {
+      // The item exists, now check if the quantity matches the one to be removed
+      let [existingItemId, existingQuantity] = cartItems[itemIndex].split('-').map(Number);
+      
+      if (existingItemId === parseInt(itemId) && existingQuantity === parseInt(quantity)) {
+        // Remove the item from the cart
+        cartItems.splice(itemIndex, 1);
+      } else {
+        return res.status(400).json({ error: 'Quantity mismatch or item not found in the cart' });
+      }
+    } else {
+      return res.status(404).json({ error: 'Item not found in the cart' });
+    }
+
+    // Step 4: Update the cart in the database with the new array
+    db.query(
+      'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+      [JSON.stringify(cartItems), email],
+      (updateErr) => {
+        if (updateErr) {
+          console.error('Error updating cart:', updateErr);
+          return res.status(500).json({ error: 'Failed to update cart' });
+        }
+
+        // Step 5: Send success response back to the client
+        res.status(200).json({ success: true, message: 'Item removed from cart successfully' });
+      }
+    );
+  });
+});
+
+
+
+
+
+// app.post('/remove-from-wishlist', async (req, res) => {
+//   const { email, username, productId } = req.body;
+
+//   if (!email || !username || !productId) {
+//     return res.status(400).json({ error: 'Missing parameters' });
+//   }
+
+//   try {
+//     // Find user by email and username
+//     const user = await User.findOne({ email, username });
+
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     // Remove productId from wishlist
+//     user.wishlist = user.wishlist.filter(item => item.id !== productId);
+    
+//     // Save updated user document
+//     await user.save();
+
+//     res.status(200).json({ message: 'Item removed from wishlist' });
+//   } catch (error) {
+//     console.error('Error removing from wishlist:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
 
 
 app.post('/backend/remove-from-wishlist', (req, res) => {
-  const { email, itemId } = req.body;
+  const { email, productId } = req.body;
 
-  if (!email || !itemId) {
-    return res.status(400).json({ message: "Email and itemId are required" });
+  if (!email || !productId) {
+    return res.status(400).send({ error: 'Email and product ID are required.' });
   }
 
-  // SQL query to get the wishlist column from the oneclick_users table
-  const getQuery = 'SELECT wishlist FROM oneclick_users WHERE email = ?';
-
-  db.query(getQuery, [email], (err, results) => {
+  // Step 1: Fetch the current wishlist
+  db.query('SELECT wishlist FROM oneclick_users WHERE email = ?', [email], (err, result) => {
     if (err) {
-      console.error("Error retrieving wishlist items:", {
-        message: err.message,
-        query: getQuery,
-        params: [email]
-      });
-      return res.status(500).json({ message: "Internal server error" });
+      console.error('Error fetching wishlist:', err);
+      return res.status(500).send({ error: 'Failed to fetch wishlist.' });
     }
 
-    if (results.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+    if (result.length === 0) {
+      return res.status(404).send({ error: 'User not found.' });
     }
 
-    let wishlistItems;
-    try {
-      wishlistItems = JSON.parse(results[0].wishlist);
-    } catch (parseError) {
-      return res.status(500).json({ message: "Error parsing wishlist items", error: parseError.message });
-    }
+    // Step 2: Remove the productId from the wishlist array
+    let wishlist = JSON.parse(result[0].wishlist || '[]');
+    wishlist = wishlist.filter(item => item !== productId);  // Remove product ID from the array
 
-    // Filter out the item to be removed
-    const updatedWishlistItems = wishlistItems.filter(item => item.id !== itemId);
-
-    // SQL query to update the wishlist column with the new JSON data
-    const updateQuery = 'UPDATE oneclick_users SET wishlist = ? WHERE email = ?';
-
-    db.query(updateQuery, [JSON.stringify(updatedWishlistItems), email], (err, results) => {
+    // Step 3: Update the wishlist in the database
+    const updatedWishlist = JSON.stringify(wishlist);
+    db.query('UPDATE oneclick_users SET wishlist = ? WHERE email = ?', [updatedWishlist, email], (err, updateResult) => {
       if (err) {
-        console.error("Error updating wishlist items:", {
-          message: err.message,
-          query: updateQuery,
-          params: [JSON.stringify(updatedWishlistItems), email]
-        });
-        return res.status(500).json({ message: "Internal server error" });
+        console.error('Error updating wishlist:', err);
+        return res.status(500).send({ error: 'Failed to update wishlist.' });
       }
 
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ message: "Failed to update wishlist" });
+      if (updateResult.affectedRows === 0) {
+        return res.status(404).send({ error: 'No changes made, user or wishlist not found.' });
       }
 
-      res.status(200).json({ message: "Item removed from wishlist" });
+      res.status(200).send({ message: 'Item removed from wishlist successfully.' });
     });
   });
 });
+// app.post('/backend/remove-from-wishlist', (req, res) => {
+//   const { email, itemId } = req.body;
+
+//   if (!email || !itemId) {
+//     return res.status(400).json({ message: "Email and itemId are required" });
+//   }
+
+//   // SQL query to get the wishlist column from the oneclick_users table
+//   const getQuery = 'SELECT wishlist FROM oneclick_users WHERE email = ?';
+
+//   db.query(getQuery, [email], (err, results) => {
+//     if (err) {
+//       console.error("Error retrieving wishlist items:", {
+//         message: err.message,
+//         query: getQuery,
+//         params: [email]
+//       });
+//       return res.status(500).json({ message: "Internal server error" });
+//     }
+
+//     if (results.length === 0) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     let wishlistItems;
+//     try {
+//       wishlistItems = JSON.parse(results[0].wishlist);
+//     } catch (parseError) {
+//       return res.status(500).json({ message: "Error parsing wishlist items", error: parseError.message });
+//     }
+
+//     // Filter out the item to be removed
+//     const updatedWishlistItems = wishlistItems.filter(item => item.id !== itemId);
+
+//     // SQL query to update the wishlist column with the new JSON data
+//     const updateQuery = 'UPDATE oneclick_users SET wishlist = ? WHERE email = ?';
+
+//     db.query(updateQuery, [JSON.stringify(updatedWishlistItems), email], (err, results) => {
+//       if (err) {
+//         console.error("Error updating wishlist items:", {
+//           message: err.message,
+//           query: updateQuery,
+//           params: [JSON.stringify(updatedWishlistItems), email]
+//         });
+//         return res.status(500).json({ message: "Internal server error" });
+//       }
+
+//       if (results.affectedRows === 0) {
+//         return res.status(404).json({ message: "Failed to update wishlist" });
+//       }
+
+//       res.status(200).json({ message: "Item removed from wishlist" });
+//     });
+//   });
+// });
 
 
 
@@ -4727,6 +5252,8 @@ app.get('/backend/fetchprinters', (req, res) => {
     res.json(products);
   });
 });
+
+
 app.put('/backend/updateprinters/image/:id', printersUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
@@ -6705,7 +7232,59 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 
 
 
-
+app.get('/backend/api/mostpopular', (req, res) => {
+  const categories = [
+    'Mobiles',
+    'Computers',
+    'CCTV',
+    'Printers',
+    'ComputerAccessories',
+    'MobileAccessories',
+    'CCTVAccessories',
+    'PrinterAccessories',
+    'Speakers',
+    'Headphones',
+    'Watch',
+  ];
+  // Define limits for each category
+  const categoryLimits = {
+    'Mobiles': 1,
+    'Computers': 1,
+    'CCTV': 1,
+    'Printers': 1,
+    'ComputerAccessories': 1,
+    'MobileAccessories': 1,
+    'CCTVAccessories':1,
+    'PrinterAccessories':1,
+    'Speakers': 1,
+    'Headphones': 1,
+    'Watch': 1,
+  };
+  // Create an array of promises for each category query
+  const promises = categories.map(category => new Promise((resolve, reject) => {
+    const limit = categoryLimits[category]; // Get the limit for the current category
+    const query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
+    console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
+    db.query(query, [category, limit], (err, results) => {
+      if (err) {
+        console.error(`Error fetching products for category: ${category}`, err); // Log error for specific category
+        return reject(err);
+      }
+      console.log(`Fetched ${results.length} products for category: ${category}`); // Log successful fetch with count
+      resolve(results); // Resolve with all rows of the result for the category
+    });
+  }));
+  // Execute all promises and return results
+  Promise.all(promises)
+    .then(results => {
+      console.log('Successfully fetched all product categories:', results); // Log successful fetch of all categories
+      res.json(results); // Send the results as JSON
+    })
+    .catch(err => {
+      console.error('Database error:', err); // Log any errors during the promise execution
+      res.status(500).json({ error: 'Database error' });
+    });
+});
 
 // app.put('/backend/deleteedithomepageimage/:id', (req, res) => {
 //   const productId = req.params.id;
@@ -8905,10 +9484,308 @@ const productStorage = multer.diskStorage({
 
 const upload7 = multer({ storage: productStorage });
 
-app.post('/backend/place-order', upload7.array('image'), (req, res) => {
-  const { user_id, total_amount, payment_method, status,  shipping_address, address_id, cartItems } = req.body;
+// app.post('/backend/place-order', upload7.array('image'), (req, res) => {
+//   const { user_id, total_amount, payment_method, status,  shipping_address, address_id, cartItems } = req.body;
 
-  // Ensure req.files exists
+//   // Ensure req.files exists
+//   const files = req.files || [];
+//   console.log('Uploaded Files:', files);
+
+//   let items;
+//   try {
+//     items = Array.isArray(cartItems) ? cartItems : JSON.parse(cartItems);
+//   } catch (e) {
+//     console.error('Error parsing cartItems:', e);
+//     return res.status(400).json({ message: 'Invalid cart items format' });
+//   }
+
+//   if (!user_id || !total_amount || !address_id || !items || items.length === 0) {
+//     console.error('Invalid data provided:', { user_id, total_amount, shipping_address, address_id, items });
+//     return res.status(400).json({ message: 'Invalid data' });
+//   }
+
+//   // Generate unique ID for the order
+//   const unique_id = generateUniqueId();
+
+//   // Insert order into `oneclick_orders` table
+//   const orderQuery = 'INSERT INTO oneclick_orders ( payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
+//   db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err, result) => {
+//     if (err) {
+//       console.error('Error inserting order:', err);
+//       return res.status(500).json({ message: 'Error inserting order', error: err.message });
+//     }
+
+//     // Prepare values for order items
+//     const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
+//     const orderItemsValues = items.map(item => [
+//       unique_id,
+//       item.product_id,
+//       item.quantity,
+//       item.price * item.quantity
+//     ]);
+
+//     console.log("orderItemsValues", orderItemsValues)
+
+//     // Insert order items
+//     db.query(orderItemsQuery, [orderItemsValues], (err) => {
+//       if (err) {
+//         console.error('Error inserting order items:', err);
+//         return res.status(500).json({ message: 'Error inserting order items', error: err.message });
+//       }
+
+//       // Prepare query for inserting or updating products (excluding image URLs for now)
+//       const productsQuery = `
+//       INSERT INTO oneclick_products (product_id, name, category, price, description) 
+//       VALUES ? 
+//       ON DUPLICATE KEY UPDATE 
+//         name = VALUES(name), 
+//         category = VALUES(category), 
+//         price = VALUES(price), 
+//         description = VALUES(description)
+//       `;
+
+//       // Prepare values for products
+//       const productsValues = items.map(item => [
+//         item.product_id,
+//         item.name,
+//         item.category,
+//         item.price,
+//         item.description
+//       ]);
+
+//     console.log("productsValues", productsValues)
+
+
+//       // Insert or update product information
+//       db.query(productsQuery, [productsValues], (err) => {
+//         if (err) {
+//           console.error('Error inserting or updating products:', err);
+//           return res.status(500).json({ message: 'Error inserting or updating products', error: err.message });
+//         }
+
+//          // Insert notification
+//       const notificationMessage = `New order placed by user ${user_id}. Order ID: ${unique_id}, Total Amount: Rs.${total_amount}`;
+//       const notificationQuery = 'INSERT INTO oneclick_notifications (type, message, is_read) VALUES (?, ?, ?)';
+//       db.query(notificationQuery, ['order', notificationMessage, false], (err) => {
+//         if (err) {
+//           console.error('Error inserting notification:', err);
+//           return res.status(500).json({ message: 'Error inserting notification', error: err.message });
+//         }
+
+//         console.log('Notification created successfully.');
+//       });
+
+//         console.log('Products inserted or updated successfully');
+
+//         // Now handle inserting images into `product_images` table
+//         const productImagesQuery = `
+//         INSERT INTO oneclick_product_images (product_id, image_url) 
+//         VALUES ?
+//         `;
+
+//         // Prepare values for product images
+//         let imagesValues = [];
+//         items.forEach(item => {
+//           // Find the corresponding uploaded file(s)
+//           const filesForProduct = files.filter(file => file.originalname === item.image);
+
+//           if (filesForProduct.length > 0) {
+//             // If files were uploaded, use the filenames
+//             filesForProduct.forEach(file => {
+//               imagesValues.push([item.product_id, file.filename]);
+//             });
+//           } else {
+//             // If no files were uploaded, fall back to using the existing image URL (single or multiple)
+//             const imageUrls = Array.isArray(item.image) ? item.image : [item.image];
+//             imageUrls.forEach(url => {
+//               imagesValues.push([item.product_id, url]);
+//             });
+//           }
+//         });
+
+//         // Insert the product images into the database
+//         if (imagesValues.length > 0) {
+//           db.query(productImagesQuery, [imagesValues], (err) => {
+//             if (err) {
+//               console.error('Error inserting product images:', err);
+//               return res.status(500).json({ message: 'Error inserting product images', error: err.message });
+//             }
+
+//             console.log('Product images inserted successfully');
+//             return res.status(200).json({ message: 'Order placed successfully', unique_id });
+//           });
+//         } else {
+//           console.log('No images to insert.');
+//           return res.status(200).json({ message: 'Order placed successfully', unique_id });
+//         }
+//       });
+//     });
+//   });
+// });
+
+
+// app.post('/backend/place-order', upload7.array('image'), (req, res) => {
+//   const { user_id, total_amount, payment_method, status, shipping_address, address_id, cartItems } = req.body;
+
+//   const files = req.files || [];
+//   console.log('Uploaded Files:', files);
+
+//   let items;
+//   try {
+//     items = Array.isArray(cartItems) ? cartItems : JSON.parse(cartItems);
+//   } catch (e) {
+//     console.error('Error parsing cartItems:', e);
+//     return res.status(400).json({ message: 'Invalid cart items format' });
+//   }
+
+//   if (!user_id || !total_amount || !address_id || !items || items.length === 0) {
+//     console.error('Invalid data provided:', { user_id, total_amount, shipping_address, address_id, items });
+//     return res.status(400).json({ message: 'Invalid data' });
+//   }
+
+//   const unique_id = generateUniqueId();
+
+//   const orderQuery = 'INSERT INTO oneclick_orders (payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
+//   db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err) => {
+//     if (err) {
+//       console.error('Error inserting order:', err);
+//       return res.status(500).json({ message: 'Error inserting order', error: err.message });
+//     }
+
+//     const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
+//     const orderItemsValues = items.map(item => [unique_id, item.product_id, item.quantity, item.price * item.quantity]);
+
+//     db.query(orderItemsQuery, [orderItemsValues], (err) => {
+//       if (err) {
+//         console.error('Error inserting order items:', err);
+//         return res.status(500).json({ message: 'Error inserting order items', error: err.message });
+//       }
+
+//       const productImagesQuery = `
+//         INSERT INTO oneclick_product_images (product_id, image_url) 
+//         VALUES ?
+//       `;
+
+//       const imagesValues = [];
+//       items.forEach(item => {
+//         const filesForProduct = files.filter(file => file.originalname === item.image);
+//         if (filesForProduct.length > 0) {
+//           filesForProduct.forEach(file => {
+//             imagesValues.push([item.product_id, file.filename]);
+//           });
+//         } else if (item.image) {
+//           const imageUrls = Array.isArray(item.image) ? item.image : [item.image];
+//           imageUrls.forEach(url => {
+//             imagesValues.push([item.product_id, url]);
+//           });
+//         }
+//       });
+
+//       if (imagesValues.length > 0) {
+//         db.query(productImagesQuery, [imagesValues], (err) => {
+//           if (err) {
+//             console.error('Error inserting product images:', err);
+//             return res.status(500).json({ message: 'Error inserting product images', error: err.message });
+//           }
+
+//           console.log('Product images inserted successfully');
+//           return res.status(200).json({ message: 'Order placed successfully', unique_id });
+//         });
+//       } else {
+//         console.log('No images to insert.');
+//         return res.status(200).json({ message: 'Order placed successfully', unique_id });
+//       }
+//     });
+//   });
+// });
+// app.post('/backend/place-order', upload7.array('image'), (req, res) => {
+//   const { user_id, total_amount, payment_method, status, shipping_address, address_id, cartItems } = req.body;
+
+//   const files = req.files || [];
+//   console.log('Uploaded Files:', files);
+
+//   let items;
+//   try {
+//     // Handle cartItems which is already structured based on the frontend enrichedCartItems
+//     items = Array.isArray(cartItems) ? cartItems : JSON.parse(cartItems);
+//   } catch (e) {
+//     console.error('Error parsing cartItems:', e);
+//     return res.status(400).json({ message: 'Invalid cart items format' });
+//   }
+
+//   if (!user_id || !total_amount || !address_id || !items || items.length === 0) {
+//     console.error('Invalid data provided:', { user_id, total_amount, shipping_address, address_id, items });
+//     return res.status(400).json({ message: 'Invalid data' });
+//   }
+
+//   const unique_id = generateUniqueId();
+
+//   // Insert the order into the 'oneclick_orders' table
+//   const orderQuery = 'INSERT INTO oneclick_orders (payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
+//   db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err) => {
+//     if (err) {
+//       console.error('Error inserting order:', err);
+//       return res.status(500).json({ message: 'Error inserting order', error: err.message });
+//     }
+
+//     // Insert the order items into 'oneclick_order_items' table using the new field names
+//     const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
+//     const orderItemsValues = items.map(item => [
+//       unique_id, 
+//       item.prod_id,               // Use 'prod_id' for product ID
+//       item.quantity,         // Use 'prod_quantity' for quantity
+//       item.prod_price * item.quantity  // Use 'prod_price' for price (multiplied by quantity)
+//     ]);
+
+//     db.query(orderItemsQuery, [orderItemsValues], (err) => {
+//       if (err) {
+//         console.error('Error inserting order items:', err);
+//         return res.status(500).json({ message: 'Error inserting order items', error: err.message });
+//       }
+
+//       // Insert product images into 'oneclick_product_images' table using 'prod_image'
+//       const productImagesQuery = `
+//         INSERT INTO oneclick_product_images (product_id, image_url) 
+//         VALUES ?
+//       `;
+
+//       const imagesValues = [];
+//       items.forEach(item => {
+//         const filesForProduct = files.filter(file => file.originalname === item.prod_img);  // Use 'prod_img' to find image
+//         if (filesForProduct.length > 0) {
+//           filesForProduct.forEach(file => {
+//             imagesValues.push([item.prod_id, file.filename]);  // Store the image file with 'prod_id'
+//           });
+//         } else if (item.prod_img) {
+//           // If the image URL is passed in, handle it
+//           const imageUrls = Array.isArray(item.prod_img) ? item.prod_img : [item.prod_img];
+//           imageUrls.forEach(url => {
+//             imagesValues.push([item.prod_id, url]);  // Store image URL with 'prod_id'
+//           });
+//         }
+//       });
+
+//       if (imagesValues.length > 0) {
+//         db.query(productImagesQuery, [imagesValues], (err) => {
+//           if (err) {
+//             console.error('Error inserting product images:', err);
+//             return res.status(500).json({ message: 'Error inserting product images', error: err.message });
+//           }
+
+//           console.log('Product images inserted successfully');
+//           return res.status(200).json({ message: 'Order placed successfully', unique_id });
+//         });
+//       } else {
+//         console.log('No images to insert.');
+//         return res.status(200).json({ message: 'Order placed successfully', unique_id });
+//       }
+//     });
+//   });
+// });
+
+
+app.post('/backend/place-order', upload7.array('image'), (req, res) => {
+  const { user_id, total_amount, payment_method, status, shipping_address, address_id, cartItems } = req.body;
   const files = req.files || [];
   console.log('Uploaded Files:', files);
 
@@ -8925,37 +9802,23 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
     return res.status(400).json({ message: 'Invalid data' });
   }
 
-  // Generate unique ID for the order
   const unique_id = generateUniqueId();
 
-  // Insert order into `oneclick_orders` table
-  const orderQuery = 'INSERT INTO oneclick_orders ( payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
-  db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err, result) => {
+  // Log affected tables
+  let affectedTables = [];
+
+  // Insert the order into the 'oneclick_orders' table
+  const orderQuery = 'INSERT INTO oneclick_orders (payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
+  db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err) => {
     if (err) {
       console.error('Error inserting order:', err);
       return res.status(500).json({ message: 'Error inserting order', error: err.message });
     }
 
-    // Prepare values for order items
-    const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
-    const orderItemsValues = items.map(item => [
-      unique_id,
-      item.product_id,
-      item.quantity,
-      item.price * item.quantity
-    ]);
+    affectedTables.push('oneclick_orders'); // Log affected table
 
-    console.log("orderItemsValues", orderItemsValues)
-
-    // Insert order items
-    db.query(orderItemsQuery, [orderItemsValues], (err) => {
-      if (err) {
-        console.error('Error inserting order items:', err);
-        return res.status(500).json({ message: 'Error inserting order items', error: err.message });
-      }
-
-      // Prepare query for inserting or updating products (excluding image URLs for now)
-      const productsQuery = `
+    // Insert or update products into 'oneclick_products'
+    const productsQuery = `
       INSERT INTO oneclick_products (product_id, name, category, price, description) 
       VALUES ? 
       ON DUPLICATE KEY UPDATE 
@@ -8963,68 +9826,57 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
         category = VALUES(category), 
         price = VALUES(price), 
         description = VALUES(description)
-      `;
+    `;
+    const productsValues = items.map(item => [
+      item.prod_id,
+      item.prod_name,
+      item.prod_category,
+      item.prod_price,
+      item.prod_description
+    ]);
 
-      // Prepare values for products
-      const productsValues = items.map(item => [
-        item.product_id,
-        item.name,
-        item.category,
-        item.price,
-        item.description
+    db.query(productsQuery, [productsValues], (err) => {
+      if (err) {
+        console.error('Error inserting or updating products:', err);
+        return res.status(500).json({ message: 'Error inserting or updating products', error: err.message });
+      }
+
+      affectedTables.push('oneclick_products'); // Log affected table
+
+      // Insert order items into 'oneclick_order_items'
+      const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
+      const orderItemsValues = items.map(item => [
+        unique_id,
+        item.prod_id, 
+        item.quantity, 
+        item.prod_price * item.quantity
       ]);
 
-    console.log("productsValues", productsValues)
-
-
-      // Insert or update product information
-      db.query(productsQuery, [productsValues], (err) => {
+      db.query(orderItemsQuery, [orderItemsValues], (err) => {
         if (err) {
-          console.error('Error inserting or updating products:', err);
-          return res.status(500).json({ message: 'Error inserting or updating products', error: err.message });
+          console.error('Error inserting order items:', err);
+          return res.status(500).json({ message: 'Error inserting order items', error: err.message });
         }
 
-         // Insert notification
-      const notificationMessage = `New order placed by user ${user_id}. Order ID: ${unique_id}, Total Amount: Rs.${total_amount}`;
-      const notificationQuery = 'INSERT INTO oneclick_notifications (type, message, is_read) VALUES (?, ?, ?)';
-      db.query(notificationQuery, ['order', notificationMessage, false], (err) => {
-        if (err) {
-          console.error('Error inserting notification:', err);
-          return res.status(500).json({ message: 'Error inserting notification', error: err.message });
-        }
+        affectedTables.push('oneclick_order_items'); // Log affected table
 
-        console.log('Notification created successfully.');
-      });
-
-        console.log('Products inserted or updated successfully');
-
-        // Now handle inserting images into `product_images` table
-        const productImagesQuery = `
-        INSERT INTO oneclick_product_images (product_id, image_url) 
-        VALUES ?
-        `;
-
-        // Prepare values for product images
-        let imagesValues = [];
+        // Insert product images into 'oneclick_product_images'
+        const productImagesQuery = 'INSERT INTO oneclick_product_images (product_id, image_url) VALUES ?';
+        const imagesValues = [];
         items.forEach(item => {
-          // Find the corresponding uploaded file(s)
-          const filesForProduct = files.filter(file => file.originalname === item.image);
-
+          const filesForProduct = files.filter(file => file.originalname === item.prod_img);
           if (filesForProduct.length > 0) {
-            // If files were uploaded, use the filenames
             filesForProduct.forEach(file => {
-              imagesValues.push([item.product_id, file.filename]);
+              imagesValues.push([item.prod_id, file.filename]);
             });
-          } else {
-            // If no files were uploaded, fall back to using the existing image URL (single or multiple)
-            const imageUrls = Array.isArray(item.image) ? item.image : [item.image];
+          } else if (item.prod_img) {
+            const imageUrls = Array.isArray(item.prod_img) ? item.prod_img : [item.prod_img];
             imageUrls.forEach(url => {
-              imagesValues.push([item.product_id, url]);
+              imagesValues.push([item.prod_id, url]);
             });
           }
         });
 
-        // Insert the product images into the database
         if (imagesValues.length > 0) {
           db.query(productImagesQuery, [imagesValues], (err) => {
             if (err) {
@@ -9032,17 +9884,118 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
               return res.status(500).json({ message: 'Error inserting product images', error: err.message });
             }
 
-            console.log('Product images inserted successfully');
+            affectedTables.push('oneclick_product_images'); // Log affected table
+
+            // Log the affected tables
+            console.log('Affected Tables:');
+            affectedTables.forEach(table => {
+              console.log(`Table: ${table}`);
+            });
+
             return res.status(200).json({ message: 'Order placed successfully', unique_id });
           });
         } else {
           console.log('No images to insert.');
+          console.log('Affected Tables:');
+          affectedTables.forEach(table => {
+            console.log(`Table: ${table}`);
+          });
           return res.status(200).json({ message: 'Order placed successfully', unique_id });
         }
       });
     });
   });
 });
+
+
+// app.post('/backend/clear-cart', (req, res) => {
+//   const { email } = req.body;
+
+//   if (!email) {
+//     return res.status(400).json({ error: 'Email is required' });
+//   }
+
+//   // Update the addtocart field to an empty array
+//   db.query(
+//     'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+//     ['[]', email],
+//     (err, result) => {
+//       if (err) {
+//         console.error('Error clearing cart:', err);
+//         return res.status(500).json({ error: 'Internal Server Error' });
+//       }
+
+//       if (result.affectedRows === 0) {
+//         return res.status(404).json({ error: 'User not found' });
+//       }
+
+//       res.json({ message: 'Cart cleared successfully' });
+//     }
+//   );
+// });
+
+app.post('/backend/clear-cart', (req, res) => {
+  const { email, cartItems } = req.body;
+
+  console.log("Received clear-cart request for:", email);
+  console.log("Cart items to remove:", cartItems);
+
+  if (!email || !Array.isArray(cartItems)) {
+    console.error("Invalid request: Missing email or cartItems is not an array");
+    return res.status(400).json({ error: 'Email and cartItems are required' });
+  }
+
+  // Fetch the current cart
+  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, result) => {
+    if (err) {
+      console.error('Error fetching cart:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+    if (result.length === 0) {
+      console.warn("User not found:", email);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let currentCart = [];
+    try {
+      currentCart = JSON.parse(result[0].addtocart);
+      console.log("Current Cart from DB:", currentCart);
+    } catch (e) {
+      console.error("Error parsing addtocart:", e);
+      return res.status(500).json({ error: 'Corrupted cart data' });
+    }
+
+    // Create a Set of items to remove (ensure consistent string format)
+    const itemsToRemove = new Set(cartItems.map(item => `${item.id}-${item.quantity}`));
+    console.log("Items to remove (Set):", itemsToRemove);
+
+    // Filter out the items that need to be removed
+    const updatedCart = currentCart.filter(cartItem => {
+      const shouldRemove = itemsToRemove.has(cartItem);
+      console.log(`Checking cartItem: ${cartItem} - Remove: ${shouldRemove}`);
+      return !shouldRemove;
+    });
+
+    console.log("Updated Cart after removal:", updatedCart);
+
+    // Update the database with the modified cart
+    db.query(
+      'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+      [JSON.stringify(updatedCart), email],
+      (updateErr) => {
+        if (updateErr) {
+          console.error('Error updating cart:', updateErr);
+          return res.status(500).json({ error: 'Failed to update cart' });
+        }
+
+        console.log("Cart updated successfully for user:", email);
+        res.json({ message: 'Selected cart items removed successfully', updatedCart });
+      }
+    );
+  });
+});
+
 
 //////////////////////////
 
@@ -9393,6 +10346,83 @@ app.delete('/backend/api/deleteuser/:id', (req, res) => {
 // });
 
 
+app.get("/backend/my-orders/:userId", (req, res) => {
+  const userId = req.params.userId;
+
+  const ordersQuery = `SELECT * FROM oneclick_orders WHERE user_id = ? ORDER BY order_id DESC`;
+
+  db.query(ordersQuery, [userId], (error, orders) => {
+    if (error) {
+      return res.status(500).json({ message: "Error fetching orders" });
+    }
+    if (orders.length === 0) {
+      return res.status(404).json({ message: "No orders found for this user" });
+    }
+
+    const orderIds = orders.map(order => order.unique_id);
+
+    if (orderIds.length === 0) {
+      return res.status(200).json({ orders: [] });
+    }
+
+    const productsQuery = `
+      SELECT oi.order_id, oi.product_id, oi.quantity, 
+             c.prod_name, c.prod_features, c.prod_price, c.prod_img, c.status, 
+             c.category, c.prod_id, c.actual_price, c.offer_label, 
+             c.productStatus, c.coupon_value, c.subtitle, c.deliverycharge, 
+             c.effectiveprice, c.additional_accessories, c.offer_start_time, 
+             c.offer_end_time, c.offer_price
+      FROM oneclick_order_items oi
+      JOIN oneclick_product_category c ON oi.product_id = c.prod_id
+      WHERE oi.order_id IN (?)
+    `;
+
+    db.query(productsQuery, [orderIds], (err, products) => {
+      if (err) {
+        return res.status(500).json({ message: "Error fetching products", error: err.message });
+      }
+
+      // Group products by order_id and include all relevant product and category details
+      const productsByOrder = {};
+      products.forEach(product => {
+        if (!productsByOrder[product.order_id]) {
+          productsByOrder[product.order_id] = [];
+        }
+        productsByOrder[product.order_id].push({
+          product_id: product.product_id,
+          name: product.prod_name,
+          features: product.prod_features,
+          price: product.prod_price,
+          image: product.prod_img,
+          status: product.status,
+          category: product.category,
+          prod_id: product.prod_id,
+          actual_price: product.actual_price,
+          offer_label: product.offer_label,
+          product_status: product.productStatus,
+          coupon_value: product.coupon_value,
+          subtitle: product.subtitle,
+          delivery_charge: product.deliverycharge,
+          effective_price: product.effectiveprice,
+          additional_accessories: product.additional_accessories,
+          offer_start_time: product.offer_start_time,
+          offer_end_time: product.offer_end_time,
+          offer_price: product.offer_price,
+          quantity: product.quantity,
+          total_price: product.quantity * product.prod_price // Assuming you want to calculate the total price for each product
+        });
+      });
+
+      // Attach products to respective orders
+      const formattedOrders = orders.map(order => ({
+        ...order,
+        products: productsByOrder[order.unique_id] || []
+      }));
+
+      return res.status(200).json({ orders: formattedOrders });
+    });
+  });
+});
 
 
 
@@ -10290,365 +11320,365 @@ app.delete("/backend/api/deletestaff/:id", (req, res) => {
 /////////frequent products///////////
 // GET: Fetch accessories by category
 // GET: Fetch accessories by category
-app.get("/backend/getcomputeraccessories", (req, res) => {
-  const { productId } = req.query;
+// app.get("/backend/getcomputeraccessories", (req, res) => {
+//   const { productId } = req.query;
 
-  console.log("Received request for /backend/getaccessories");
-  console.log("Query parameters:", { productId });
+//   console.log("Received request for /backend/getaccessories");
+//   console.log("Query parameters:", { productId });
 
-  // Validate query parameter
-  if (!productId) {
-    console.error("Missing parameter: productId");
-    return res.status(400).json({ error: "productId is required." });
-  }
+//   // Validate query parameter
+//   if (!productId) {
+//     console.error("Missing parameter: productId");
+//     return res.status(400).json({ error: "productId is required." });
+//   }
 
-  // Part 1: Fetch additional accessories for the given productId
-  const fetchAdditionalAccessoriesSQL = `
-    SELECT additional_accessories 
-    FROM oneclick_product_category 
-    WHERE id = ?
-  `;
+//   // Part 1: Fetch additional accessories for the given productId
+//   const fetchAdditionalAccessoriesSQL = `
+//     SELECT additional_accessories 
+//     FROM oneclick_product_category 
+//     WHERE id = ?
+//   `;
 
-  console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
-  console.log("SQL Query Parameters:", [productId]);
+//   console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
+//   console.log("SQL Query Parameters:", [productId]);
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      console.error("Database query error (additional accessories):", err.message);
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+//   db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
+//     if (err) {
+//       console.error("Database query error (additional accessories):", err.message);
+//       return res.status(500).json({ error: "Error fetching additional accessories." });
+//     }
 
-    if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
-      console.warn("No additional accessories found for productId:", productId);
-      return res.status(404).json({ error: "No additional accessories found." });
-    }
+//     if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
+//       console.warn("No additional accessories found for productId:", productId);
+//       return res.status(404).json({ error: "No additional accessories found." });
+//     }
 
-    const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
-    console.log("Additional Accessories fetched successfully:", additionalAccessories);
+//     const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
+//     console.log("Additional Accessories fetched successfully:", additionalAccessories);
 
-    // Part 2: Fetch all accessories for "ComputerAccessories" category
-    const fetchCategoryAccessoriesSQL = `
-      SELECT * 
-      FROM oneclick_product_category 
-      WHERE category = 'ComputerAccessories'
-    `;
+//     // Part 2: Fetch all accessories for "ComputerAccessories" category
+//     const fetchCategoryAccessoriesSQL = `
+//       SELECT * 
+//       FROM oneclick_product_category 
+//       WHERE category = 'ComputerAccessories'
+//     `;
 
-    console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
-    console.log("SQL Query Parameters:", ['ComputerAccessories']);
+//     console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
+//     console.log("SQL Query Parameters:", ['ComputerAccessories']);
 
-    db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
-      if (err) {
-        console.error("Database query error (category accessories):", err.message);
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+//     db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
+//       if (err) {
+//         console.error("Database query error (category accessories):", err.message);
+//         return res.status(500).json({ error: "Error fetching accessories for category." });
+//       }
 
-      if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
-        console.warn("No accessories found for category: ComputerAccessories");
-        return res.status(404).json({ error: "No accessories found for this category." });
-      }
+//       if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
+//         console.warn("No accessories found for category: ComputerAccessories");
+//         return res.status(404).json({ error: "No accessories found for this category." });
+//       }
 
-      console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
+//       console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
 
-      // Combine results
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult,
-      };
+//       // Combine results
+//       const result = {
+//         additionalAccessories,
+//         categoryAccessories: categoryAccessoriesResult,
+//       };
 
-      console.log("Final Accessories Response:", result);
-      res.status(200).json(result);
-    });
-  });
-});
-app.get("/backend/getmobileaccessories", (req, res) => {
-  const { productId } = req.query;
+//       console.log("Final Accessories Response:", result);
+//       res.status(200).json(result);
+//     });
+//   });
+// });
+// app.get("/backend/getmobileaccessories", (req, res) => {
+//   const { productId } = req.query;
 
-  console.log("Received request for /backend/getaccessories");
-  console.log("Query parameters:", { productId });
+//   console.log("Received request for /backend/getaccessories");
+//   console.log("Query parameters:", { productId });
 
-  // Validate query parameter
-  if (!productId) {
-    console.error("Missing parameter: productId");
-    return res.status(400).json({ error: "productId is required." });
-  }
+//   // Validate query parameter
+//   if (!productId) {
+//     console.error("Missing parameter: productId");
+//     return res.status(400).json({ error: "productId is required." });
+//   }
 
-  // Part 1: Fetch additional accessories for the given productId
-  const fetchAdditionalAccessoriesSQL = `
-    SELECT additional_accessories 
-    FROM oneclick_product_category 
-    WHERE id = ?
-  `;
+//   // Part 1: Fetch additional accessories for the given productId
+//   const fetchAdditionalAccessoriesSQL = `
+//     SELECT additional_accessories 
+//     FROM oneclick_product_category 
+//     WHERE id = ?
+//   `;
 
-  console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
-  console.log("SQL Query Parameters:", [productId]);
+//   console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
+//   console.log("SQL Query Parameters:", [productId]);
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      console.error("Database query error (additional accessories):", err.message);
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+//   db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
+//     if (err) {
+//       console.error("Database query error (additional accessories):", err.message);
+//       return res.status(500).json({ error: "Error fetching additional accessories." });
+//     }
 
-    if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
-      console.warn("No additional accessories found for productId:", productId);
-      return res.status(404).json({ error: "No additional accessories found." });
-    }
+//     if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
+//       console.warn("No additional accessories found for productId:", productId);
+//       return res.status(404).json({ error: "No additional accessories found." });
+//     }
 
-    const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
-    console.log("Additional Accessories fetched successfully:", additionalAccessories);
+//     const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
+//     console.log("Additional Accessories fetched successfully:", additionalAccessories);
 
-    // Part 2: Fetch all accessories for "ComputerAccessories" category
-    const fetchCategoryAccessoriesSQL = `
-      SELECT * 
-      FROM oneclick_product_category 
-      WHERE category = 'MobileAccessories'
-    `;
+//     // Part 2: Fetch all accessories for "ComputerAccessories" category
+//     const fetchCategoryAccessoriesSQL = `
+//       SELECT * 
+//       FROM oneclick_product_category 
+//       WHERE category = 'MobileAccessories'
+//     `;
 
-    console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
-    console.log("SQL Query Parameters:", ['ComputerAccessories']);
+//     console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
+//     console.log("SQL Query Parameters:", ['ComputerAccessories']);
 
-    db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
-      if (err) {
-        console.error("Database query error (category accessories):", err.message);
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+//     db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
+//       if (err) {
+//         console.error("Database query error (category accessories):", err.message);
+//         return res.status(500).json({ error: "Error fetching accessories for category." });
+//       }
 
-      if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
-        console.warn("No accessories found for category: ComputerAccessories");
-        return res.status(404).json({ error: "No accessories found for this category." });
-      }
+//       if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
+//         console.warn("No accessories found for category: ComputerAccessories");
+//         return res.status(404).json({ error: "No accessories found for this category." });
+//       }
 
-      console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
+//       console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
 
-      // Combine results
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult,
-      };
+//       // Combine results
+//       const result = {
+//         additionalAccessories,
+//         categoryAccessories: categoryAccessoriesResult,
+//       };
 
-      console.log("Final Accessories Response:", result);
-      res.status(200).json(result);
-    });
-  });
-});
-app.get("/backend/getcctvaccessories", (req, res) => {
-  const { productId } = req.query;
+//       console.log("Final Accessories Response:", result);
+//       res.status(200).json(result);
+//     });
+//   });
+// });
+// app.get("/backend/getcctvaccessories", (req, res) => {
+//   const { productId } = req.query;
 
-  console.log("Received request for /backend/getaccessories");
-  console.log("Query parameters:", { productId });
+//   console.log("Received request for /backend/getaccessories");
+//   console.log("Query parameters:", { productId });
 
-  // Validate query parameter
-  if (!productId) {
-    console.error("Missing parameter: productId");
-    return res.status(400).json({ error: "productId is required." });
-  }
+//   // Validate query parameter
+//   if (!productId) {
+//     console.error("Missing parameter: productId");
+//     return res.status(400).json({ error: "productId is required." });
+//   }
 
-  // Part 1: Fetch additional accessories for the given productId
-  const fetchAdditionalAccessoriesSQL = `
-    SELECT additional_accessories 
-    FROM oneclick_product_category 
-    WHERE id = ?
-  `;
+//   // Part 1: Fetch additional accessories for the given productId
+//   const fetchAdditionalAccessoriesSQL = `
+//     SELECT additional_accessories 
+//     FROM oneclick_product_category 
+//     WHERE id = ?
+//   `;
 
-  console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
-  console.log("SQL Query Parameters:", [productId]);
+//   console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
+//   console.log("SQL Query Parameters:", [productId]);
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      console.error("Database query error (additional accessories):", err.message);
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+//   db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
+//     if (err) {
+//       console.error("Database query error (additional accessories):", err.message);
+//       return res.status(500).json({ error: "Error fetching additional accessories." });
+//     }
 
-    if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
-      console.warn("No additional accessories found for productId:", productId);
-      return res.status(404).json({ error: "No additional accessories found." });
-    }
+//     if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
+//       console.warn("No additional accessories found for productId:", productId);
+//       return res.status(404).json({ error: "No additional accessories found." });
+//     }
 
-    const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
-    console.log("Additional Accessories fetched successfully:", additionalAccessories);
+//     const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
+//     console.log("Additional Accessories fetched successfully:", additionalAccessories);
 
-    // Part 2: Fetch all accessories for "ComputerAccessories" category
-    const fetchCategoryAccessoriesSQL = `
-      SELECT * 
-      FROM oneclick_product_category 
-      WHERE category = 'CCTVAccessories'
-    `;
+//     // Part 2: Fetch all accessories for "ComputerAccessories" category
+//     const fetchCategoryAccessoriesSQL = `
+//       SELECT * 
+//       FROM oneclick_product_category 
+//       WHERE category = 'CCTVAccessories'
+//     `;
 
-    console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
-    console.log("SQL Query Parameters:", ['ComputerAccessories']);
+//     console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
+//     console.log("SQL Query Parameters:", ['ComputerAccessories']);
 
-    db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
-      if (err) {
-        console.error("Database query error (category accessories):", err.message);
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+//     db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
+//       if (err) {
+//         console.error("Database query error (category accessories):", err.message);
+//         return res.status(500).json({ error: "Error fetching accessories for category." });
+//       }
 
-      if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
-        console.warn("No accessories found for category: ComputerAccessories");
-        return res.status(404).json({ error: "No accessories found for this category." });
-      }
+//       if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
+//         console.warn("No accessories found for category: ComputerAccessories");
+//         return res.status(404).json({ error: "No accessories found for this category." });
+//       }
 
-      console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
+//       console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
 
-      // Combine results
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult,
-      };
+//       // Combine results
+//       const result = {
+//         additionalAccessories,
+//         categoryAccessories: categoryAccessoriesResult,
+//       };
 
-      console.log("Final Accessories Response:", result);
-      res.status(200).json(result);
-    });
-  });
-});
-app.get("/backend/getprinteraccessories", (req, res) => {
-  const { productId } = req.query;
+//       console.log("Final Accessories Response:", result);
+//       res.status(200).json(result);
+//     });
+//   });
+// });
+// app.get("/backend/getprinteraccessories", (req, res) => {
+//   const { productId } = req.query;
 
-  console.log("Received request for /backend/getaccessories");
-  console.log("Query parameters:", { productId });
+//   console.log("Received request for /backend/getaccessories");
+//   console.log("Query parameters:", { productId });
 
-  // Validate query parameter
-  if (!productId) {
-    console.error("Missing parameter: productId");
-    return res.status(400).json({ error: "productId is required." });
-  }
+//   // Validate query parameter
+//   if (!productId) {
+//     console.error("Missing parameter: productId");
+//     return res.status(400).json({ error: "productId is required." });
+//   }
 
-  // Part 1: Fetch additional accessories for the given productId
-  const fetchAdditionalAccessoriesSQL = `
-    SELECT additional_accessories 
-    FROM oneclick_product_category 
-    WHERE id = ?
-  `;
+//   // Part 1: Fetch additional accessories for the given productId
+//   const fetchAdditionalAccessoriesSQL = `
+//     SELECT additional_accessories 
+//     FROM oneclick_product_category 
+//     WHERE id = ?
+//   `;
 
-  console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
-  console.log("SQL Query Parameters:", [productId]);
+//   console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
+//   console.log("SQL Query Parameters:", [productId]);
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      console.error("Database query error (additional accessories):", err.message);
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+//   db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
+//     if (err) {
+//       console.error("Database query error (additional accessories):", err.message);
+//       return res.status(500).json({ error: "Error fetching additional accessories." });
+//     }
 
-    if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
-      console.warn("No additional accessories found for productId:", productId);
-      return res.status(404).json({ error: "No additional accessories found." });
-    }
+//     if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
+//       console.warn("No additional accessories found for productId:", productId);
+//       return res.status(404).json({ error: "No additional accessories found." });
+//     }
 
-    const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
-    console.log("Additional Accessories fetched successfully:", additionalAccessories);
+//     const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
+//     console.log("Additional Accessories fetched successfully:", additionalAccessories);
 
-    // Part 2: Fetch all accessories for "ComputerAccessories" category
-    const fetchCategoryAccessoriesSQL = `
-      SELECT * 
-      FROM oneclick_product_category 
-      WHERE category = 'PrinterAccessories'
-    `;
+//     // Part 2: Fetch all accessories for "ComputerAccessories" category
+//     const fetchCategoryAccessoriesSQL = `
+//       SELECT * 
+//       FROM oneclick_product_category 
+//       WHERE category = 'PrinterAccessories'
+//     `;
 
-    console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
-    console.log("SQL Query Parameters:", ['ComputerAccessories']);
+//     console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
+//     console.log("SQL Query Parameters:", ['ComputerAccessories']);
 
-    db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
-      if (err) {
-        console.error("Database query error (category accessories):", err.message);
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+//     db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
+//       if (err) {
+//         console.error("Database query error (category accessories):", err.message);
+//         return res.status(500).json({ error: "Error fetching accessories for category." });
+//       }
 
-      if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
-        console.warn("No accessories found for category: ComputerAccessories");
-        return res.status(404).json({ error: "No accessories found for this category." });
-      }
+//       if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
+//         console.warn("No accessories found for category: ComputerAccessories");
+//         return res.status(404).json({ error: "No accessories found for this category." });
+//       }
 
-      console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
+//       console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
 
-      // Combine results
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult,
-      };
+//       // Combine results
+//       const result = {
+//         additionalAccessories,
+//         categoryAccessories: categoryAccessoriesResult,
+//       };
 
-      console.log("Final Accessories Response:", result);
-      res.status(200).json(result);
-    });
-  });
-});
+//       console.log("Final Accessories Response:", result);
+//       res.status(200).json(result);
+//     });
+//   });
+// });
 
 
 
-app.post("/backend/addfrequentlybuy", (req, res) => {
-  const { id, accessoryIds } = req.body;
-  if (!id) {
-    console.error("[ERROR] Missing 'id' in request body.");
-    return res.status(400).send("Product ID is required.");
-  }
-  if (accessoryIds === "") {
-    // Clear the existing accessories
-    const clearSql = `UPDATE oneclick_product_category SET additional_accessories = NULL WHERE id = ?`;
-    db.query(clearSql, [id], (err) => {
-      if (err) {
-        console.error(`[ERROR] Error clearing accessories: ${err.message}`, err);
-        return res.status(500).send("Error clearing accessories.");
-      }
-      console.log(`[INFO] Accessories cleared successfully for id=${id}`);
-      return res.send("Accessories cleared successfully.");
-    });
-  } else {
-    const formattedAccessoryIds = accessoryIds.startsWith(",") ? accessoryIds : `,${accessoryIds}`;
-    const accessoryArray = formattedAccessoryIds.split(",").filter(Boolean);
-    const fetchSql = `SELECT additional_accessories FROM oneclick_product_category WHERE id = ?`;
-    db.query(fetchSql, [id], (err, result) => {
-      if (err) {
-        console.error(`[ERROR] Error fetching current accessories: ${err.message}`, err);
-        return res.status(500).send("Error fetching current accessories.");
-      }
-      const currentAccessories = result[0]?.additional_accessories
-        ? result[0].additional_accessories.split(",")
-        : [];
-      const updatedAccessories = Array.from(new Set([...currentAccessories, ...accessoryArray]));
-      // Check column limit (255 characters) before updating
-      if (updatedAccessories.join(",").length > 255) {
-        console.error("[ERROR] Accessories data exceeds column limit.");
-        return res.status(400).send("Accessories data exceeds the column limit.");
-      }
-      const updateSql = `UPDATE oneclick_product_category SET additional_accessories = ? WHERE id = ?`;
-      db.query(updateSql, [updatedAccessories.join(","), id], (err) => {
-        if (err) {
-          console.error(`[ERROR] Error updating accessories: ${err.message}`, err);
-          return res.status(500).send("Error updating accessories.");
-        }
-        console.log(`[INFO] Accessories updated successfully for id=${id}`);
-        res.send("Accessories updated successfully.");
-      });
-    });
-  }
-});
-// POST: Remove frequently bought accessory
-app.post("/backend/removefrequentlybuy", (req, res) => {
-  const { productId, accessoryId } = req.body;
-  if (!productId || !accessoryId) {
-    console.error(`[ERROR] Missing required fields: productId=${productId}, accessoryId=${accessoryId}`);
-    return res.status(400).send("Product ID and accessory ID are required.");
-  }
-  const fetchSql = `SELECT additional_accessories FROM oneclick_product_category WHERE id = ?`;
-  db.query(fetchSql, [productId], (err, result) => {
-    if (err) {
-      console.error(`[ERROR] Error fetching current accessories: ${err.message}`, err);
-      return res.status(500).send("Error fetching current accessories.");
-    }
-    const currentAccessories = result[0]?.additional_accessories
-      ? result[0].additional_accessories.split(",")
-      : [];
-    console.log(`[INFO] Current accessories before removal: ${JSON.stringify(currentAccessories)}`);
-    const updatedAccessories = currentAccessories.filter((id) => id !== accessoryId);
-    const updateSql = `UPDATE oneclick_product_category SET additional_accessories = ? WHERE id = ?`;
-    db.query(updateSql, [updatedAccessories.join(","), productId], (err) => {
-      if (err) {
-        console.error(`[ERROR] Error updating accessories: ${err.message}`, err);
-        return res.status(500).send("Error updating accessories.");
-      }
-      console.log(`[INFO] Accessory removed successfully for productId=${productId}`);
-      res.send("Accessory removed successfully.");
-    });
-  });
-});
+// app.post("/backend/addfrequentlybuy", (req, res) => {
+//   const { id, accessoryIds } = req.body;
+//   if (!id) {
+//     console.error("[ERROR] Missing 'id' in request body.");
+//     return res.status(400).send("Product ID is required.");
+//   }
+//   if (accessoryIds === "") {
+//     // Clear the existing accessories
+//     const clearSql = `UPDATE oneclick_product_category SET additional_accessories = NULL WHERE id = ?`;
+//     db.query(clearSql, [id], (err) => {
+//       if (err) {
+//         console.error(`[ERROR] Error clearing accessories: ${err.message}`, err);
+//         return res.status(500).send("Error clearing accessories.");
+//       }
+//       console.log(`[INFO] Accessories cleared successfully for id=${id}`);
+//       return res.send("Accessories cleared successfully.");
+//     });
+//   } else {
+//     const formattedAccessoryIds = accessoryIds.startsWith(",") ? accessoryIds : `,${accessoryIds}`;
+//     const accessoryArray = formattedAccessoryIds.split(",").filter(Boolean);
+//     const fetchSql = `SELECT additional_accessories FROM oneclick_product_category WHERE id = ?`;
+//     db.query(fetchSql, [id], (err, result) => {
+//       if (err) {
+//         console.error(`[ERROR] Error fetching current accessories: ${err.message}`, err);
+//         return res.status(500).send("Error fetching current accessories.");
+//       }
+//       const currentAccessories = result[0]?.additional_accessories
+//         ? result[0].additional_accessories.split(",")
+//         : [];
+//       const updatedAccessories = Array.from(new Set([...currentAccessories, ...accessoryArray]));
+//       // Check column limit (255 characters) before updating
+//       if (updatedAccessories.join(",").length > 255) {
+//         console.error("[ERROR] Accessories data exceeds column limit.");
+//         return res.status(400).send("Accessories data exceeds the column limit.");
+//       }
+//       const updateSql = `UPDATE oneclick_product_category SET additional_accessories = ? WHERE id = ?`;
+//       db.query(updateSql, [updatedAccessories.join(","), id], (err) => {
+//         if (err) {
+//           console.error(`[ERROR] Error updating accessories: ${err.message}`, err);
+//           return res.status(500).send("Error updating accessories.");
+//         }
+//         console.log(`[INFO] Accessories updated successfully for id=${id}`);
+//         res.send("Accessories updated successfully.");
+//       });
+//     });
+//   }
+// });
+// // POST: Remove frequently bought accessory
+// app.post("/backend/removefrequentlybuy", (req, res) => {
+//   const { productId, accessoryId } = req.body;
+//   if (!productId || !accessoryId) {
+//     console.error(`[ERROR] Missing required fields: productId=${productId}, accessoryId=${accessoryId}`);
+//     return res.status(400).send("Product ID and accessory ID are required.");
+//   }
+//   const fetchSql = `SELECT additional_accessories FROM oneclick_product_category WHERE id = ?`;
+//   db.query(fetchSql, [productId], (err, result) => {
+//     if (err) {
+//       console.error(`[ERROR] Error fetching current accessories: ${err.message}`, err);
+//       return res.status(500).send("Error fetching current accessories.");
+//     }
+//     const currentAccessories = result[0]?.additional_accessories
+//       ? result[0].additional_accessories.split(",")
+//       : [];
+//     console.log(`[INFO] Current accessories before removal: ${JSON.stringify(currentAccessories)}`);
+//     const updatedAccessories = currentAccessories.filter((id) => id !== accessoryId);
+//     const updateSql = `UPDATE oneclick_product_category SET additional_accessories = ? WHERE id = ?`;
+//     db.query(updateSql, [updatedAccessories.join(","), productId], (err) => {
+//       if (err) {
+//         console.error(`[ERROR] Error updating accessories: ${err.message}`, err);
+//         return res.status(500).send("Error updating accessories.");
+//       }
+//       console.log(`[INFO] Accessory removed successfully for productId=${productId}`);
+//       res.send("Accessory removed successfully.");
+//     });
+//   });
+// });
 
 
 /////////////offerprice///////////////
@@ -10749,7 +11779,6 @@ app.get('/backend/api/products/fetchoffer/:id', (req, res) => {
 // API route to copy a product
 app.post('/backend/api/copy-product/:id', async (req, res) => {
   const productId = req.params.id;
-console.log("")
   try {
 
     const newProdId = generateProductId();
@@ -10780,56 +11809,61 @@ console.log("")
   }
 });
 
-app.get("/backend/pending-payment", (req, res) => {
-  const sql = "SELECT total_amount FROM oneclick_orders WHERE status != 'Paid'";
+// app.get("/backend/pending-payment", (req, res) => {
+//   const sql = "SELECT SUM(total_amount) AS totalPendingAmount FROM oneclick_orders WHERE status != 'Paid'";
 
-  db.query(sql, (error, results) => {
-    if (error) {
-      console.error("Error fetching pending payments:", error);
-      return res.status(500).json({ message: "Server error" });
-    }
+//   db.query(sql, (error, results) => {
+//     if (error) {
+//       console.error("Error fetching pending payments:", error);
+//       return res.status(500).json({ message: "Server error" });
+//     }
 
-    // Calculate the sum of total_amount
-    const totalPendingAmount = results.reduce((sum, record) => sum + record.total_amount, 0);
+//     // Extract the total pending amount from the results
+//     const totalPendingAmount = results[0]?.totalPendingAmount || 0;
 
-    // Send the total pending amount
-    res.status(200).json({
-      message: "Pending payments fetched successfully",
-      totalPendingAmount: totalPendingAmount,
-    });
-    console.log("Pending payments total: ", totalPendingAmount);
-  });
-});
-////////////cancel order ///////////
-app.post("/backend/cancelOrder", (req, res) => {
-  const { orderId } = req.body;
+//     res.status(200).json({
+//       message: "Pending payments fetched successfully",
+//       totalPendingAmount,
+//     });
+//     console.log("Pending payments total: ", totalPendingAmount);
+//   });
+// });
 
-  // Validate input
-  if (!orderId) {
-    return res.status(400).json({ error: "Order ID is required." });
-  }
 
-  // Query to update the order's delivery_status to "Cancelled"
-  const query = `
-    UPDATE oneclick_orders
-    SET delivery_status = 'Cancelled'
-    WHERE unique_id = ? AND delivery_status != 'Cancelled'
-  `;
+////////////Cancel process/////////
 
-  db.query(query, [orderId], (error, result) => {
-    if (error) {
-      console.error("Error cancelling order:", error);
-      return res.status(500).json({ error: "Internal server error." });
-    }
+// app.post("/backend/cancelOrder", (req, res) => {
+//   const { orderId } = req.body;
 
-    if (result.affectedRows > 0) {
-      return res.json({ message: "Order successfully cancelled." });
-    } else {
-      return res
-        .status(400)
-        .json({ error: "Order cancellation failed or already cancelled." });
-    }
-  });
+//   console.log("orderId",orderId)
+
+//   if (!orderId) {
+//     return res.status(400).json({ error: "Order ID is required." });
+//   }
+
+//   const query = `
+//     UPDATE oneclick_orders
+//     SET delivery_status = 'Cancelled'
+//     WHERE unique_id = ? AND delivery_status != 'Cancelled'
+//   `;
+
+//   db.query(query, [orderId], (error, result) => {
+//     if (error) {
+//       console.error("Error cancelling order:", error);
+//       return res.status(500).json({ error: "Internal server error." });
+//     }
+
+//     if (result.affectedRows > 0) {
+//       res.json({ message: "Order successfully cancelled." });
+//     } else {
+//       res.status(400).json({ error: "Order cancellation failed or already cancelled." });
+//     }
+//   });
+// });
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Something went wrong." });
 });
 
 
