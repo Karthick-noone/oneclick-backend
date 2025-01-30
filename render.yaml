@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 services:
   - name: my-backend-service
     env: node
     startCommand: node server.js
     port: 3005
+=======
+services:
+  - name: my-backend-service
+    env: node
+    startCommand: node server.js
+    port: 3005
+>>>>>>> edc03143eb4857b4da096577bb73ada5cc9c3d93
