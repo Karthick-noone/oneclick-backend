@@ -1,2 +1,12 @@
+# Ignore zip files
+*.zip
+
+# Ignore specific files and folders
 node_modules/
 config.js
+cronjob.js
+render.yaml
+server2.js
+sms-errors.log
+smsService.js
+test.log
