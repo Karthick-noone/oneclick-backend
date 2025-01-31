@@ -1147,16 +1147,16 @@ app.post('/backend/update-user-wishlist', (req, res) => {
     });
   });
 });
-
-// Fetch user's wishlist product details
 app.post('/backend/fetch-wishlist', (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
+    console.log('Missing email or username in request');
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
-  // Step 1: Retrieve wishlist IDs from oneclick_users table
+  console.log(`Fetching wishlist for user: ${email}, ${username}`);
+
   db.query(
     'SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?',
     [email, username],
@@ -1167,6 +1167,7 @@ app.post('/backend/fetch-wishlist', (req, res) => {
       }
 
       if (results.length === 0) {
+        console.log(`User not found: ${email}, ${username}`);
         return res.status(404).json({ error: 'User not found' });
       }
 
@@ -1175,14 +1176,15 @@ app.post('/backend/fetch-wishlist', (req, res) => {
       try {
         wishlist = JSON.parse(wishlist);
       } catch (parseError) {
+        console.error('Error parsing wishlist:', parseError);
         wishlist = [];
       }
 
       if (wishlist.length === 0) {
+        console.log('Wishlist is empty for user:', email);
         return res.json({ products: [] });
       }
 
-      // Step 2: Fetch product details from oneclick_product_category table
       const placeholders = wishlist.map(() => '?').join(',');
       const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
 
@@ -1192,7 +1194,37 @@ app.post('/backend/fetch-wishlist', (req, res) => {
           return res.status(500).json({ error: 'Internal Server Error' });
         }
 
-        res.json({ products: productResults });
+        console.log('Fetched product details:', productResults);
+
+        const featureProductIds = productResults
+          .filter(product => product.category === 'Mobiles' || product.category === 'Computers')
+          .map(product => product.prod_id);
+
+        if (featureProductIds.length === 0) {
+          console.log('No wishlist products require additional features.');
+          return res.json({ products: productResults });
+        }
+
+        console.log('Fetching features for wishlist products:', featureProductIds);
+
+        const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => '?').join(',')})`;
+
+        db.query(featureQuery, featureProductIds, (err, featureResults) => {
+          if (err) {
+            console.error('Error fetching product features:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+          }
+
+          console.log('Fetched product features:', featureResults);
+
+          const productsWithFeatures = productResults.map(product => {
+            const features = featureResults.find(feature => feature.prod_id === product.prod_id);
+            return features ? { ...product, ...features } : product;
+          });
+
+          console.log('Final wishlist product list with features:', productsWithFeatures);
+          res.json({ products: productsWithFeatures });
+        });
       });
     }
   );
@@ -1254,10 +1286,12 @@ app.post('/backend/get-cart-items', (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
+    console.log('Missing email or username in request');
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
-  // Step 1: Retrieve cart items (IDs with quantities) from oneclick_users table
+  console.log(`Fetching cart items for user: ${email}, ${username}`);
+
   db.query(
     'SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?',
     [email, username],
@@ -1268,26 +1302,27 @@ app.post('/backend/get-cart-items', (req, res) => {
       }
 
       if (results.length === 0) {
+        console.log(`User not found: ${email}, ${username}`);
         return res.status(404).json({ error: 'User not found' });
       }
 
-      let cartItems = results[0].addtocart || '[]'; // Ensure you're using the correct field name
+      let cartItems = results[0].addtocart || '[]';
 
       try {
-        cartItems = JSON.parse(cartItems); // Parse the cart items as an array of "productId-quantity"
+        cartItems = JSON.parse(cartItems);
       } catch (parseError) {
+        console.error('Error parsing cart items:', parseError);
         cartItems = [];
       }
 
       if (cartItems.length === 0) {
+        console.log('Cart is empty for user:', email);
         return res.json({ products: [] });
       }
 
-      // Step 2: Prepare to fetch product details from oneclick_product_category table
-      // Extract the product IDs from the "productId-quantity" format
-      const productIds = cartItems.map(item => item.split('-')[0]); // Extract only the productId
+      const productIds = cartItems.map(item => item.split('-')[0]);
+      console.log('Product IDs in cart:', productIds);
 
-      // Step 3: Fetch product details from oneclick_product_category table
       const placeholders = productIds.map(() => '?').join(',');
       const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
 
@@ -1297,24 +1332,52 @@ app.post('/backend/get-cart-items', (req, res) => {
           return res.status(500).json({ error: 'Internal Server Error' });
         }
 
-        // Step 4: Map the product results to include the quantity from the cart
+        console.log('Fetched product details:', productResults);
+
         const productsWithQuantity = productResults.map(product => {
-          // Find the corresponding cart item with productId-quantity format
           const cartItem = cartItems.find(item => item.startsWith(`${product.id}-`));
-          const quantity = cartItem ? parseInt(cartItem.split('-')[1]) : 0; // Extract the quantity
+          const quantity = cartItem ? parseInt(cartItem.split('-')[1]) : 0;
 
           return {
             ...product,
-            quantity: quantity, // Add quantity to the product data
+            quantity: quantity,
           };
         });
 
-        // Return the products with their quantities
-        res.json({ products: productsWithQuantity });
+        const featureProductIds = productsWithQuantity
+          .filter(product => product.category === 'Mobiles' || product.category === 'Computers')
+          .map(product => product.prod_id);
+
+        if (featureProductIds.length === 0) {
+          console.log('No products require additional features.');
+          return res.json({ products: productsWithQuantity });
+        }
+
+        console.log('Fetching features for products:', featureProductIds);
+
+        const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => '?').join(',')})`;
+
+        db.query(featureQuery, featureProductIds, (err, featureResults) => {
+          if (err) {
+            console.error('Error fetching product features:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+          }
+
+          console.log('Fetched product features:', featureResults);
+
+          const productsWithFeatures = productsWithQuantity.map(product => {
+            const features = featureResults.find(feature => feature.prod_id === product.prod_id);
+            return features ? { ...product, ...features } : product;
+          });
+
+          console.log('Final product list with features:', productsWithFeatures);
+          res.json({ products: productsWithFeatures });
+        });
       });
     }
   );
 });
+
 
 
 app.post('/backend/get-cart-quantity-sum', (req, res) => {
@@ -7230,8 +7293,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 //   });
 // });
 
-
-
 app.get('/backend/api/mostpopular', (req, res) => {
   const categories = [
     'Mobiles',
@@ -7246,7 +7307,7 @@ app.get('/backend/api/mostpopular', (req, res) => {
     'Headphones',
     'Watch',
   ];
-  // Define limits for each category
+
   const categoryLimits = {
     'Mobiles': 1,
     'Computers': 1,
@@ -7254,37 +7315,70 @@ app.get('/backend/api/mostpopular', (req, res) => {
     'Printers': 1,
     'ComputerAccessories': 1,
     'MobileAccessories': 1,
-    'CCTVAccessories':1,
-    'PrinterAccessories':1,
+    'CCTVAccessories': 1,
+    'PrinterAccessories': 1,
     'Speakers': 1,
     'Headphones': 1,
     'Watch': 1,
   };
-  // Create an array of promises for each category query
+
   const promises = categories.map(category => new Promise((resolve, reject) => {
-    const limit = categoryLimits[category]; // Get the limit for the current category
-    const query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
-    console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
-    db.query(query, [category, limit], (err, results) => {
+    const limit = categoryLimits[category];
+
+    let query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
+
+    db.query(query, [category, limit], (err, products) => {
       if (err) {
-        console.error(`Error fetching products for category: ${category}`, err); // Log error for specific category
+        console.error(`Error fetching products for category: ${category}`, err);
         return reject(err);
       }
-      console.log(`Fetched ${results.length} products for category: ${category}`); // Log successful fetch with count
-      resolve(results); // Resolve with all rows of the result for the category
+
+      console.log(`Fetched ${products.length} products for category: ${category}`);
+
+      if (category !== 'Mobiles' && category !== 'Computers') {
+        return resolve(products);
+      }
+
+      const productIds = products.map(p => p.prod_id);
+      if (productIds.length === 0) {
+        return resolve(products);
+      }
+
+      console.log(`Fetching features for category: ${category}, Product IDs:`, productIds);
+
+      const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${productIds.map(() => '?').join(',')})`;
+
+      db.query(featureQuery, productIds, (err, featureResults) => {
+        if (err) {
+          console.error(`Error fetching features for category: ${category}`, err);
+          return reject(err);
+        }
+
+        console.log(`Fetched features for ${category}:`, featureResults);
+
+        const productsWithFeatures = products.map(product => {
+          const features = featureResults.find(feature => feature.prod_id === product.prod_id);
+          return features ? { ...product, ...features } : product;
+        });
+
+        resolve(productsWithFeatures);
+      });
     });
   }));
-  // Execute all promises and return results
+
   Promise.all(promises)
     .then(results => {
-      console.log('Successfully fetched all product categories:', results); // Log successful fetch of all categories
-      res.json(results); // Send the results as JSON
+      const flattenedResults = results.flat();
+      console.log('Final most popular product list:', flattenedResults);
+      res.json(flattenedResults);
     })
     .catch(err => {
-      console.error('Database error:', err); // Log any errors during the promise execution
+      console.error('Database error:', err);
       res.status(500).json({ error: 'Database error' });
     });
 });
+
+
 
 // app.put('/backend/deleteedithomepageimage/:id', (req, res) => {
 //   const productId = req.params.id;
@@ -11320,76 +11414,49 @@ app.delete("/backend/api/deletestaff/:id", (req, res) => {
 /////////frequent products///////////
 // GET: Fetch accessories by category
 // GET: Fetch accessories by category
-// app.get("/backend/getcomputeraccessories", (req, res) => {
-//   const { productId } = req.query;
+app.get("/backend/getcomputeraccessories", (req, res) => {
+  const { productId } = req.query;
 
-//   console.log("Received request for /backend/getaccessories");
-//   console.log("Query parameters:", { productId });
+  if (!productId) {
+    return res.status(400).json({ error: "productId is required." });
+  }
 
-//   // Validate query parameter
-//   if (!productId) {
-//     console.error("Missing parameter: productId");
-//     return res.status(400).json({ error: "productId is required." });
-//   }
+  const fetchAdditionalAccessoriesSQL = `
+    SELECT additional_accessories 
+    FROM oneclick_product_category 
+    WHERE id = ?
+  `;
 
-//   // Part 1: Fetch additional accessories for the given productId
-//   const fetchAdditionalAccessoriesSQL = `
-//     SELECT additional_accessories 
-//     FROM oneclick_product_category 
-//     WHERE id = ?
-//   `;
+  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
+    if (err) {
+      return res.status(500).json({ error: "Error fetching additional accessories." });
+    }
 
-//   console.log("SQL Query for additional accessories:", fetchAdditionalAccessoriesSQL);
-//   console.log("SQL Query Parameters:", [productId]);
+    const additionalAccessories = additionalAccessoriesResult.length ? additionalAccessoriesResult[0].additional_accessories : null;
 
-//   db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-//     if (err) {
-//       console.error("Database query error (additional accessories):", err.message);
-//       return res.status(500).json({ error: "Error fetching additional accessories." });
-//     }
+    const fetchCategoryAccessoriesSQL = `
+      SELECT * 
+      FROM oneclick_product_category 
+      WHERE category = 'ComputerAccessories'
+    `;
 
-//     if (!additionalAccessoriesResult || additionalAccessoriesResult.length === 0) {
-//       console.warn("No additional accessories found for productId:", productId);
-//       return res.status(404).json({ error: "No additional accessories found." });
-//     }
+    db.query(fetchCategoryAccessoriesSQL, (err, categoryAccessoriesResult) => {
+      if (err) {
+        return res.status(500).json({ error: "Error fetching accessories for category." });
+      }
 
-//     const additionalAccessories = additionalAccessoriesResult[0]?.additional_accessories || null;
-//     console.log("Additional Accessories fetched successfully:", additionalAccessories);
+      const result = {
+        additionalAccessories,
+        categoryAccessories: categoryAccessoriesResult
+      };
 
-//     // Part 2: Fetch all accessories for "ComputerAccessories" category
-//     const fetchCategoryAccessoriesSQL = `
-//       SELECT * 
-//       FROM oneclick_product_category 
-//       WHERE category = 'ComputerAccessories'
-//     `;
+      res.status(200).json(result);
+    });
+  });
+});
 
-//     console.log("SQL Query for category accessories:", fetchCategoryAccessoriesSQL);
-//     console.log("SQL Query Parameters:", ['ComputerAccessories']);
 
-//     db.query(fetchCategoryAccessoriesSQL, ['ComputerAccessories'], (err, categoryAccessoriesResult) => {
-//       if (err) {
-//         console.error("Database query error (category accessories):", err.message);
-//         return res.status(500).json({ error: "Error fetching accessories for category." });
-//       }
 
-//       if (!categoryAccessoriesResult || categoryAccessoriesResult.length === 0) {
-//         console.warn("No accessories found for category: ComputerAccessories");
-//         return res.status(404).json({ error: "No accessories found for this category." });
-//       }
-
-//       console.log("Category Accessories fetched successfully:", categoryAccessoriesResult);
-
-//       // Combine results
-//       const result = {
-//         additionalAccessories,
-//         categoryAccessories: categoryAccessoriesResult,
-//       };
-
-//       console.log("Final Accessories Response:", result);
-//       res.status(200).json(result);
-//     });
-//   });
-// });
 // app.get("/backend/getmobileaccessories", (req, res) => {
 //   const { productId } = req.query;
 
@@ -11602,83 +11669,94 @@ app.delete("/backend/api/deletestaff/:id", (req, res) => {
 // });
 
 
-
 // app.post("/backend/addfrequentlybuy", (req, res) => {
 //   const { id, accessoryIds } = req.body;
+
 //   if (!id) {
-//     console.error("[ERROR] Missing 'id' in request body.");
 //     return res.status(400).send("Product ID is required.");
 //   }
-//   if (accessoryIds === "") {
+
+//   if (!accessoryIds) {
 //     // Clear the existing accessories
 //     const clearSql = `UPDATE oneclick_product_category SET additional_accessories = NULL WHERE id = ?`;
 //     db.query(clearSql, [id], (err) => {
 //       if (err) {
-//         console.error(`[ERROR] Error clearing accessories: ${err.message}`, err);
 //         return res.status(500).send("Error clearing accessories.");
 //       }
-//       console.log(`[INFO] Accessories cleared successfully for id=${id}`);
 //       return res.send("Accessories cleared successfully.");
 //     });
 //   } else {
-//     const formattedAccessoryIds = accessoryIds.startsWith(",") ? accessoryIds : `,${accessoryIds}`;
-//     const accessoryArray = formattedAccessoryIds.split(",").filter(Boolean);
+//     const accessoryArray = accessoryIds.split(",").filter(Boolean);
+
 //     const fetchSql = `SELECT additional_accessories FROM oneclick_product_category WHERE id = ?`;
 //     db.query(fetchSql, [id], (err, result) => {
 //       if (err) {
-//         console.error(`[ERROR] Error fetching current accessories: ${err.message}`, err);
 //         return res.status(500).send("Error fetching current accessories.");
 //       }
+
 //       const currentAccessories = result[0]?.additional_accessories
 //         ? result[0].additional_accessories.split(",")
 //         : [];
 //       const updatedAccessories = Array.from(new Set([...currentAccessories, ...accessoryArray]));
-//       // Check column limit (255 characters) before updating
+
 //       if (updatedAccessories.join(",").length > 255) {
-//         console.error("[ERROR] Accessories data exceeds column limit.");
 //         return res.status(400).send("Accessories data exceeds the column limit.");
 //       }
+
 //       const updateSql = `UPDATE oneclick_product_category SET additional_accessories = ? WHERE id = ?`;
 //       db.query(updateSql, [updatedAccessories.join(","), id], (err) => {
 //         if (err) {
-//           console.error(`[ERROR] Error updating accessories: ${err.message}`, err);
 //           return res.status(500).send("Error updating accessories.");
 //         }
-//         console.log(`[INFO] Accessories updated successfully for id=${id}`);
-//         res.send("Accessories updated successfully.");
+//         return res.send("Accessories updated successfully.");
 //       });
 //     });
 //   }
 // });
-// // POST: Remove frequently bought accessory
+
 // app.post("/backend/removefrequentlybuy", (req, res) => {
 //   const { productId, accessoryId } = req.body;
+
 //   if (!productId || !accessoryId) {
 //     console.error(`[ERROR] Missing required fields: productId=${productId}, accessoryId=${accessoryId}`);
-//     return res.status(400).send("Product ID and accessory ID are required.");
+//     return res.status(400).json({ error: "Product ID and accessory ID are required." });
 //   }
+
 //   const fetchSql = `SELECT additional_accessories FROM oneclick_product_category WHERE id = ?`;
 //   db.query(fetchSql, [productId], (err, result) => {
 //     if (err) {
 //       console.error(`[ERROR] Error fetching current accessories: ${err.message}`, err);
-//       return res.status(500).send("Error fetching current accessories.");
+//       return res.status(500).json({ error: "Error fetching current accessories." });
 //     }
-//     const currentAccessories = result[0]?.additional_accessories
-//       ? result[0].additional_accessories.split(",")
-//       : [];
+
+//     if (!result || result.length === 0 || !result[0].additional_accessories) {
+//       console.warn(`[WARNING] No accessories found for productId=${productId}`);
+//       return res.status(404).json({ error: "No accessories found for this product." });
+//     }
+
+//     const currentAccessories = result[0].additional_accessories.split(",").filter(Boolean);
 //     console.log(`[INFO] Current accessories before removal: ${JSON.stringify(currentAccessories)}`);
-//     const updatedAccessories = currentAccessories.filter((id) => id !== accessoryId);
+
+//     if (!currentAccessories.includes(accessoryId)) {
+//       console.warn(`[WARNING] AccessoryId=${accessoryId} not found for productId=${productId}`);
+//       return res.status(404).json({ error: "Accessory not found for this product." });
+//     }
+
+//     const updatedAccessories = currentAccessories.filter(id => id !== accessoryId);
 //     const updateSql = `UPDATE oneclick_product_category SET additional_accessories = ? WHERE id = ?`;
-//     db.query(updateSql, [updatedAccessories.join(","), productId], (err) => {
+
+//     db.query(updateSql, [updatedAccessories.join(",") || null, productId], (err) => {
 //       if (err) {
 //         console.error(`[ERROR] Error updating accessories: ${err.message}`, err);
-//         return res.status(500).send("Error updating accessories.");
+//         return res.status(500).json({ error: "Error updating accessories." });
 //       }
+
 //       console.log(`[INFO] Accessory removed successfully for productId=${productId}`);
-//       res.send("Accessory removed successfully.");
+//       return res.status(200).json({ message: "Accessory removed successfully." });
 //     });
 //   });
 // });
+
 
 
 /////////////offerprice///////////////
@@ -11832,34 +11910,35 @@ app.post('/backend/api/copy-product/:id', async (req, res) => {
 
 ////////////Cancel process/////////
 
-// app.post("/backend/cancelOrder", (req, res) => {
-//   const { orderId } = req.body;
+app.post("/backend/cancelOrder", (req, res) => {
+  const { orderId } = req.body;
 
-//   console.log("orderId",orderId)
+  console.log("Received orderId:", orderId);
 
-//   if (!orderId) {
-//     return res.status(400).json({ error: "Order ID is required." });
-//   }
+  if (!orderId || typeof orderId !== "string" || !/^ORD\d{8,}$/.test(orderId)) {
+    return res.status(400).json({ error: "Invalid Order ID format." });
+  }
 
-//   const query = `
-//     UPDATE oneclick_orders
-//     SET delivery_status = 'Cancelled'
-//     WHERE unique_id = ? AND delivery_status != 'Cancelled'
-//   `;
+  const query = `
+    UPDATE oneclick_orders
+    SET delivery_status = 'Cancelled'
+    WHERE unique_id = ? AND delivery_status != 'Cancelled'
+  `;
 
-//   db.query(query, [orderId], (error, result) => {
-//     if (error) {
-//       console.error("Error cancelling order:", error);
-//       return res.status(500).json({ error: "Internal server error." });
-//     }
+  db.query(query, [orderId], (error, result) => {
+    if (error) {
+      console.error("Database error while cancelling order:", error);
+      return res.status(500).json({ error: "Internal server error." }); // ✅ Response is returned immediately
+    }
 
-//     if (result.affectedRows > 0) {
-//       res.json({ message: "Order successfully cancelled." });
-//     } else {
-//       res.status(400).json({ error: "Order cancellation failed or already cancelled." });
-//     }
-//   });
-// });
+    if (result.affectedRows > 0) {
+      return res.json({ message: "Order successfully cancelled." }); // ✅ Return added to prevent multiple responses
+    } 
+    
+    return res.status(404).json({ error: "Order not found or already cancelled." }); // ✅ Return added
+  });
+});
+
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
