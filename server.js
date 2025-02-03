@@ -49,19 +49,19 @@ const db = require('./db'); //external file for db
 // });
 
 
-// // Middleware function to check for direct access to API routes
-// const preventDirectAccessToApi = (req, res, next) => {
-//   const isApiRequest = req.originalUrl.startsWith("/");
-//   if (isApiRequest && !req.headers.referer) {
-//     // If it's an API request and there's no Referer header, respond with an error
-//     return res.status(403).json({ error: "Direct access to API not allowed" });
-//   }
-//   // If it's not an API request or if there's a Referer header, proceed to the next middleware/route handler
-//   next();
-// };
+// Middleware function to check for direct access to API routes
+const preventDirectAccessToApi = (req, res, next) => {
+  const isApiRequest = req.originalUrl.startsWith("/");
+  if (isApiRequest && !req.headers.referer) {
+    // If it's an API request and there's no Referer header, respond with an error
+    return res.status(403).json({ error: "Direct access to API not allowed" });
+  }
+  // If it's not an API request or if there's a Referer header, proceed to the next middleware/route handler
+  next();
+};
 
-// // Apply the middleware to all routes
-// app.use(preventDirectAccessToApi);
+// Apply the middleware to all routes
+app.use(preventDirectAccessToApi);
 
 // // MySQL connection configuration
 // const dbConfig = {
