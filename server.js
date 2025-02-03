@@ -1290,7 +1290,7 @@ app.post('/backend/get-cart-items', (req, res) => {
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
-  console.log(`Fetching cart items for user: ${email}, ${username}`);
+  // console.log(`Fetching cart items for user: ${email}, ${username}`);
 
   db.query(
     'SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?',
@@ -1321,7 +1321,7 @@ app.post('/backend/get-cart-items', (req, res) => {
       }
 
       const productIds = cartItems.map(item => item.split('-')[0]);
-      console.log('Product IDs in cart:', productIds);
+      // console.log('Product IDs in cart:', productIds);
 
       const placeholders = productIds.map(() => '?').join(',');
       const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
@@ -1332,7 +1332,7 @@ app.post('/backend/get-cart-items', (req, res) => {
           return res.status(500).json({ error: 'Internal Server Error' });
         }
 
-        console.log('Fetched product details:', productResults);
+        // console.log('Fetched product details:', productResults);
 
         const productsWithQuantity = productResults.map(product => {
           const cartItem = cartItems.find(item => item.startsWith(`${product.id}-`));
@@ -1353,7 +1353,7 @@ app.post('/backend/get-cart-items', (req, res) => {
           return res.json({ products: productsWithQuantity });
         }
 
-        console.log('Fetching features for products:', featureProductIds);
+        // console.log('Fetching features for products:', featureProductIds);
 
         const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => '?').join(',')})`;
 
@@ -1363,14 +1363,14 @@ app.post('/backend/get-cart-items', (req, res) => {
             return res.status(500).json({ error: 'Internal Server Error' });
           }
 
-          console.log('Fetched product features:', featureResults);
+          // console.log('Fetched product features:', featureResults);
 
           const productsWithFeatures = productsWithQuantity.map(product => {
             const features = featureResults.find(feature => feature.prod_id === product.prod_id);
             return features ? { ...product, ...features } : product;
           });
 
-          console.log('Final product list with features:', productsWithFeatures);
+          // console.log('Final product list with features:', productsWithFeatures);
           res.json({ products: productsWithFeatures });
         });
       });
@@ -1927,7 +1927,7 @@ app.get('/backend/api/products', (req, res) => {
   // Execute all promises and return results
   Promise.all(promises)
     .then(results => {
-      console.log('Successfully fetched all product categories:', results); // Log successful fetch of all categories
+      // console.log('Successfully fetched all product categories:', results); // Log successful fetch of all categories
       res.json(results); // Send the results as JSON
     })
     .catch(err => {
@@ -7294,90 +7294,96 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 // });
 
 app.get('/backend/api/mostpopular', (req, res) => {
+  console.log('Received request for most popular products');
+
   const categories = [
-    'Mobiles',
-    'Computers',
-    'CCTV',
-    'Printers',
-    'ComputerAccessories',
-    'MobileAccessories',
-    'CCTVAccessories',
-    'PrinterAccessories',
-    'Speakers',
-    'Headphones',
-    'Watch',
+    'Mobiles', 'Computers', 'CCTV', 'Printers', 'ComputerAccessories', 
+    'MobileAccessories', 'CCTVAccessories', 'PrinterAccessories', 'Speakers', 
+    'Headphones', 'Watch'
   ];
 
-  const categoryLimits = {
-    'Mobiles': 1,
-    'Computers': 1,
-    'CCTV': 1,
-    'Printers': 1,
-    'ComputerAccessories': 1,
-    'MobileAccessories': 1,
-    'CCTVAccessories': 1,
-    'PrinterAccessories': 1,
-    'Speakers': 1,
-    'Headphones': 1,
-    'Watch': 1,
-  };
+  let query = `
+    SELECT p.*, 
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.memory
+             ELSE NULL 
+           END AS memory,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.storage
+             ELSE NULL 
+           END AS storage,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.processor
+             ELSE NULL 
+           END AS processor,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.camera
+             ELSE NULL 
+           END AS camera,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.display
+             ELSE NULL 
+           END AS display,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.battery
+             ELSE NULL 
+           END AS battery,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.os
+             ELSE NULL 
+           END AS os,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.network
+             ELSE NULL 
+           END AS network,
+           CASE 
+             WHEN p.category IN ('Mobiles', 'Computers') THEN m.others
+             ELSE NULL 
+           END AS others
+    FROM oneclick_product_category p
+    LEFT JOIN oneclick_mobile_features m 
+    ON p.prod_id = m.prod_id AND p.category IN ('Mobiles', 'Computers')
+    WHERE p.category IN (${categories.map(() => '?').join(',')}) 
+    AND p.productStatus = 'approved' 
+    ORDER BY p.category, p.id DESC`;
 
-  const promises = categories.map(category => new Promise((resolve, reject) => {
-    const limit = categoryLimits[category];
+  console.log('Executing query:', query);
+  console.log('Query Parameters:', categories);
 
-    let query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
-
-    db.query(query, [category, limit], (err, products) => {
-      if (err) {
-        console.error(`Error fetching products for category: ${category}`, err);
-        return reject(err);
-      }
-
-      console.log(`Fetched ${products.length} products for category: ${category}`);
-
-      if (category !== 'Mobiles' && category !== 'Computers') {
-        return resolve(products);
-      }
-
-      const productIds = products.map(p => p.prod_id);
-      if (productIds.length === 0) {
-        return resolve(products);
-      }
-
-      console.log(`Fetching features for category: ${category}, Product IDs:`, productIds);
-
-      const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${productIds.map(() => '?').join(',')})`;
-
-      db.query(featureQuery, productIds, (err, featureResults) => {
-        if (err) {
-          console.error(`Error fetching features for category: ${category}`, err);
-          return reject(err);
-        }
-
-        console.log(`Fetched features for ${category}:`, featureResults);
-
-        const productsWithFeatures = products.map(product => {
-          const features = featureResults.find(feature => feature.prod_id === product.prod_id);
-          return features ? { ...product, ...features } : product;
-        });
-
-        resolve(productsWithFeatures);
-      });
-    });
-  }));
-
-  Promise.all(promises)
-    .then(results => {
-      const flattenedResults = results.flat();
-      console.log('Final most popular product list:', flattenedResults);
-      res.json(flattenedResults);
-    })
-    .catch(err => {
+  db.query(query, categories, (err, products) => {
+    if (err) {
       console.error('Database error:', err);
-      res.status(500).json({ error: 'Database error' });
-    });
-});
+      return res.status(500).json({ error: 'Database error', details: err });
+    }
 
+    console.log('Raw products fetched:', products);
+
+    if (!products || products.length === 0) {
+      console.error('No products found in the database for the given categories.');
+      return res.status(404).json({ error: 'No products found' });
+    }
+
+    // Group the products by category and select one per category
+    try {
+      const latestProducts = categories.reduce((result, category) => {
+        const product = products.find(product => product.category === category);
+        if (product) {
+          result.push(product);
+        } else {
+          console.log(`No product found for category: ${category}, skipping.`);
+        }
+        return result;
+      }, []);
+
+      console.log('Latest products:', latestProducts);
+
+      res.json(latestProducts);
+    } catch (error) {
+      console.error('Error while processing products:', error);
+      return res.status(500).json({ error: 'Error processing products', details: error });
+    }
+  });
+});
 
 
 // app.put('/backend/deleteedithomepageimage/:id', (req, res) => {
