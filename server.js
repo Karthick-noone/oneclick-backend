@@ -1151,7 +1151,7 @@ app.post('/backend/fetch-wishlist', (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
-    console.log('Missing email or username in request');
+    // console.log('Missing email or username in request');
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
@@ -1286,7 +1286,7 @@ app.post('/backend/get-cart-items', (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
-    console.log('Missing email or username in request');
+    // console.log('Missing email or username in request');
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
@@ -1316,7 +1316,7 @@ app.post('/backend/get-cart-items', (req, res) => {
       }
 
       if (cartItems.length === 0) {
-        console.log('Cart is empty for user:', email);
+        // console.log('Cart is empty for user:', email);
         return res.json({ products: [] });
       }
 
@@ -1349,7 +1349,7 @@ app.post('/backend/get-cart-items', (req, res) => {
           .map(product => product.prod_id);
 
         if (featureProductIds.length === 0) {
-          console.log('No products require additional features.');
+          // console.log('No products require additional features.');
           return res.json({ products: productsWithQuantity });
         }
 
@@ -4372,6 +4372,8 @@ app.get('/backend/fetchheadphones', (req, res) => {
     res.json(products);
   });
 });
+
+
 app.put('/backend/updateheadphones/image/:id', headphonesUpload.single('image'), (req, res) => {
   const productId = req.params.id;
   const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
@@ -7511,7 +7513,7 @@ const upload13 = multer({
 app.get('/backend/fetchedithomepage', (req, res) => {
   const sql = 'SELECT * FROM oneclick_edithomepage ORDER BY id DESC';
 
-  console.log('Received request to fetch homepage data'); // Log the incoming request
+  // console.log('Received request to fetch homepage data'); // Log the incoming request
 
   db.query(sql, (err, results) => {
     if (err) {
@@ -11285,16 +11287,29 @@ app.patch('/backend/notifications/mark-all-read', (req, res) => {
 });
 ////////common coupon code//////////
 
+
 // Get all coupons
 app.get("/backend/api/fetchcoupons", (req, res) => {
   console.log("Fetching all coupons...");
+  
+  // Query to fetch coupons
   db.query("SELECT * FROM oneclick_common_coupon ORDER BY id DESC LIMIT 1", (err, results) => {
     if (err) {
       console.error("Error fetching coupons:", err);
-      return res.status(500).json(err);
+      return res.status(500).json({ error: "Failed to fetch coupons", details: err });
     }
+
+    // Log the fetched results
     console.log("Fetched coupons successfully:", results);
-    res.json(results);
+
+    if (results.length > 0) {
+      // Send the coupon data as a JSON response
+      res.json(results);
+    } else {
+      // Handle case where no coupons are found
+      console.log("No coupons found in database.");
+      res.status(404).json({ error: "No coupons found" });
+    }
   });
 });
 
