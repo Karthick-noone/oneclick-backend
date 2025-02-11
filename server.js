@@ -615,7 +615,7 @@ app.post("/backend/login", (req, res) => {
       }
   
       if (results.length === 0) {
-        console.log("User not found:", contact_number); // Log user not found
+        // console.log("User not found:", contact_number); // Log user not found
         return res.status(400).json({ message: "User not found" });
       }
   
@@ -649,7 +649,7 @@ app.post("/backend/adminlogin", (req, res) => {
       }
   
       if (results.length === 0) {
-        console.log("User not found:", username); // Log user not found
+        // console.log("User not found:", username); // Log user not found
         return res.status(400).json({ message: "User not found" });
       }
   
@@ -1167,7 +1167,7 @@ app.post('/backend/fetch-wishlist', (req, res) => {
       }
 
       if (results.length === 0) {
-        console.log(`User not found: ${email}, ${username}`);
+        // console.log(`User not found: ${email}, ${username}`);
         return res.status(404).json({ error: 'User not found' });
       }
 
@@ -1302,7 +1302,7 @@ app.post('/backend/get-cart-items', (req, res) => {
       }
 
       if (results.length === 0) {
-        console.log(`User not found: ${email}, ${username}`);
+        // console.log(`User not found: ${email}, ${username}`);
         return res.status(404).json({ error: 'User not found' });
       }
 
@@ -10055,7 +10055,7 @@ app.post('/backend/clear-cart', (req, res) => {
     }
 
     if (result.length === 0) {
-      console.warn("User not found:", email);
+      // console.warn("User not found:", email);
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -10165,17 +10165,17 @@ app.get('/backend/fetchorders', (req, res) => {
 
     // Collect all unique user_ids from orders
     const userIds = [...new Set(enrichedOrders.map(order => order.user_id))];
-    console.log('Unique user IDs:', userIds);
+    // console.log('Unique user IDs:', userIds);
 
     if (userIds.length === 0) {
       // No user_ids to fetch
-      console.log('No user IDs to fetch. Returning orders.');
+      // console.log('No user IDs to fetch. Returning orders.');
       return res.json(enrichedOrders);
     }
 
     // Prepare query to fetch names from users table
     const queryUsers = 'SELECT user_id, username FROM oneclick_users WHERE user_id IN (?)';
-    console.log('Query to fetch user names:', queryUsers);
+    // console.log('Query to fetch user names:', queryUsers);
 
     db.query(queryUsers, [userIds], (err, users) => {
       if (err) {
@@ -10183,14 +10183,14 @@ app.get('/backend/fetchorders', (req, res) => {
         return res.status(500).json({ message: 'Error fetching users' });
       }
 
-      console.log('Users fetched:', users);
+      // console.log('Users fetched:', users);
 
       // Map user_id to name
       const userMap = users.reduce((acc, user) => {
         acc[user.user_id] = user.username;
         return acc;
       }, {});
-      console.log('User ID to name map:', userMap);
+      // console.log('User ID to name map:', userMap);
 
       // Add customerName to orders based on user_id
       const finalOrders = enrichedOrders.map(order => ({
@@ -10237,6 +10237,26 @@ app.get('/backend/fetchordersdashboard', (req, res) => {
 
 // Fetch Product Categories for Pie Chart
 app.get('/backend/fetchcategories', (req, res) => {
+  const query = `
+    SELECT 
+      category, 
+      COUNT(*) AS total_category 
+    FROM oneclick_product_category 
+    GROUP BY category;
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching product categories:', err);
+      res.status(500).send('Error fetching product categories');
+      return;
+    }
+    res.json(results);
+  });
+});
+
+
+app.get('/backend/fetchproductcategories', (req, res) => {
   const query = `
     SELECT 
       category, 
@@ -11811,25 +11831,18 @@ app.post('/backend/api/copy-product/:id', async (req, res) => {
 });
 
 
-// app.get("/backend/pending-payment", (req, res) => {
-//   const sql = "SELECT SUM(total_amount) AS totalPendingAmount FROM oneclick_orders WHERE status != 'Paid'";
+app.get("/backend/pending-payment", (req, res) => {
+  const sql = "SELECT total_amount FROM oneclick_orders WHERE status != 'Paid'";
 
-//   db.query(sql, (error, results) => {
-//     if (error) {
-//       console.error("Error fetching pending payments:", error);
-//       return res.status(500).json({ message: "Server error" });
-//     }
+  db.query(sql, (error, results) => {
+    if (error) {
+      console.error("Error fetching pending payments:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
 
-//     // Extract the total pending amount from the results
-//     const totalPendingAmount = results[0]?.totalPendingAmount || 0;
-
-//     res.status(200).json({
-//       message: "Pending payments fetched successfully",
-//       totalPendingAmount,
-//     });
-//     console.log("Pending payments total: ", totalPendingAmount);
-//   });
-// });
+    res.status(200).json(results); // Return all pending payments data
+  });
+});
 
 
 ////////////Cancel process/////////
@@ -11865,15 +11878,40 @@ app.post("/backend/cancelOrder", (req, res) => {
 
 ///////////new method for adding products//////////
 
-app.post("/api/add-product", (req, res) => {
-  const { name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features } = req.body;
+// app.post("/api/add-product", (req, res) => {
+//   const { name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features } = req.body;
   
-  const sql = `INSERT INTO oneclick_products (name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+//   const sql = `INSERT INTO oneclick_products (name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features) 
+//                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   
-  db.query(sql, [name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features], (err, result) => {
-    if (err) return res.status(500).json({ message: "Database Error", error: err });
-    res.json({ message: "Product added successfully" });
+//   db.query(sql, [name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features], (err, result) => {
+//     if (err) return res.status(500).json({ message: "Database Error", error: err });
+//     res.json({ message: "Product added successfully" });
+//   });
+// });
+
+//////////////////////////
+// API endpoint to update the status
+app.post("/backend/api/update-order-status", (req, res) => {
+  const { orderId, status } = req.body;
+
+  if (!orderId || !status) {
+    return res.status(400).json({ error: "orderId and status are required." });
+  }
+
+  // SQL query to update the status
+  const query = "UPDATE oneclick_orders SET status = ? WHERE unique_id = ?";
+  db.query(query, [status, orderId], (err, result) => {
+    if (err) {
+      console.error("Error updating status:", err);
+      return res.status(500).json({ error: "Failed to update the status." });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    return res.status(200).json({ message: "Status updated successfully!" });
   });
 });
 
