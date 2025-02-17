@@ -4355,20 +4355,26 @@ app.get('/backend/adminfetchheadphones', (req, res) => {
   });
 });
 
+
 app.get('/backend/fetchheadphones', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'headphones' AND productStatus = 'approved' ORDER BY id DESC"; 
+  console.log("Received request to fetch headphones");
+
+  const sql = "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'headphones' AND productStatus = 'approved' ORDER BY id DESC";
+  
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error('Error fetching products from database:', err);
+      return res.status(500).json({ message: 'Failed to fetch products' });
     }
-    
-    // Parse the prod_img JSON string to an array for each product
+
+    console.log(`Fetched ${results.length} products from the database`);
+
     const products = results.map(product => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
 
+    console.log("Sending fetched products to the client...");
     res.json(products);
   });
 });
@@ -5284,7 +5290,7 @@ app.post('/backend/printers', printersUpload.array('images', 5), (req, res) => {
 });
 
 app.get('/backend/adminfetchprinters', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'printers' ORDER BY id DESC"; 
+  const sql = "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'printers' ORDER BY id DESC"; 
   db.query(sql, (err, results) => {
     if (err) {
       console.error('Error fetching product:', err);
@@ -5301,7 +5307,7 @@ app.get('/backend/adminfetchprinters', (req, res) => {
   });
 });
 app.get('/backend/fetchprinters', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'printers' AND productStatus = 'approved' ORDER BY id DESC"; 
+  const sql = "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'printers' AND productStatus = 'approved' ORDER BY id DESC"; 
   db.query(sql, (err, results) => {
     if (err) {
       console.error('Error fetching product:', err);
@@ -10971,65 +10977,80 @@ app.get('/backend/products/relatedaccessories/:category', (req, res) => {
 // });
 
 // Validate coupon code
-// Backend (Node.js/Express)
-
-
-
 app.post('/backend/api/apply-coupon', (req, res) => {
   const { couponCode, product_ids } = req.body;
   console.log("Received data:", req.body);
 
+  // Normalize the coupon code to uppercase for case-insensitive matching
+  const normalizedCouponCode = couponCode.toUpperCase();
+
   // Ensure product_ids is an array
   const productIdsArray = Array.isArray(product_ids) ? product_ids : [product_ids];
 
-  // Prepare SQL query to check coupon for all products in product_ids
-  const query = `SELECT coupon_id, coupon_code, expiry_date, discount_value FROM oneclick_coupons 
-                 WHERE product_id IN (?) AND coupon_code = ?`;
-  
-  console.log('Executing query:', query, 'with params:', [productIdsArray, couponCode]);
+  // Query table 1: oneclick_coupons (which does NOT have a min purchase limit)
+  const queryCoupons = `
+    SELECT coupon_id, coupon_code, expiry_date, discount_value 
+    FROM oneclick_coupons 
+    WHERE product_id IN (?) AND LOWER(coupon_code) = LOWER(?)`;
 
-  db.query(query, [productIdsArray, couponCode], (err, results) => {
+  db.query(queryCoupons, [productIdsArray, normalizedCouponCode], (err, results) => {
     if (err) {
       console.error('Database query error:', err);
       return res.status(500).json({ error: 'Database query failed.', details: err });
     }
 
-    console.log('Query results:', results);
+    console.log('Query results from oneclick_coupons:', results);
 
-    if (results.length === 0) {
-      console.warn('Invalid coupon code or product ID does not match.');
-      return res.status(400).json({ error: 'Invalid coupon code.' });
+    if (results.length > 0) {
+      // Check if the coupon is expired
+      const validCoupons = results.filter(result => new Date(result.expiry_date) >= new Date());
+
+      if (validCoupons.length === 0) {
+        return res.status(400).json({ error: 'Coupon has expired.' });
+      }
+
+      // If valid coupon(s) exist, apply the total discount and return success
+      const totalDiscount = validCoupons.reduce((total, coupon) => total + parseInt(coupon.discount_value, 10), 0);
+
+      return res.json({
+        success: true,
+        message: 'Coupon applied successfully!',
+        discount2: totalDiscount, // Discount from table 1
+        min_purchase_limit: 0 // No min purchase limit for table 1
+      });
     }
 
-    // Check if any of the coupons have expired
-    const validCoupons = results.filter((result) => {
-      const expiryDate = new Date(result.expiry_date);
-      const today = new Date();
-      return expiryDate >= today;
-    });
+    // If no valid coupon found in table 1, check table 2 (common coupon)
+    const queryCommonCoupon = `
+      SELECT min_purchase_limit, value 
+      FROM oneclick_common_coupon 
+      WHERE LOWER(name) = LOWER(?)`;
 
-    if (validCoupons.length === 0) {
-      console.warn('Coupon has expired.');
-      return res.status(400).json({ error: 'Coupon has expired.' });
-    }
+    db.query(queryCommonCoupon, [normalizedCouponCode], (err, commonCouponResults) => {
+      if (err) {
+        console.error('Database query error:', err);
+        return res.status(500).json({ error: 'Database query failed.', details: err });
+      }
 
-    // Calculate total discount value from valid coupons
-    const totalDiscount = validCoupons.reduce((total, coupon) => {
-      return total + parseInt(coupon.discount_value, 10);
-    }, 0);
+      console.log('Query results from oneclick_common_coupon:', commonCouponResults);
 
-    console.log("Total discount value:", totalDiscount);
+      if (commonCouponResults.length === 0) {
+        return res.status(400).json({ error: 'Invalid coupon code.' });
+      }
 
-    // Return valid coupons and discount
-    console.log('Valid coupons found. Coupon applied successfully.');
-    res.json({
-      success: true,
-      message: 'Coupon applied successfully!',
-      discount: totalDiscount
+      // Use values from the common coupon table (table 2)
+      const { min_purchase_limit, value } = commonCouponResults[0];
+      console.log("Common Coupon - Min Purchase Limit:", min_purchase_limit, "Discount Value:", value);
+
+      return res.json({
+        success: true,
+        message: 'Coupon applied successfully!',
+        discount1: value, // Discount from table 2
+        min_purchase_limit: min_purchase_limit
+      });
     });
   });
 });
-
 
 
 //////////////////////////////////
