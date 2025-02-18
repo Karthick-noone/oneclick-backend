@@ -49,19 +49,19 @@ const db = require('./db'); //external file for db
 // });
 
 
-// Middleware function to check for direct access to API routes
-const preventDirectAccessToApi = (req, res, next) => {
-  const isApiRequest = req.originalUrl.startsWith("/");
-  if (isApiRequest && !req.headers.referer) {
-    // If it's an API request and there's no Referer header, respond with an error
-    return res.status(403).json({ error: "Direct access to API not allowed" });
-  }
-  // If it's not an API request or if there's a Referer header, proceed to the next middleware/route handler
-  next();
-};
+// // Middleware function to check for direct access to API routes
+// const preventDirectAccessToApi = (req, res, next) => {
+//   const isApiRequest = req.originalUrl.startsWith("/");
+//   if (isApiRequest && !req.headers.referer) {
+//     // If it's an API request and there's no Referer header, respond with an error
+//     return res.status(403).json({ error: "Direct access to API not allowed" });
+//   }
+//   // If it's not an API request or if there's a Referer header, proceed to the next middleware/route handler
+//   next();
+// };
 
-// Apply the middleware to all routes
-app.use(preventDirectAccessToApi);
+// // Apply the middleware to all routes
+// app.use(preventDirectAccessToApi);
 
 // // MySQL connection configuration
 // const dbConfig = {
@@ -10317,12 +10317,8 @@ app.get('/backend/api/salesreport', (req, res) => {
 app.get('/backend/api/ordersreport', (req, res) => {
   const query = `
     SELECT 
-      o.unique_id, 
-      u.username AS user_name, 
-      o.shipping_address, 
-      o.total_amount, 
-      o.status, 
-      o.order_date
+      o.*, 
+      u.* 
     FROM 
       oneclick_orders o
     JOIN 
@@ -10339,6 +10335,7 @@ app.get('/backend/api/ordersreport', (req, res) => {
     }
   });
 });
+
 
 // Customers Report API
 app.get('/backend/api/customersreport', (req, res) => {
@@ -10579,7 +10576,7 @@ app.get('/backend/getProductByOrderId/:orderId', (req, res) => {
 
   // SQL query to fetch product IDs
   const query = `
-    SELECT oi.product_id, oi.quantity
+    SELECT *
     FROM oneclick_order_items oi
     JOIN oneclick_orders o ON o.unique_id = oi.order_id
     WHERE o.unique_id = ?
@@ -10981,76 +10978,43 @@ app.post('/backend/api/apply-coupon', (req, res) => {
   const { couponCode, product_ids } = req.body;
   console.log("Received data:", req.body);
 
-  // Normalize the coupon code to uppercase for case-insensitive matching
   const normalizedCouponCode = couponCode.toUpperCase();
-
-  // Ensure product_ids is an array
   const productIdsArray = Array.isArray(product_ids) ? product_ids : [product_ids];
 
-  // Query table 1: oneclick_coupons (which does NOT have a min purchase limit)
+  // Query table 1: oneclick_coupons
   const queryCoupons = `
     SELECT coupon_id, coupon_code, expiry_date, discount_value 
     FROM oneclick_coupons 
     WHERE product_id IN (?) AND LOWER(coupon_code) = LOWER(?)`;
 
   db.query(queryCoupons, [productIdsArray, normalizedCouponCode], (err, results) => {
-    if (err) {
-      console.error('Database query error:', err);
-      return res.status(500).json({ error: 'Database query failed.', details: err });
-    }
+    if (err) return console.error('DB error:', err), res.status(500).json({ error: 'Database query failed.' });
 
-    console.log('Query results from oneclick_coupons:', results);
+    console.log('Coupons table results:', results);
 
     if (results.length > 0) {
-      // Check if the coupon is expired
-      const validCoupons = results.filter(result => new Date(result.expiry_date) >= new Date());
+      const validCoupons = results.filter(coupon => new Date(coupon.expiry_date) >= new Date());
+      if (validCoupons.length === 0) return res.status(400).json({ error: 'Coupon has expired.' });
 
-      if (validCoupons.length === 0) {
-        return res.status(400).json({ error: 'Coupon has expired.' });
-      }
-
-      // If valid coupon(s) exist, apply the total discount and return success
-      const totalDiscount = validCoupons.reduce((total, coupon) => total + parseInt(coupon.discount_value, 10), 0);
-
-      return res.json({
-        success: true,
-        message: 'Coupon applied successfully!',
-        discount2: totalDiscount, // Discount from table 1
-        min_purchase_limit: 0 // No min purchase limit for table 1
-      });
+      const totalDiscount = validCoupons.reduce((sum, coupon) => sum + parseInt(coupon.discount_value, 10), 0);
+      return res.json({ success: true, message: 'Coupon applied successfully!', discount2: totalDiscount, min_purchase_limit: 0 });
     }
 
-    // If no valid coupon found in table 1, check table 2 (common coupon)
-    const queryCommonCoupon = `
-      SELECT min_purchase_limit, value 
-      FROM oneclick_common_coupon 
-      WHERE LOWER(name) = LOWER(?)`;
-
+    // Query table 2: oneclick_common_coupon
+    const queryCommonCoupon = `SELECT min_purchase_limit, value FROM oneclick_common_coupon WHERE LOWER(name) = LOWER(?)`;
     db.query(queryCommonCoupon, [normalizedCouponCode], (err, commonCouponResults) => {
-      if (err) {
-        console.error('Database query error:', err);
-        return res.status(500).json({ error: 'Database query failed.', details: err });
-      }
+      if (err) return console.error('DB error:', err), res.status(500).json({ error: 'Database query failed.' });
 
-      console.log('Query results from oneclick_common_coupon:', commonCouponResults);
+      console.log('Common coupons table results:', commonCouponResults);
 
-      if (commonCouponResults.length === 0) {
-        return res.status(400).json({ error: 'Invalid coupon code.' });
-      }
+      if (commonCouponResults.length === 0) return res.status(400).json({ error: 'Invalid coupon code.' });
 
-      // Use values from the common coupon table (table 2)
       const { min_purchase_limit, value } = commonCouponResults[0];
-      console.log("Common Coupon - Min Purchase Limit:", min_purchase_limit, "Discount Value:", value);
-
-      return res.json({
-        success: true,
-        message: 'Coupon applied successfully!',
-        discount1: value, // Discount from table 2
-        min_purchase_limit: min_purchase_limit
-      });
+      return res.json({ success: true, message: 'Coupon applied successfully!', discount1: value, min_purchase_limit });
     });
   });
 });
+
 
 
 //////////////////////////////////
