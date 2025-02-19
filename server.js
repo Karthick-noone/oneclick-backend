@@ -1,34 +1,29 @@
-const express = require('express');
-const mysql = require('mysql');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+const express = require("express");
+const mysql = require("mysql");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 const app = express();
 const port = 5001;
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 const bcrypt = require("bcrypt");
-const nodemailer = require('nodemailer');
-const axios = require('axios'); // Import axios
+const nodemailer = require("nodemailer");
+const axios = require("axios"); // Import axios
 // const sendOtpSms = require("./smsService"); // Import the SMS service
 // const config = require('./config'); // Import your config file
 // Middleware
 app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: true }));  //first one 
-app.use(express.urlencoded({ limit: '10mb', extended: true }));  //new one for extend file limit
+// app.use(bodyParser.urlencoded({ extended: true }));  //first one
+app.use(express.urlencoded({ limit: "10mb", extended: true })); //new one for extend file limit
 
-app.use(cors());  // Enable CORS for all routes
+app.use(cors()); // Enable CORS for all routes
 // Middleware to parse JSON bodies
 // app.use(express.json()); //first one
-app.use(express.json({ limit: '10mb' })); //new one for extend file limit
+app.use(express.json({ limit: "10mb" })); //new one for extend file limit
 
-
-
-const db = require('./db'); //external file for db
-
-
-
+const db = require("./db"); //external file for db
 
 // const logStream = fs.createWriteStream(path.join(__dirname, "app.log"), { flags: "a" });
 
@@ -38,16 +33,14 @@ const db = require('./db'); //external file for db
 // // Example log
 // console.log("Server is starting...");
 // console.error("This is a test error log.");
-        
 
 // fs.writeFile("test.log", "Testing file write", (err) => {
-//   if (err) { 
+//   if (err) {
 //     console.error("Failed to write file:", err);
 //   } else {
 //     console.log("File written successfully");
 //   }
 // });
-
 
 // // Middleware function to check for direct access to API routes
 // const preventDirectAccessToApi = (req, res, next) => {
@@ -70,8 +63,6 @@ const db = require('./db'); //external file for db
 //   password: '',
 //   database: 'oneclick_empty',
 // };
-
-
 
 // // Create a MySQL connection
 // const db = mysql.createConnection(dbConfig);
@@ -101,7 +92,6 @@ const db = require('./db'); //external file for db
 //     throw err;
 //   }
 // });
-
 
 // // MySQL connection
 // const db = mysql.createConnection({
@@ -156,46 +146,46 @@ const db = require('./db'); //external file for db
 //   });
 // });
 
-app.post('/backend/contact', (req, res) => {
+app.post("/backend/contact", (req, res) => {
   const { name, email, subject, message, number } = req.body;
 
   // Validate input
   if (!name || !email || !subject || !message || !number) {
-    return res.status(400).send('All fields are required');
+    return res.status(400).send("All fields are required");
   }
 
   // Check if the email already exists
   const checkEmailQuery = `SELECT * FROM oneclick_contact_details WHERE email = ?`;
   db.query(checkEmailQuery, [email], (emailErr, emailResult) => {
     if (emailErr) {
-      console.error('Error checking email:', emailErr);
-      return res.status(500).send('Failed to check email.');
+      console.error("Error checking email:", emailErr);
+      return res.status(500).send("Failed to check email.");
     }
 
     // Check if the phone number already exists
     const checkPhoneQuery = `SELECT * FROM oneclick_contact_details WHERE phone = ?`;
     db.query(checkPhoneQuery, [number], (phoneErr, phoneResult) => {
       if (phoneErr) {
-        console.error('Error checking phone number:', phoneErr);
-        return res.status(500).send('Failed to check phone number.');
+        console.error("Error checking phone number:", phoneErr);
+        return res.status(500).send("Failed to check phone number.");
       }
 
       // Construct the response message
-      let responseMessage = 'Message stored successfully';
+      let responseMessage = "Message stored successfully";
 
       // If email exists
       if (emailResult.length > 0) {
-        responseMessage = 'Email already exists.';
+        responseMessage = "Email already exists.";
       }
 
       // If phone number exists
       if (phoneResult.length > 0) {
-        responseMessage = 'Phone number already exists.';
+        responseMessage = "Phone number already exists.";
       }
 
       // If both email and phone number exist
       if (emailResult.length > 0 && phoneResult.length > 0) {
-        responseMessage = 'Email and phone number already exists.';
+        responseMessage = "Email and phone number already exists.";
       }
 
       // If neither exists, insert the new message
@@ -205,24 +195,33 @@ app.post('/backend/contact', (req, res) => {
 
         db.query(insertQuery, values, (insertErr, insertResult) => {
           if (insertErr) {
-            console.error('Error inserting data:', insertErr);
-            return res.status(500).send('Failed to save the message. Please try again.');
+            console.error("Error inserting data:", insertErr);
+            return res
+              .status(500)
+              .send("Failed to save the message. Please try again.");
           }
 
           // Add a notification for the contacted user
           const notificationMessage = `User ${name} contacted via email: ${email} with subject: ${subject}`;
-          const notificationQuery = 'INSERT INTO oneclick_notifications (message, is_read, type, created_at) VALUES (?, FALSE, ?, NOW())';
-          const notificationType = 'contacted users'; // Define type as 'contacted users'
+          const notificationQuery =
+            "INSERT INTO oneclick_notifications (message, is_read, type, created_at) VALUES (?, FALSE, ?, NOW())";
+          const notificationType = "contacted users"; // Define type as 'contacted users'
 
-          db.query(notificationQuery, [notificationMessage, notificationType], (notificationErr) => {
-            if (notificationErr) {
-              console.error('Error creating notification:', notificationErr);
-              return res.status(500).send('Message stored, but failed to create notification');
+          db.query(
+            notificationQuery,
+            [notificationMessage, notificationType],
+            (notificationErr) => {
+              if (notificationErr) {
+                console.error("Error creating notification:", notificationErr);
+                return res
+                  .status(500)
+                  .send("Message stored, but failed to create notification");
+              }
+
+              // Return the response message
+              return res.status(200).send(responseMessage);
             }
-
-            // Return the response message
-            return res.status(200).send(responseMessage);
-          });
+          );
         });
       } else {
         // If we found existing email or phone, just send the response without inserting
@@ -232,34 +231,34 @@ app.post('/backend/contact', (req, res) => {
   });
 });
 
-
-
 // API endpoint to get contacts
-app.get('/backend/fetchcontacts', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_contact_details ORDER BY id DESC'; // Adjust table name as necessary
+app.get("/backend/fetchcontacts", (req, res) => {
+  const sql = "SELECT * FROM oneclick_contact_details ORDER BY id DESC"; // Adjust table name as necessary
 
   db.query(sql, (error, results) => {
     if (error) {
-      console.error('Error fetching contacts:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+      console.error("Error fetching contacts:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
     res.json(results);
   });
 });
 
-app.delete('/backend/api/deletecontact/:id', (req, res) => {
+app.delete("/backend/api/deletecontact/:id", (req, res) => {
   const { id } = req.params;
-  const query = 'DELETE FROM oneclick_contact_details WHERE id = ?';
+  const query = "DELETE FROM oneclick_contact_details WHERE id = ?";
   db.query(query, [id], (err, result) => {
     if (err) {
-      console.error('Error deleting contact entry:', err);
-      return res.status(500).json({ message: 'Failed to delete contact entry' });
+      console.error("Error deleting contact entry:", err);
+      return res
+        .status(500)
+        .json({ message: "Failed to delete contact entry" });
     }
 
     if (result.affectedRows > 0) {
-      res.status(200).json({ message: 'Contact entry deleted successfully' });
+      res.status(200).json({ message: "Contact entry deleted successfully" });
     } else {
-      res.status(404).json({ message: 'Contact entry not found' });
+      res.status(404).json({ message: "Contact entry not found" });
     }
   });
 });
@@ -311,11 +310,10 @@ app.delete('/backend/api/deletecontact/:id', (req, res) => {
 //   }
 // });
 
-
 // Set up multer for resume uploads
 const resumeStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/resumes';
+    const dir = "uploads/resumes";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -325,7 +323,7 @@ const resumeStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`); // Generate a unique file name
-  }
+  },
 });
 
 // Create a multer instance for resume upload
@@ -333,130 +331,155 @@ const resumeUpload = multer({
   storage: resumeStorage,
   fileFilter: (req, file, cb) => {
     const allowedTypes = /pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (extname && mimetype) {
       cb(null, true);
     } else {
-      cb(new Error('Only .pdf, .doc, and .docx files are allowed.'));
+      cb(new Error("Only .pdf, .doc, and .docx files are allowed."));
     }
-  }
+  },
 });
-app.post('/backend/submit-careers-form', resumeUpload.single('resume'), (req, res) => {
-  const { name, email, phone, position, startDate } = req.body;
-  const resumeLink = req.file ? req.file.filename : ''; // Get the uploaded file name
+app.post(
+  "/backend/submit-careers-form",
+  resumeUpload.single("resume"),
+  (req, res) => {
+    const { name, email, phone, position, startDate } = req.body;
+    const resumeLink = req.file ? req.file.filename : ""; // Get the uploaded file name
 
-  // Query to check if the email already exists
-  const checkEmailQuery = 'SELECT * FROM oneclick_careers WHERE email = ?';
-  db.query(checkEmailQuery, [email], (err, emailResults) => {
-    if (err) {
-      console.error('Error checking email:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
-
-    if (emailResults.length > 0) {
-      const lastApplication = emailResults[0];
-      const previousStartDate = new Date(lastApplication.startDate);
-      const currentDate = new Date();
-      const timeDifference = currentDate - previousStartDate;
-      const threeMonthsInMilliseconds = 3 * 30 * 24 * 60 * 60 * 1000; // Approx 3 months
-
-      if (timeDifference < threeMonthsInMilliseconds) {
-        const nextEligibleDate = new Date(previousStartDate.getTime() + threeMonthsInMilliseconds);
-        return res.status(400).json({
-          message: `You can re-apply after ${nextEligibleDate.toLocaleDateString()} (3 months from your previous application).`,
-        });
-      }
-    }
-
-    // Query to check if the phone number already exists
-    const checkPhoneQuery = 'SELECT * FROM oneclick_careers WHERE phone = ?';
-    db.query(checkPhoneQuery, [phone], (err, phoneResults) => {
+    // Query to check if the email already exists
+    const checkEmailQuery = "SELECT * FROM oneclick_careers WHERE email = ?";
+    db.query(checkEmailQuery, [email], (err, emailResults) => {
       if (err) {
-        console.error('Error checking phone number:', err);
-        return res.status(500).json({ message: 'Internal server error' });
+        console.error("Error checking email:", err);
+        return res.status(500).json({ message: "Internal server error" });
       }
 
-      // Commented out phone number check
-      // if (phoneResults.length > 0) {
-      //   return res.status(400).json({ message: 'Phone number already exists' });
-      // }
-
-      if (phoneResults.length > 0) {
-        const lastApplication = phoneResults[0];
+      if (emailResults.length > 0) {
+        const lastApplication = emailResults[0];
         const previousStartDate = new Date(lastApplication.startDate);
         const currentDate = new Date();
         const timeDifference = currentDate - previousStartDate;
         const threeMonthsInMilliseconds = 3 * 30 * 24 * 60 * 60 * 1000; // Approx 3 months
 
         if (timeDifference < threeMonthsInMilliseconds) {
-          const nextEligibleDate = new Date(previousStartDate.getTime() + threeMonthsInMilliseconds);
+          const nextEligibleDate = new Date(
+            previousStartDate.getTime() + threeMonthsInMilliseconds
+          );
           return res.status(400).json({
             message: `You can re-apply after ${nextEligibleDate.toLocaleDateString()} (3 months from your previous application).`,
           });
         }
       }
 
-      // If both email and phone are unique, insert into the database
-      const insertQuery = 'INSERT INTO oneclick_careers (name, email, phone, position, startDate, resumeLink) VALUES (?, ?, ?, ?, ?, ?)';
-      db.query(insertQuery, [name, email, phone, position, startDate, resumeLink], (err, result) => {
+      // Query to check if the phone number already exists
+      const checkPhoneQuery = "SELECT * FROM oneclick_careers WHERE phone = ?";
+      db.query(checkPhoneQuery, [phone], (err, phoneResults) => {
         if (err) {
-          console.error('Error inserting data:', err);
-          return res.status(500).json({ message: 'Failed to submit the form' });
+          console.error("Error checking phone number:", err);
+          return res.status(500).json({ message: "Internal server error" });
         }
 
-        // Add a notification for the careers application
-        const notificationMessage = `User ${name} has applied for the position of ${position} via email: ${email}`;
-        const notificationQuery = 'INSERT INTO oneclick_notifications (message, is_read, type, created_at) VALUES (?, FALSE, ?, NOW())';
-        const notificationType = 'careers'; // Define type as 'careers'
+        // Commented out phone number check
+        // if (phoneResults.length > 0) {
+        //   return res.status(400).json({ message: 'Phone number already exists' });
+        // }
 
-        db.query(notificationQuery, [notificationMessage, notificationType], (notificationErr) => {
-          if (notificationErr) {
-            console.error('Error creating notification:', notificationErr);
-            return res.status(500).send('Form submitted, but failed to create notification');
+        if (phoneResults.length > 0) {
+          const lastApplication = phoneResults[0];
+          const previousStartDate = new Date(lastApplication.startDate);
+          const currentDate = new Date();
+          const timeDifference = currentDate - previousStartDate;
+          const threeMonthsInMilliseconds = 3 * 30 * 24 * 60 * 60 * 1000; // Approx 3 months
+
+          if (timeDifference < threeMonthsInMilliseconds) {
+            const nextEligibleDate = new Date(
+              previousStartDate.getTime() + threeMonthsInMilliseconds
+            );
+            return res.status(400).json({
+              message: `You can re-apply after ${nextEligibleDate.toLocaleDateString()} (3 months from your previous application).`,
+            });
           }
+        }
 
-          // Return success message for form submission
-          res.status(200).json({ message: 'Form submitted successfully' });
-        });
+        // If both email and phone are unique, insert into the database
+        const insertQuery =
+          "INSERT INTO oneclick_careers (name, email, phone, position, startDate, resumeLink) VALUES (?, ?, ?, ?, ?, ?)";
+        db.query(
+          insertQuery,
+          [name, email, phone, position, startDate, resumeLink],
+          (err, result) => {
+            if (err) {
+              console.error("Error inserting data:", err);
+              return res
+                .status(500)
+                .json({ message: "Failed to submit the form" });
+            }
+
+            // Add a notification for the careers application
+            const notificationMessage = `User ${name} has applied for the position of ${position} via email: ${email}`;
+            const notificationQuery =
+              "INSERT INTO oneclick_notifications (message, is_read, type, created_at) VALUES (?, FALSE, ?, NOW())";
+            const notificationType = "careers"; // Define type as 'careers'
+
+            db.query(
+              notificationQuery,
+              [notificationMessage, notificationType],
+              (notificationErr) => {
+                if (notificationErr) {
+                  console.error(
+                    "Error creating notification:",
+                    notificationErr
+                  );
+                  return res
+                    .status(500)
+                    .send("Form submitted, but failed to create notification");
+                }
+
+                // Return success message for form submission
+                res
+                  .status(200)
+                  .json({ message: "Form submitted successfully" });
+              }
+            );
+          }
+        );
       });
     });
+  }
+);
+
+app.get("/backend/api/careers", (req, res) => {
+  const query = "SELECT * FROM oneclick_careers ORDER BY id DESC";
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
+    }
+
+    res.json(results);
   });
 });
 
-
-
-
-app.get('/backend/api/careers', (req, res) => {
-  const query = 'SELECT * FROM oneclick_careers ORDER BY id DESC';
-  db.query(query, (err, results) => {
-    if (err) {
-     console.error('Error fetching product:', err);
-     return res.status(500).json({ message: 'Failed to fetch product' });
-   }
-
-   res.json(results);
- });
-});
-
-app.delete('/backend/api/deletecareers/:id', (req, res) => {
+app.delete("/backend/api/deletecareers/:id", (req, res) => {
   const { id } = req.params;
-  const query = 'DELETE FROM oneclick_careers WHERE id = ?';
+  const query = "DELETE FROM oneclick_careers WHERE id = ?";
   db.query(query, [id], (err, result) => {
     if (err) {
-      console.error('Error deleting career entry:', err);
-      return res.status(500).json({ message: 'Failed to delete career entry' });
+      console.error("Error deleting career entry:", err);
+      return res.status(500).json({ message: "Failed to delete career entry" });
     }
 
     if (result.affectedRows > 0) {
-      res.status(200).json({ message: 'Career entry deleted successfully' });
+      res.status(200).json({ message: "Career entry deleted successfully" });
     } else {
-      res.status(404).json({ message: 'Career entry not found' });
+      res.status(404).json({ message: "Career entry not found" });
     }
   });
 });
-
 
 // db.query(query, (err, results) => {
 //   if (err) throw err;
@@ -482,222 +505,291 @@ app.delete('/backend/api/deletecareers/:id', (req, res) => {
 //   }
 // });
 
-app.post('/backend/signup', (req, res) => {
+app.post("/backend/signup", (req, res) => {
   const { username, email, password, contactNumber } = req.body; // Include contactNumber
 
   // Validate input
-  if (!username || !email || !password || !contactNumber) { // Add contactNumber to validation
-    return res.status(400).json({ error: 'All fields are required' });
+  if (!username || !email || !password || !contactNumber) {
+    // Add contactNumber to validation
+    return res.status(400).json({ error: "All fields are required" });
   }
 
   // Function to generate the next user_id
   const generateUserId = (callback) => {
-    db.query('SELECT user_id FROM oneclick_users ORDER BY user_id DESC LIMIT 1', (err, results) => {
-      if (err) {
-        console.error('Database error:', err);
-        return callback(err);
+    db.query(
+      "SELECT user_id FROM oneclick_users ORDER BY user_id DESC LIMIT 1",
+      (err, results) => {
+        if (err) {
+          console.error("Database error:", err);
+          return callback(err);
+        }
+
+        let nextUserId = "usr000001"; // Default ID if no previous ID exists
+
+        if (results.length > 0 && results[0].user_id) {
+          const lastUserId = results[0].user_id;
+          const numberPart = parseInt(lastUserId.slice(3)); // Extract the numeric part
+          const newNumberPart = numberPart + 1;
+          nextUserId = `usr${newNumberPart.toString().padStart(6, "0")}`;
+        }
+
+        callback(null, nextUserId);
       }
-
-      let nextUserId = 'usr000001'; // Default ID if no previous ID exists
-
-      if (results.length > 0 && results[0].user_id) {
-        const lastUserId = results[0].user_id;
-        const numberPart = parseInt(lastUserId.slice(3)); // Extract the numeric part
-        const newNumberPart = numberPart + 1;
-        nextUserId = `usr${newNumberPart.toString().padStart(6, '0')}`;
-      }
-
-      callback(null, nextUserId);
-    });
+    );
   };
 
   // Check if the email, username, or contact number already exists
   db.query(
-    'SELECT * FROM oneclick_users WHERE email = ? OR username = ? OR contact_number = ?',
+    "SELECT * FROM oneclick_users WHERE email = ? OR username = ? OR contact_number = ?",
     [email, username, contactNumber],
     (err, results) => {
       if (err) {
-        console.error('Database error:', err);
-        return res.status(500).json({ error: 'Server error' });
+        console.error("Database error:", err);
+        return res.status(500).json({ error: "Server error" });
       }
 
       if (results.length > 0) {
-        if (results.some(user => user.email === email)) {
-          return res.status(400).json({ error: 'Email already exists' });
+        if (results.some((user) => user.email === email)) {
+          return res.status(400).json({ error: "Email already exists" });
         }
-        if (results.some(user => user.username === username)) {
-          return res.status(400).json({ error: 'Username already exists' });
+        if (results.some((user) => user.username === username)) {
+          return res.status(400).json({ error: "Username already exists" });
         }
-        if (results.some(user => user.contact_number === contactNumber)) {
-          return res.status(400).json({ error: 'Contact number already exists' });
+        if (results.some((user) => user.contact_number === contactNumber)) {
+          return res
+            .status(400)
+            .json({ error: "Contact number already exists" });
         }
       }
 
       // Generate the next user_id and insert the new user
       generateUserId((err, userId) => {
         if (err) {
-          return res.status(500).json({ error: 'Server error' });
+          return res.status(500).json({ error: "Server error" });
         }
 
-        const query = 'INSERT INTO oneclick_users (username, email, password, user_id, contact_number) VALUES (?, ?, ?, ?, ?)';
-        db.query(query, [username, email, password, userId, contactNumber], (err) => {
-          if (err) {
-            console.error('Error creating user:', err);
-            return res.status(500).json({ error: 'Server error' });
-          }
-
-          // Add a notification about the new user
-          const notificationQuery = 'INSERT INTO oneclick_notifications (type, message, is_read, created_at) VALUES ("New user",?, FALSE, NOW())';
-          const notificationMessage = `New user ${username} has signed up.`;
-
-          db.query(notificationQuery, [notificationMessage], (notificationErr) => {
-            if (notificationErr) {
-              console.error('Error creating notification:', notificationErr);
-              return res.status(500).json({ error: 'User created but failed to create notification' });
+        const query =
+          "INSERT INTO oneclick_users (username, email, password, user_id, contact_number) VALUES (?, ?, ?, ?, ?)";
+        db.query(
+          query,
+          [username, email, password, userId, contactNumber],
+          (err) => {
+            if (err) {
+              console.error("Error creating user:", err);
+              return res.status(500).json({ error: "Server error" });
             }
 
-            res.status(200).json({ message: 'User created successfully and notification sent' });
-          });
-        });
+            // Add a notification about the new user
+            const notificationQuery =
+              'INSERT INTO oneclick_notifications (type, message, is_read, created_at) VALUES ("New user",?, FALSE, NOW())';
+            const notificationMessage = `New user ${username} has signed up.`;
+
+            db.query(
+              notificationQuery,
+              [notificationMessage],
+              (notificationErr) => {
+                if (notificationErr) {
+                  console.error(
+                    "Error creating notification:",
+                    notificationErr
+                  );
+                  return res
+                    .status(500)
+                    .json({
+                      error: "User created but failed to create notification",
+                    });
+                }
+
+                res
+                  .status(200)
+                  .json({
+                    message: "User created successfully and notification sent",
+                  });
+              }
+            );
+          }
+        );
       });
     }
   );
 });
 
-
 // Signup Route
-app.post('/backend/adminsignup', (req, res) => {
-    const { username, email, password } = req.body;
-  
-    if (!username || !email || !password) {
-      return res.status(400).send('All fields are required');
-    }
-  
-    // Check if the email already exists
-    db.query('SELECT * FROM oneclick_admin WHERE email = ?', [email], (err, results) => {
+app.post("/backend/adminsignup", (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).send("All fields are required");
+  }
+
+  // Check if the email already exists
+  db.query(
+    "SELECT * FROM oneclick_admin WHERE email = ?",
+    [email],
+    (err, results) => {
       if (err) {
-        console.error('Database error:', err);
-        return res.status(500).send('Server error');
+        console.error("Database error:", err);
+        return res.status(500).send("Server error");
       }
-  
+
       if (results.length > 0) {
-        return res.status(400).send('Email already registered');
+        return res.status(400).send("Email already registered");
       }
-  
+
       // If email doesn't exist, proceed to insert the new user
-      const query = 'INSERT INTO oneclick_admin (username, email, password) VALUES (?, ?, ?)';
+      const query =
+        "INSERT INTO oneclick_admin (username, email, password) VALUES (?, ?, ?)";
       db.query(query, [username, email, password], (err) => {
         if (err) {
-          console.error('Error creating user:', err);
-          return res.status(500).send('Server error');
+          console.error("Error creating user:", err);
+          return res.status(500).send("Server error");
         }
-        res.status(200).send('User created successfully');
+        res.status(200).send("User created successfully");
       });
-    });
-  });
-
+    }
+  );
+});
 
 // Login Route
 app.post("/backend/login", (req, res) => {
-    console.log("Received login request:", req.body); // Log incoming request
-  
-    const { contact_number, password } = req.body;
-  
-    if (!contact_number || !password) {
-      console.log("Missing fields in login request"); // Log missing fields
-      return res.status(400).json({ message: "contact_number and password are required" });
-    }
-  
-    db.query("SELECT * FROM oneclick_users WHERE contact_number = ?", [contact_number], (err, results) => {
+  console.log("Received login request:", req.body); // Log incoming request
+
+  const { contact_number, password } = req.body;
+
+  if (!contact_number || !password) {
+    console.log("Missing fields in login request"); // Log missing fields
+    return res
+      .status(400)
+      .json({ message: "contact_number and password are required" });
+  }
+
+  db.query(
+    "SELECT * FROM oneclick_users WHERE contact_number = ?",
+    [contact_number],
+    (err, results) => {
       if (err) {
-        console.error('Database error:', err); // Log database errors
+        console.error("Database error:", err); // Log database errors
         return res.status(500).json({ message: "Database error" });
       }
-  
+
       if (results.length === 0) {
         // console.log("User not found:", contact_number); // Log user not found
         return res.status(400).json({ message: "User not found" });
       }
-  
+
       const user = results[0];
-  
+
       // Compare plain text passwords
       if (password === user.password) {
-        const { contact_number, email, user_id, username  } = user;
-        return res.status(200).json({ contact_number, email, user_id ,username, message: "Login successful" });
+        const { contact_number, email, user_id, username } = user;
+        return res
+          .status(200)
+          .json({
+            contact_number,
+            email,
+            user_id,
+            username,
+            message: "Login successful",
+          });
       } else {
         return res.status(400).json({ message: "Invalid credentials" });
       }
-    });
-  });
+    }
+  );
+});
 
 // Login Route
 app.post("/backend/adminlogin", (req, res) => {
-    console.log("Received login request:", req.body); // Log incoming request
-  
-    const { username, password } = req.body;
-  
-    if (!username || !password) {
-      console.log("Missing fields in login request"); // Log missing fields
-      return res.status(400).json({ message: "Username and password are required" });
-    }
-  
-    db.query("SELECT * FROM oneclick_admin WHERE username = ?", [username], (err, results) => {
+  console.log("Received login request:", req.body); // Log incoming request
+
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    console.log("Missing fields in login request"); // Log missing fields
+    return res
+      .status(400)
+      .json({ message: "Username and password are required" });
+  }
+
+  db.query(
+    "SELECT * FROM oneclick_admin WHERE username = ?",
+    [username],
+    (err, results) => {
       if (err) {
-        console.error('Database error:', err); // Log database errors
+        console.error("Database error:", err); // Log database errors
         return res.status(500).json({ message: "Database error" });
       }
-  
+
       if (results.length === 0) {
         // console.log("User not found:", username); // Log user not found
         return res.status(400).json({ message: "User not found" });
       }
-  
+
       const user = results[0];
-  
+
       // Compare plain text passwords
       if (password === user.password) {
         const { username, email } = user;
-        return res.status(200).json({ username, email, message: "Login successful" });
+        return res
+          .status(200)
+          .json({ username, email, message: "Login successful" });
       } else {
         return res.status(400).json({ message: "Invalid credentials" });
       }
-    });
-  });
-
-
-  app.post("/backend/stafflogin", (req, res) => {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
     }
-  
-    db.query("SELECT * FROM oneclick_staff WHERE username = ?", [username], (err, results) => {
+  );
+});
+
+app.post("/backend/stafflogin", (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ message: "Username and password are required" });
+  }
+
+  db.query(
+    "SELECT * FROM oneclick_staff WHERE username = ?",
+    [username],
+    (err, results) => {
       if (err) return res.status(500).json({ message: "Database error" });
-  
+
       if (results.length === 0) {
         return res.status(400).json({ message: "Invalid credentials" });
       }
-  
+
       const staff = results[0];
-  
+
       // Check if the password matches
       if (staff.password !== password) {
         return res.status(400).json({ message: "Invalid credentials" });
       }
-  
+
       // Check if the staff status is inactive
       if (staff.status === "inactive") {
-        return res.status(400).json({ message: "Your account is inactive. Please contact the admin." });
+        return res
+          .status(400)
+          .json({
+            message: "Your account is inactive. Please contact the admin.",
+          });
       }
-  
-      // If login is successful
-      res.status(200).json({ message: "Staff login successful", staff: { id: staff.id, username: staff.username, role: staff.role, staffname:staff.staffname } });
-    });
-  });
-  
 
+      // If login is successful
+      res
+        .status(200)
+        .json({
+          message: "Staff login successful",
+          staff: {
+            id: staff.id,
+            username: staff.username,
+            role: staff.role,
+            staffname: staff.staffname,
+          },
+        });
+    }
+  );
+});
 
 // // Generate a random 6-digit OTP
 // const generateOTP = () => {
@@ -747,9 +839,6 @@ app.post("/backend/adminlogin", (req, res) => {
 //     res.status(500).send("Failed to send OTP");
 //   }
 // });
-
-
-
 
 // // Configuration for the SMS Gateway
 // const smsGatewayConfig = {
@@ -850,8 +939,6 @@ app.post("/backend/adminlogin", (req, res) => {
 //   }
 // });
 
-
-
 // app.post("/backend/verifyotp", async (req, res) => {
 //   try {
 //     const { number, otp } = req.body;
@@ -910,140 +997,168 @@ app.post("/backend/adminlogin", (req, res) => {
 //   }
 // });
 
-
-  
 // Forgot password route
-app.post('/backend/forgot-password', (req, res) => {
+app.post("/backend/forgot-password", (req, res) => {
   const { contactNumber, newPassword } = req.body;
 
   if (!contactNumber || !newPassword) {
-      return res.status(400).send('Contact number and new password are required');
+    return res.status(400).send("Contact number and new password are required");
   }
 
   // Check if the user exists with the provided contact number
-  db.query('SELECT * FROM oneclick_users WHERE contact_number = ?', [contactNumber], (err, results) => {
+  db.query(
+    "SELECT * FROM oneclick_users WHERE contact_number = ?",
+    [contactNumber],
+    (err, results) => {
       if (err) {
-          console.error('Database error:', err);
-          return res.status(500).send('Server error');
+        console.error("Database error:", err);
+        return res.status(500).send("Server error");
       }
 
       if (results.length === 0) {
-          return res.status(400).send('User not found');
+        return res.status(400).send("User not found");
       }
 
       // Update the password
-      db.query('UPDATE oneclick_users SET password = ? WHERE contact_number = ?', [newPassword, contactNumber], (err) => {
+      db.query(
+        "UPDATE oneclick_users SET password = ? WHERE contact_number = ?",
+        [newPassword, contactNumber],
+        (err) => {
           if (err) {
-              console.error('Error updating password:', err);
-              return res.status(500).send('Server error');
+            console.error("Error updating password:", err);
+            return res.status(500).send("Server error");
           }
-          res.status(200).send('Password updated successfully');
-      });
-  });
+          res.status(200).send("Password updated successfully");
+        }
+      );
+    }
+  );
 });
 
-
 // Forgot password route
-app.post('/backend/adminforgotpassword', (req, res) => {
-    const { email, newPassword } = req.body;
-  
-    if (!email || !newPassword) {
-      return res.status(400).send('Email and new password are required');
-    }
-  
-    // Check if the user exists
-    db.query('SELECT * FROM oneclick_admin WHERE email = ?', [email], (err, results) => {
-      if (err) {
-        console.error('Database error:', err);
-        return res.status(500).send('Server error');
-      }
-  
-      if (results.length === 0) {
-        return res.status(400).send('User not found');
-      }
-  
-      // Update the password
-      db.query('UPDATE oneclick_admin SET password = ? WHERE email = ?', [newPassword, email], (err) => {
-        if (err) {
-          console.error('Error updating password:', err);
-          return res.status(500).send('Server error');
-        }
-        res.status(200).send('Password updated successfully');
-      });
-    });
-  });
+app.post("/backend/adminforgotpassword", (req, res) => {
+  const { email, newPassword } = req.body;
 
+  if (!email || !newPassword) {
+    return res.status(400).send("Email and new password are required");
+  }
+
+  // Check if the user exists
+  db.query(
+    "SELECT * FROM oneclick_admin WHERE email = ?",
+    [email],
+    (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).send("Server error");
+      }
+
+      if (results.length === 0) {
+        return res.status(400).send("User not found");
+      }
+
+      // Update the password
+      db.query(
+        "UPDATE oneclick_admin SET password = ? WHERE email = ?",
+        [newPassword, email],
+        (err) => {
+          if (err) {
+            console.error("Error updating password:", err);
+            return res.status(500).send("Server error");
+          }
+          res.status(200).send("Password updated successfully");
+        }
+      );
+    }
+  );
+});
 
 // Verify user endpoint
-app.post('/backend/verify-user', (req, res) => {
+app.post("/backend/verify-user", (req, res) => {
   const { email, username } = req.body;
 
   // Check if email and username are provided
   if (!email || !username) {
-    return res.status(400).json({ exists: false, message: 'Email and username are required' });
+    return res
+      .status(400)
+      .json({ exists: false, message: "Email and username are required" });
   }
 
   // Query to check if the user exists
-  db.query('SELECT * FROM oneclick_users WHERE email = ? AND username = ?', [email, username], (err, results) => {
-    if (err) {
-      console.error('Error querying database:', err);
-      return res.status(500).json({ exists: false, message: 'Internal Server Error' });
-    }
+  db.query(
+    "SELECT * FROM oneclick_users WHERE email = ? AND username = ?",
+    [email, username],
+    (err, results) => {
+      if (err) {
+        console.error("Error querying database:", err);
+        return res
+          .status(500)
+          .json({ exists: false, message: "Internal Server Error" });
+      }
 
-    // Check if user was found
-    if (results.length > 0) {
-      res.json({ exists: true });
-    } else {
-      res.json({ exists: false });
+      // Check if user was found
+      if (results.length > 0) {
+        res.json({ exists: true });
+      } else {
+        res.json({ exists: false });
+      }
     }
-  });
+  );
 });
 
 // Update user's cart endpoint
-app.post('/backend/update-user-cart', (req, res) => {
+app.post("/backend/update-user-cart", (req, res) => {
   const { email, username, product } = req.body;
 
   if (!email || !username || !product) {
-    return res.status(400).json({ error: 'Email, username, and product are required' });
+    return res
+      .status(400)
+      .json({ error: "Email, username, and product are required" });
   }
 
   // Step 1: Retrieve the current cart
-  db.query('SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?', [email, username], (err, results) => {
-    if (err) {
-      console.error('Error retrieving cart:', err);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    let cart = results[0].addtocart || [];
-
-    // Step 2: Update the cart in application code
-    try {
-      cart = JSON.parse(cart);
-    } catch (parseError) {
-      cart = [];
-    }
-
-    cart.push(product);
-
-    // Step 3: Save the updated cart
-    const updatedCart = JSON.stringify(cart);
-
-    db.query('UPDATE oneclick_users SET addtocart = ? WHERE email = ? AND username = ?', [updatedCart, email, username], (err) => {
+  db.query(
+    "SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?",
+    [email, username],
+    (err, results) => {
       if (err) {
-        console.error('Error updating cart:', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error retrieving cart:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
 
-      res.json({ success: true });
-    });
-  });
+      if (results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let cart = results[0].addtocart || [];
+
+      // Step 2: Update the cart in application code
+      try {
+        cart = JSON.parse(cart);
+      } catch (parseError) {
+        cart = [];
+      }
+
+      cart.push(product);
+
+      // Step 3: Save the updated cart
+      const updatedCart = JSON.stringify(cart);
+
+      db.query(
+        "UPDATE oneclick_users SET addtocart = ? WHERE email = ? AND username = ?",
+        [updatedCart, email, username],
+        (err) => {
+          if (err) {
+            console.error("Error updating cart:", err);
+            return res.status(500).json({ error: "Internal Server Error" });
+          }
+
+          res.json({ success: true });
+        }
+      );
+    }
+  );
 });
-
-
 
 // Update user's wishlist endpoint
 // app.post('/backend/update-user-wishlist', (req, res) => {
@@ -1097,132 +1212,155 @@ app.post('/backend/update-user-cart', (req, res) => {
 //   });
 // });
 
-app.post('/backend/update-user-wishlist', (req, res) => {
+app.post("/backend/update-user-wishlist", (req, res) => {
   const { email, username, prod_id, action } = req.body;
 
   if (!email || !username || !prod_id || !action) {
-    return res.status(400).json({ error: 'Email, username, prod_id, and action are required' });
+    return res
+      .status(400)
+      .json({ error: "Email, username, prod_id, and action are required" });
   }
 
   // Step 1: Retrieve the current wishlist
-  db.query('SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?', [email, username], (err, results) => {
-    if (err) {
-      console.error('Error retrieving wishlist:', err);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    let wishlist = results[0].wishlist || [];
-
-    // Step 2: Update the wishlist in application code
-    try {
-      wishlist = JSON.parse(wishlist);
-    } catch (parseError) {
-      wishlist = [];
-    }
-
-    if (action === 'add') {
-      // Add prod_id to wishlist
-      if (!wishlist.includes(prod_id)) {
-        wishlist.push(prod_id);
-      }
-    } else if (action === 'remove') {
-      // Remove prod_id from wishlist
-      wishlist = wishlist.filter(id => id !== prod_id);
-    }
-
-    // Step 3: Save the updated wishlist
-    const updatedWishlist = JSON.stringify(wishlist);
-
-    db.query('UPDATE oneclick_users SET wishlist = ? WHERE email = ? AND username = ?', [updatedWishlist, email, username], (err) => {
+  db.query(
+    "SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?",
+    [email, username],
+    (err, results) => {
       if (err) {
-        console.error('Error updating wishlist:', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error retrieving wishlist:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
 
-      res.json({ success: true });
-    });
-  });
+      if (results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let wishlist = results[0].wishlist || [];
+
+      // Step 2: Update the wishlist in application code
+      try {
+        wishlist = JSON.parse(wishlist);
+      } catch (parseError) {
+        wishlist = [];
+      }
+
+      if (action === "add") {
+        // Add prod_id to wishlist
+        if (!wishlist.includes(prod_id)) {
+          wishlist.push(prod_id);
+        }
+      } else if (action === "remove") {
+        // Remove prod_id from wishlist
+        wishlist = wishlist.filter((id) => id !== prod_id);
+      }
+
+      // Step 3: Save the updated wishlist
+      const updatedWishlist = JSON.stringify(wishlist);
+
+      db.query(
+        "UPDATE oneclick_users SET wishlist = ? WHERE email = ? AND username = ?",
+        [updatedWishlist, email, username],
+        (err) => {
+          if (err) {
+            console.error("Error updating wishlist:", err);
+            return res.status(500).json({ error: "Internal Server Error" });
+          }
+
+          res.json({ success: true });
+        }
+      );
+    }
+  );
 });
-app.post('/backend/fetch-wishlist', (req, res) => {
+app.post("/backend/fetch-wishlist", (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
     // console.log('Missing email or username in request');
-    return res.status(400).json({ error: 'Email and username are required' });
+    return res.status(400).json({ error: "Email and username are required" });
   }
 
   console.log(`Fetching wishlist for user: ${email}, ${username}`);
 
   db.query(
-    'SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?',
+    "SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?",
     [email, username],
     (err, results) => {
       if (err) {
-        console.error('Error retrieving wishlist:', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error retrieving wishlist:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
 
       if (results.length === 0) {
         // console.log(`User not found: ${email}, ${username}`);
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: "User not found" });
       }
 
-      let wishlist = results[0].wishlist || '[]';
+      let wishlist = results[0].wishlist || "[]";
 
       try {
         wishlist = JSON.parse(wishlist);
       } catch (parseError) {
-        console.error('Error parsing wishlist:', parseError);
+        console.error("Error parsing wishlist:", parseError);
         wishlist = [];
       }
 
       if (wishlist.length === 0) {
-        console.log('Wishlist is empty for user:', email);
+        console.log("Wishlist is empty for user:", email);
         return res.json({ products: [] });
       }
 
-      const placeholders = wishlist.map(() => '?').join(',');
+      const placeholders = wishlist.map(() => "?").join(",");
       const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
 
       db.query(query, wishlist, (err, productResults) => {
         if (err) {
-          console.error('Error fetching product details:', err);
-          return res.status(500).json({ error: 'Internal Server Error' });
+          console.error("Error fetching product details:", err);
+          return res.status(500).json({ error: "Internal Server Error" });
         }
 
-        console.log('Fetched product details:', productResults);
+        console.log("Fetched product details:", productResults);
 
         const featureProductIds = productResults
-          .filter(product => product.category === 'Mobiles' || product.category === 'Computers')
-          .map(product => product.prod_id);
+          .filter(
+            (product) =>
+              product.category === "Mobiles" || product.category === "Computers"
+          )
+          .map((product) => product.prod_id);
 
         if (featureProductIds.length === 0) {
-          console.log('No wishlist products require additional features.');
+          console.log("No wishlist products require additional features.");
           return res.json({ products: productResults });
         }
 
-        console.log('Fetching features for wishlist products:', featureProductIds);
+        console.log(
+          "Fetching features for wishlist products:",
+          featureProductIds
+        );
 
-        const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => '?').join(',')})`;
+        const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds
+          .map(() => "?")
+          .join(",")})`;
 
         db.query(featureQuery, featureProductIds, (err, featureResults) => {
           if (err) {
-            console.error('Error fetching product features:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
+            console.error("Error fetching product features:", err);
+            return res.status(500).json({ error: "Internal Server Error" });
           }
 
-          console.log('Fetched product features:', featureResults);
+          console.log("Fetched product features:", featureResults);
 
-          const productsWithFeatures = productResults.map(product => {
-            const features = featureResults.find(feature => feature.prod_id === product.prod_id);
+          const productsWithFeatures = productResults.map((product) => {
+            const features = featureResults.find(
+              (feature) => feature.prod_id === product.prod_id
+            );
             return features ? { ...product, ...features } : product;
           });
 
-          console.log('Final wishlist product list with features:', productsWithFeatures);
+          console.log(
+            "Final wishlist product list with features:",
+            productsWithFeatures
+          );
           res.json({ products: productsWithFeatures });
         });
       });
@@ -1230,88 +1368,173 @@ app.post('/backend/fetch-wishlist', (req, res) => {
   );
 });
 
-app.post('/backend/add-to-cart', (req, res) => {
-  const { email, productId, quantity } = req.body; // Get email, productId, and quantity from the request body
+app.post("/backend/api/addtocart", (req, res) => {
+  const { email, productId, quantity, buyLater } = req.body; // Added buyLater flag
 
-  // Basic validation
   if (!email || !productId || quantity === undefined) {
-    return res.status(400).json({ message: 'Email, Product ID, and Quantity are required' });
+    return res.status(400).json({ message: "Email, Product ID, and Quantity are required" });
   }
 
-  // Get the current cart (addtocart) field from the database
-  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, result) => {
-    if (err) {
-      console.error('Error fetching cart:', err);
-      return res.status(500).json({ message: 'Error fetching cart data' });
-    }
+  // Fetch current cart and buy_later fields from the database
+  db.query(
+    "SELECT addtocart, buy_later FROM oneclick_users WHERE email = ?",
+    [email],
+    (err, result) => {
+      if (err) {
+        console.error("Error fetching cart:", err);
+        return res.status(500).json({ message: "Error fetching cart data" });
+      }
 
-    // If the user exists and has an existing cart
-    if (result.length > 0) {
+      if (result.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Parse current cart and buy_later lists
       let currentCart = result[0].addtocart ? JSON.parse(result[0].addtocart) : [];
+      let buyLaterList = result[0].buy_later ? JSON.parse(result[0].buy_later) : [];
 
-      // Check if the product is already in the cart
-      const productEntry = `${productId}-${quantity}`; // Format the string as "productId-quantity"
-      const existingProductIndex = currentCart.findIndex(item => item.startsWith(`${productId}-`));
+      const productEntry = `${productId}-${quantity}`;
+      const existingProductIndex = currentCart.findIndex((item) => item.startsWith(`${productId}-`));
 
       if (existingProductIndex !== -1) {
-        // Product is already in the cart, update the quantity
-        const existingProduct = currentCart[existingProductIndex];
-        const [existingProductId, existingQuantity] = existingProduct.split('-');
-        const updatedQuantity = parseInt(existingQuantity) + quantity;
-        currentCart[existingProductIndex] = `${existingProductId}-${updatedQuantity}`;
+        // Product exists in the cart; update its quantity
+        const [existingProductId, existingQuantity] = currentCart[existingProductIndex].split("-");
+        currentCart[existingProductIndex] = `${existingProductId}-${parseInt(existingQuantity, 10) + quantity}`;
       } else {
-        // Product is not in the cart, add it to the cart array
+        // Product is not in the cart; add it
         currentCart.push(productEntry);
       }
 
       // Update the cart in the database
       db.query(
-        'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
+        "UPDATE oneclick_users SET addtocart = ? WHERE email = ?",
         [JSON.stringify(currentCart), email],
         (updateErr) => {
           if (updateErr) {
-            console.error('Error updating cart:', updateErr);
-            return res.status(500).json({ message: 'Error updating cart' });
+            console.error("Error updating cart:", updateErr);
+            return res.status(500).json({ message: "Error updating cart" });
           }
-          return res.status(200).json({ message: 'Product added to cart successfully' });
+
+          // If the buyLater flag is set, remove the productId from buy_later
+          if (buyLater) {
+            buyLaterList = buyLaterList.filter((id) => id !== productId);
+            db.query(
+              "UPDATE oneclick_users SET buy_later = ? WHERE email = ?",
+              [JSON.stringify(buyLaterList), email],
+              (updateErr2) => {
+                if (updateErr2) {
+                  console.error("Error updating buy_later:", updateErr2);
+                  return res.status(500).json({ message: "Error updating buy_later" });
+                }
+                return res.status(200).json({ message: "Product added to cart successfully" });
+              }
+            );
+          } else {
+            return res.status(200).json({ message: "Product added to cart successfully" });
+          }
         }
       );
-    } else {
-      return res.status(404).json({ message: 'User not found' });
     }
-  });
+  );
 });
 
-app.post('/backend/get-cart-items', (req, res) => {
+app.post("/backend/add-to-cart", (req, res) => {
+  const { email, productId, quantity } = req.body; // Get email, productId, and quantity from the request body
+
+  // Basic validation
+  if (!email || !productId || quantity === undefined) {
+    return res
+      .status(400)
+      .json({ message: "Email, Product ID, and Quantity are required" });
+  }
+
+  // Get the current cart (addtocart) field from the database
+  db.query(
+    "SELECT addtocart FROM oneclick_users WHERE email = ?",
+    [email],
+    (err, result) => {
+      if (err) {
+        console.error("Error fetching cart:", err);
+        return res.status(500).json({ message: "Error fetching cart data" });
+      }
+
+      // If the user exists and has an existing cart
+      if (result.length > 0) {
+        let currentCart = result[0].addtocart
+          ? JSON.parse(result[0].addtocart)
+          : [];
+
+        // Check if the product is already in the cart
+        const productEntry = `${productId}-${quantity}`; // Format the string as "productId-quantity"
+        const existingProductIndex = currentCart.findIndex((item) =>
+          item.startsWith(`${productId}-`)
+        );
+
+        if (existingProductIndex !== -1) {
+          // Product is already in the cart, update the quantity
+          const existingProduct = currentCart[existingProductIndex];
+          const [existingProductId, existingQuantity] =
+            existingProduct.split("-");
+          const updatedQuantity = parseInt(existingQuantity) + quantity;
+          currentCart[
+            existingProductIndex
+          ] = `${existingProductId}-${updatedQuantity}`;
+        } else {
+          // Product is not in the cart, add it to the cart array
+          currentCart.push(productEntry);
+        }
+
+        // Update the cart in the database
+        db.query(
+          "UPDATE oneclick_users SET addtocart = ? WHERE email = ?",
+          [JSON.stringify(currentCart), email],
+          (updateErr) => {
+            if (updateErr) {
+              console.error("Error updating cart:", updateErr);
+              return res.status(500).json({ message: "Error updating cart" });
+            }
+            return res
+              .status(200)
+              .json({ message: "Product added to cart successfully" });
+          }
+        );
+      } else {
+        return res.status(404).json({ message: "User not found" });
+      }
+    }
+  );
+});
+
+app.post("/backend/get-cart-items", (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
     // console.log('Missing email or username in request');
-    return res.status(400).json({ error: 'Email and username are required' });
+    return res.status(400).json({ error: "Email and username are required" });
   }
 
   // console.log(`Fetching cart items for user: ${email}, ${username}`);
 
   db.query(
-    'SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?',
+    "SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?",
     [email, username],
     (err, results) => {
       if (err) {
-        console.error('Error retrieving cart items:', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error retrieving cart items:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
 
       if (results.length === 0) {
         // console.log(`User not found: ${email}, ${username}`);
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: "User not found" });
       }
 
-      let cartItems = results[0].addtocart || '[]';
+      let cartItems = results[0].addtocart || "[]";
 
       try {
         cartItems = JSON.parse(cartItems);
       } catch (parseError) {
-        console.error('Error parsing cart items:', parseError);
+        console.error("Error parsing cart items:", parseError);
         cartItems = [];
       }
 
@@ -1320,23 +1543,25 @@ app.post('/backend/get-cart-items', (req, res) => {
         return res.json({ products: [] });
       }
 
-      const productIds = cartItems.map(item => item.split('-')[0]);
+      const productIds = cartItems.map((item) => item.split("-")[0]);
       // console.log('Product IDs in cart:', productIds);
 
-      const placeholders = productIds.map(() => '?').join(',');
+      const placeholders = productIds.map(() => "?").join(",");
       const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
 
       db.query(query, productIds, (err, productResults) => {
         if (err) {
-          console.error('Error fetching product details:', err);
-          return res.status(500).json({ error: 'Internal Server Error' });
+          console.error("Error fetching product details:", err);
+          return res.status(500).json({ error: "Internal Server Error" });
         }
 
         // console.log('Fetched product details:', productResults);
 
-        const productsWithQuantity = productResults.map(product => {
-          const cartItem = cartItems.find(item => item.startsWith(`${product.id}-`));
-          const quantity = cartItem ? parseInt(cartItem.split('-')[1]) : 0;
+        const productsWithQuantity = productResults.map((product) => {
+          const cartItem = cartItems.find((item) =>
+            item.startsWith(`${product.id}-`)
+          );
+          const quantity = cartItem ? parseInt(cartItem.split("-")[1]) : 0;
 
           return {
             ...product,
@@ -1345,8 +1570,11 @@ app.post('/backend/get-cart-items', (req, res) => {
         });
 
         const featureProductIds = productsWithQuantity
-          .filter(product => product.category === 'Mobiles' || product.category === 'Computers')
-          .map(product => product.prod_id);
+          .filter(
+            (product) =>
+              product.category === "Mobiles" || product.category === "Computers"
+          )
+          .map((product) => product.prod_id);
 
         if (featureProductIds.length === 0) {
           // console.log('No products require additional features.');
@@ -1355,18 +1583,22 @@ app.post('/backend/get-cart-items', (req, res) => {
 
         // console.log('Fetching features for products:', featureProductIds);
 
-        const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => '?').join(',')})`;
+        const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds
+          .map(() => "?")
+          .join(",")})`;
 
         db.query(featureQuery, featureProductIds, (err, featureResults) => {
           if (err) {
-            console.error('Error fetching product features:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
+            console.error("Error fetching product features:", err);
+            return res.status(500).json({ error: "Internal Server Error" });
           }
 
           // console.log('Fetched product features:', featureResults);
 
-          const productsWithFeatures = productsWithQuantity.map(product => {
-            const features = featureResults.find(feature => feature.prod_id === product.prod_id);
+          const productsWithFeatures = productsWithQuantity.map((product) => {
+            const features = featureResults.find(
+              (feature) => feature.prod_id === product.prod_id
+            );
             return features ? { ...product, ...features } : product;
           });
 
@@ -1378,41 +1610,39 @@ app.post('/backend/get-cart-items', (req, res) => {
   );
 });
 
-
-
-app.post('/backend/get-cart-quantity-sum', (req, res) => {
+app.post("/backend/get-cart-quantity-sum", (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
-    return res.status(400).json({ error: 'Email and username are required' });
+    return res.status(400).json({ error: "Email and username are required" });
   }
 
   // Step 1: Retrieve cart items (IDs with quantities) from oneclick_users table
   db.query(
-    'SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?',
+    "SELECT addtocart FROM oneclick_users WHERE email = ? AND username = ?",
     [email, username],
     (err, results) => {
       if (err) {
-        console.error('Error retrieving cart items:', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error retrieving cart items:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
 
       if (results.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: "User not found" });
       }
 
-      let cartItems = results[0].addtocart || '[]'; // Ensure the correct field name is used
+      let cartItems = results[0].addtocart || "[]"; // Ensure the correct field name is used
 
       try {
         cartItems = JSON.parse(cartItems); // Parse the cart items as an array of "productId-quantity"
       } catch (parseError) {
-        console.error('Error parsing cart items:', parseError);
-        return res.status(400).json({ error: 'Invalid cart format' });
+        console.error("Error parsing cart items:", parseError);
+        return res.status(400).json({ error: "Invalid cart format" });
       }
 
       // Step 2: Calculate the total quantity
       const totalQuantity = cartItems.reduce((sum, item) => {
-        const quantity = parseInt(item.split('-')[1]); // Extract quantity from "productId-quantity"
+        const quantity = parseInt(item.split("-")[1]); // Extract quantity from "productId-quantity"
         return sum + (isNaN(quantity) ? 0 : quantity); // Add only valid quantities
       }, 0);
 
@@ -1422,9 +1652,7 @@ app.post('/backend/get-cart-quantity-sum', (req, res) => {
   );
 });
 
-
 // app.post('/backend/update-cart-item-quantity', (req, res) => {
-
 
 //   const { email, itemId, newQuantity } = req.body;
 
@@ -1466,74 +1694,87 @@ app.post('/backend/get-cart-quantity-sum', (req, res) => {
 //   });
 // });
 
-app.post('/backend/update-cart-quantity', (req, res) => {
+app.post("/backend/update-cart-quantity", (req, res) => {
   const { email, itemId, quantity } = req.body;
 
   if (!email || !itemId || quantity === undefined) {
-    return res.status(400).json({ error: 'Email, itemId, and quantity are required' });
+    return res
+      .status(400)
+      .json({ error: "Email, itemId, and quantity are required" });
   }
 
   // Step 1: Retrieve the current cart (addtocart) from the database
-  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, results) => {
-    if (err) {
-      console.error('Error retrieving cart:', err);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Step 2: Parse the addtocart field to get the cart items
-    let cartItems = results[0].addtocart ? JSON.parse(results[0].addtocart) : [];
-
-    // Step 3: Update the quantity of the specified item in the cart
-    const itemIndex = cartItems.findIndex(item => item.startsWith(`${itemId}-`));
-    
-    if (itemIndex !== -1) {
-      // Item exists, update its quantity
-      const updatedItem = `${itemId}-${quantity}`;
-      cartItems[itemIndex] = updatedItem; // Update the item in the array
-    } else {
-      // If the item doesn't exist in the cart, you can choose to add it
-      cartItems.push(`${itemId}-${quantity}`);
-    }
-
-    // Step 4: Update the cart in the database with the modified cartItems array
-    db.query(
-      'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
-      [JSON.stringify(cartItems), email],
-      (updateErr) => {
-        if (updateErr) {
-          console.error('Error updating cart:', updateErr);
-          return res.status(500).json({ error: 'Failed to update cart' });
-        }
-
-        res.status(200).json({ message: 'Cart quantity updated successfully' });
+  db.query(
+    "SELECT addtocart FROM oneclick_users WHERE email = ?",
+    [email],
+    (err, results) => {
+      if (err) {
+        console.error("Error retrieving cart:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
-    );
-  });
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Step 2: Parse the addtocart field to get the cart items
+      let cartItems = results[0].addtocart
+        ? JSON.parse(results[0].addtocart)
+        : [];
+
+      // Step 3: Update the quantity of the specified item in the cart
+      const itemIndex = cartItems.findIndex((item) =>
+        item.startsWith(`${itemId}-`)
+      );
+
+      if (itemIndex !== -1) {
+        // Item exists, update its quantity
+        const updatedItem = `${itemId}-${quantity}`;
+        cartItems[itemIndex] = updatedItem; // Update the item in the array
+      } else {
+        // If the item doesn't exist in the cart, you can choose to add it
+        cartItems.push(`${itemId}-${quantity}`);
+      }
+
+      // Step 4: Update the cart in the database with the modified cartItems array
+      db.query(
+        "UPDATE oneclick_users SET addtocart = ? WHERE email = ?",
+        [JSON.stringify(cartItems), email],
+        (updateErr) => {
+          if (updateErr) {
+            console.error("Error updating cart:", updateErr);
+            return res.status(500).json({ error: "Failed to update cart" });
+          }
+
+          res
+            .status(200)
+            .json({ message: "Cart quantity updated successfully" });
+        }
+      );
+    }
+  );
 });
 
 // Route to fetch the wishlist for a user
-app.post('/backend/fetchwishlist', (req, res) => {
+app.post("/backend/fetchwishlist", (req, res) => {
   const { email, username } = req.body;
 
   if (!email || !username) {
-    return res.status(400).json({ message: 'Email and username are required' });
+    return res.status(400).json({ message: "Email and username are required" });
   }
 
   // Query to fetch the user's wishlist from the database
-  const query = 'SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?';
+  const query =
+    "SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?";
 
   db.query(query, [email, username], (err, result) => {
     if (err) {
-      console.error('Error fetching wishlist: ', err);
-      return res.status(500).json({ message: 'Error fetching wishlist' });
+      console.error("Error fetching wishlist: ", err);
+      return res.status(500).json({ message: "Error fetching wishlist" });
     }
 
     if (result.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     try {
@@ -1545,13 +1786,11 @@ app.post('/backend/fetchwishlist', (req, res) => {
 
       return res.json({ wishlist });
     } catch (parseError) {
-      console.error('Error parsing wishlist: ', parseError);
-      return res.status(500).json({ message: 'Error parsing wishlist' });
+      console.error("Error parsing wishlist: ", parseError);
+      return res.status(500).json({ message: "Error parsing wishlist" });
     }
   });
 });
-
-
 
 // // API endpoint to get cart items
 // app.get('/backend/cart', (req, res) => {
@@ -1652,70 +1891,86 @@ app.post('/backend/fetchwishlist', (req, res) => {
 //   });
 // });
 
-app.post('/backend/remove-from-cart', (req, res) => {
+app.post("/backend/remove-from-cart", (req, res) => {
   const { email, itemId, quantity } = req.body;
 
   if (!email || !itemId || !quantity) {
-    return res.status(400).json({ error: 'Email, ItemId, and Quantity are required' });
+    return res
+      .status(400)
+      .json({ error: "Email, ItemId, and Quantity are required" });
   }
 
   // Step 1: Retrieve the user's cart (addtocart) from the database
-  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, results) => {
-    if (err) {
-      console.error('Error retrieving cart:', err);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Step 2: Parse the addtocart field into an array
-    let cartItems = [];
-    try {
-      cartItems = JSON.parse(results[0].addtocart || '[]');
-    } catch (error) {
-      console.error('Error parsing cart items:', error);
-      return res.status(500).json({ error: 'Failed to parse cart items' });
-    }
-
-    // Step 3: Find the item in the cart that matches the provided itemId
-    let itemIndex = cartItems.findIndex(item => item.startsWith(`${itemId}-`));
-
-    if (itemIndex !== -1) {
-      // The item exists, now check if the quantity matches the one to be removed
-      let [existingItemId, existingQuantity] = cartItems[itemIndex].split('-').map(Number);
-      
-      if (existingItemId === parseInt(itemId) && existingQuantity === parseInt(quantity)) {
-        // Remove the item from the cart
-        cartItems.splice(itemIndex, 1);
-      } else {
-        return res.status(400).json({ error: 'Quantity mismatch or item not found in the cart' });
+  db.query(
+    "SELECT addtocart FROM oneclick_users WHERE email = ?",
+    [email],
+    (err, results) => {
+      if (err) {
+        console.error("Error retrieving cart:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
-    } else {
-      return res.status(404).json({ error: 'Item not found in the cart' });
-    }
 
-    // Step 4: Update the cart in the database with the new array
-    db.query(
-      'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
-      [JSON.stringify(cartItems), email],
-      (updateErr) => {
-        if (updateErr) {
-          console.error('Error updating cart:', updateErr);
-          return res.status(500).json({ error: 'Failed to update cart' });
+      if (results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Step 2: Parse the addtocart field into an array
+      let cartItems = [];
+      try {
+        cartItems = JSON.parse(results[0].addtocart || "[]");
+      } catch (error) {
+        console.error("Error parsing cart items:", error);
+        return res.status(500).json({ error: "Failed to parse cart items" });
+      }
+
+      // Step 3: Find the item in the cart that matches the provided itemId
+      let itemIndex = cartItems.findIndex((item) =>
+        item.startsWith(`${itemId}-`)
+      );
+
+      if (itemIndex !== -1) {
+        // The item exists, now check if the quantity matches the one to be removed
+        let [existingItemId, existingQuantity] = cartItems[itemIndex]
+          .split("-")
+          .map(Number);
+
+        if (
+          existingItemId === parseInt(itemId) &&
+          existingQuantity === parseInt(quantity)
+        ) {
+          // Remove the item from the cart
+          cartItems.splice(itemIndex, 1);
+        } else {
+          return res
+            .status(400)
+            .json({ error: "Quantity mismatch or item not found in the cart" });
         }
-
-        // Step 5: Send success response back to the client
-        res.status(200).json({ success: true, message: 'Item removed from cart successfully' });
+      } else {
+        return res.status(404).json({ error: "Item not found in the cart" });
       }
-    );
-  });
+
+      // Step 4: Update the cart in the database with the new array
+      db.query(
+        "UPDATE oneclick_users SET addtocart = ? WHERE email = ?",
+        [JSON.stringify(cartItems), email],
+        (updateErr) => {
+          if (updateErr) {
+            console.error("Error updating cart:", updateErr);
+            return res.status(500).json({ error: "Failed to update cart" });
+          }
+
+          // Step 5: Send success response back to the client
+          res
+            .status(200)
+            .json({
+              success: true,
+              message: "Item removed from cart successfully",
+            });
+        }
+      );
+    }
+  );
 });
-
-
-
-
 
 // app.post('/remove-from-wishlist', async (req, res) => {
 //   const { email, username, productId } = req.body;
@@ -1734,7 +1989,7 @@ app.post('/backend/remove-from-cart', (req, res) => {
 
 //     // Remove productId from wishlist
 //     user.wishlist = user.wishlist.filter(item => item.id !== productId);
-    
+
 //     // Save updated user document
 //     await user.save();
 
@@ -1745,44 +2000,59 @@ app.post('/backend/remove-from-cart', (req, res) => {
 //   }
 // });
 
-
-app.post('/backend/remove-from-wishlist', (req, res) => {
+app.post("/backend/remove-from-wishlist", (req, res) => {
   const { email, productId } = req.body;
 
   if (!email || !productId) {
-    return res.status(400).send({ error: 'Email and product ID are required.' });
+    return res
+      .status(400)
+      .send({ error: "Email and product ID are required." });
   }
 
   // Step 1: Fetch the current wishlist
-  db.query('SELECT wishlist FROM oneclick_users WHERE email = ?', [email], (err, result) => {
-    if (err) {
-      console.error('Error fetching wishlist:', err);
-      return res.status(500).send({ error: 'Failed to fetch wishlist.' });
-    }
-
-    if (result.length === 0) {
-      return res.status(404).send({ error: 'User not found.' });
-    }
-
-    // Step 2: Remove the productId from the wishlist array
-    let wishlist = JSON.parse(result[0].wishlist || '[]');
-    wishlist = wishlist.filter(item => item !== productId);  // Remove product ID from the array
-
-    // Step 3: Update the wishlist in the database
-    const updatedWishlist = JSON.stringify(wishlist);
-    db.query('UPDATE oneclick_users SET wishlist = ? WHERE email = ?', [updatedWishlist, email], (err, updateResult) => {
+  db.query(
+    "SELECT wishlist FROM oneclick_users WHERE email = ?",
+    [email],
+    (err, result) => {
       if (err) {
-        console.error('Error updating wishlist:', err);
-        return res.status(500).send({ error: 'Failed to update wishlist.' });
+        console.error("Error fetching wishlist:", err);
+        return res.status(500).send({ error: "Failed to fetch wishlist." });
       }
 
-      if (updateResult.affectedRows === 0) {
-        return res.status(404).send({ error: 'No changes made, user or wishlist not found.' });
+      if (result.length === 0) {
+        return res.status(404).send({ error: "User not found." });
       }
 
-      res.status(200).send({ message: 'Item removed from wishlist successfully.' });
-    });
-  });
+      // Step 2: Remove the productId from the wishlist array
+      let wishlist = JSON.parse(result[0].wishlist || "[]");
+      wishlist = wishlist.filter((item) => item !== productId); // Remove product ID from the array
+
+      // Step 3: Update the wishlist in the database
+      const updatedWishlist = JSON.stringify(wishlist);
+      db.query(
+        "UPDATE oneclick_users SET wishlist = ? WHERE email = ?",
+        [updatedWishlist, email],
+        (err, updateResult) => {
+          if (err) {
+            console.error("Error updating wishlist:", err);
+            return res
+              .status(500)
+              .send({ error: "Failed to update wishlist." });
+          }
+
+          if (updateResult.affectedRows === 0) {
+            return res
+              .status(404)
+              .send({ error: "No changes made, user or wishlist not found." });
+          }
+
+          res
+            .status(200)
+            .send({ message: "Item removed from wishlist successfully." });
+        }
+      );
+    }
+  );
 });
 // app.post('/backend/remove-from-wishlist', (req, res) => {
 //   const { email, itemId } = req.body;
@@ -1840,10 +2110,6 @@ app.post('/backend/remove-from-wishlist', (req, res) => {
 //   });
 // });
 
-
-
-
-
 // app.get('/backend/api/products', (req, res) => {
 //   const categories = [
 //     // 'TV',
@@ -1878,61 +2144,68 @@ app.post('/backend/remove-from-wishlist', (req, res) => {
 //     });
 // });
 
-
-app.get('/backend/api/products', (req, res) => {
+app.get("/backend/api/products", (req, res) => {
   const categories = [
-    'Mobiles',
-    'Computers',
-    'CCTV',
-    'Printers',
-    'ComputerAccessories',
-    'MobileAccessories',
-    'CCTVAccessories',
-    'PrinterAccessories',
-    'Speakers',
-    'Headphones',
+    "Mobiles",
+    "Computers",
+    "CCTV",
+    "Printers",
+    "ComputerAccessories",
+    "MobileAccessories",
+    "CCTVAccessories",
+    "PrinterAccessories",
+    "Speakers",
+    "Headphones",
   ];
 
   // Define limits for each category
   const categoryLimits = {
-    'Mobiles': 10,
-    'Computers': 10,
-    'CCTV': 10,
-    'Printers': 10,
-    'ComputerAccessories': 2,
-    'MobileAccessories': 2,
-    'CCTVAccessories':2,
-    'PrinterAccessories':2,
-    'Speakers': 5,
-    'Headphones': 5,
+    Mobiles: 10,
+    Computers: 10,
+    CCTV: 10,
+    Printers: 10,
+    ComputerAccessories: 2,
+    MobileAccessories: 2,
+    CCTVAccessories: 2,
+    PrinterAccessories: 2,
+    Speakers: 5,
+    Headphones: 5,
   };
 
   // Create an array of promises for each category query
-  const promises = categories.map(category => new Promise((resolve, reject) => {
-    const limit = categoryLimits[category]; // Get the limit for the current category
-    const query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
-    
-    console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
-    
-    db.query(query, [category, limit], (err, results) => {
-      if (err) {
-        console.error(`Error fetching products for category: ${category}`, err); // Log error for specific category
-        return reject(err);
-      }
-      console.log(`Fetched ${results.length} products for category: ${category}`); // Log successful fetch with count
-      resolve(results); // Resolve with all rows of the result for the category
-    });
-  }));
+  const promises = categories.map(
+    (category) =>
+      new Promise((resolve, reject) => {
+        const limit = categoryLimits[category]; // Get the limit for the current category
+        const query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
+
+        console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
+
+        db.query(query, [category, limit], (err, results) => {
+          if (err) {
+            console.error(
+              `Error fetching products for category: ${category}`,
+              err
+            ); // Log error for specific category
+            return reject(err);
+          }
+          console.log(
+            `Fetched ${results.length} products for category: ${category}`
+          ); // Log successful fetch with count
+          resolve(results); // Resolve with all rows of the result for the category
+        });
+      })
+  );
 
   // Execute all promises and return results
   Promise.all(promises)
-    .then(results => {
+    .then((results) => {
       // console.log('Successfully fetched all product categories:', results); // Log successful fetch of all categories
       res.json(results); // Send the results as JSON
     })
-    .catch(err => {
-      console.error('Database error:', err); // Log any errors during the promise execution
-      res.status(500).json({ error: 'Database error' });
+    .catch((err) => {
+      console.error("Database error:", err); // Log any errors during the promise execution
+      res.status(500).json({ error: "Database error" });
     });
 });
 // app.get('/backend/api/products', (req, res) => {
@@ -1955,9 +2228,9 @@ app.get('/backend/api/products', (req, res) => {
 //   const promises = categories.map(category => new Promise((resolve, reject) => {
 //     const limit = categoryLimits[category]; // Get the limit for the current category
 //     const query = `SELECT * FROM oneclick_product_category WHERE category = ? ORDER BY id DESC LIMIT ?`;
-    
+
 //     console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
-    
+
 //     db.query(query, [category, limit], (err, results) => {
 //       if (err) {
 //         console.error(`Error fetching products for category: ${category}`, err); // Log error for specific category
@@ -1982,20 +2255,19 @@ app.get('/backend/api/products', (req, res) => {
 
 ///////////////////////////admin dashbord api's/////////////////////////////////////////////////////////
 
-app.use('/backend/uploads', express.static('uploads'));
+app.use("/backend/uploads", express.static("uploads"));
 
 const generateProductId = () => {
-  const prefix = 'PRD';
+  const prefix = "PRD";
   const randomDigits = Math.floor(10000 + Math.random() * 90000); // generates a random 5-digit number
   return `${prefix}${randomDigits}`;
 };
-
 
 // Set up multer for file uploads in the `/cctv` endpoint
 const computersStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/computers directory exists
-    const dir = 'uploads/computers';
+    const dir = "uploads/computers";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -2005,60 +2277,77 @@ const computersStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const computersUpload = multer({ storage: computersStorage });
 
+app.post(
+  "/backend/uploadcomputersimages",
+  computersUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-app.post('/backend/uploadcomputersimages', computersUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
 // app.post('/backend/computers', computersUpload.array('images', 5), (req, res) => { // Accept up to 5 images
 //   const { name, features, price, category, actual_price,label, coupon_expiry_date, coupon,deliverycharge, subtitle  } = req.body;
 //   const images = req.files.map(file => file.filename); // Get all uploaded image filenames
-
 
 //   const sql = 'INSERT INTO oneclick_product_category (deliverycharge, subtitle ,coupon_expiry_date, coupon, offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 //   const status = 'available'; // or any other status you might want to set
@@ -2076,87 +2365,91 @@ app.post('/backend/uploadcomputersimages', computersUpload.array('images', 5), (
 //   });
 // });
 
-app.post('/backend/computers', computersUpload.array('images', 5), (req, res) => {
-  const {
-    name,
-    price,
-    category,
-    actual_price,
-    label,
-    // coupon_expiry_date,
-    // coupon,
-    deliverycharge,
-    productStatus,
-    subtitle,
-    memory,
-    storage,
-    processor,
-    // camera,
-    display,
-    // battery,
-    os,
-    // network,
-    others,
-  } = req.body;
-
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
-  const prod_id = generateProductId(); // Generate unique product ID
-  const status = 'available'; // Default status
-
-  // Insert product into the oneclick_product_category table
-  const sqlProduct =
-    'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,  offer_label, actual_price, category, prod_id, prod_name, prod_price, prod_img, status) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-
-  db.query(
-    sqlProduct,
-    [
-      productStatus,
-      deliverycharge,
-      subtitle,
-      label,
-      actual_price,
-      'Computers',
-      prod_id,
+app.post(
+  "/backend/computers",
+  computersUpload.array("images", 5),
+  (req, res) => {
+    const {
       name,
       price,
-      JSON.stringify(images),
-      status,
-    ],
-    (err, productResult) => {
-      if (err) {
-        console.error('Error inserting product into database:', err);
-        return res.status(500).send('Error adding product');
-      }
+      category,
+      actual_price,
+      label,
+      // coupon_expiry_date,
+      // coupon,
+      deliverycharge,
+      productStatus,
+      subtitle,
+      memory,
+      storage,
+      processor,
+      // camera,
+      display,
+      // battery,
+      os,
+      // network,
+      others,
+    } = req.body;
 
-      // Insert features into the oneclick_mobile_features table
-      const sqlFeatures =
-        'INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, display,  os, others) VALUES (?, ?, ?, ?, ?, ?, ?)';
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
+    const prod_id = generateProductId(); // Generate unique product ID
+    const status = "available"; // Default status
 
-      db.query(
-        sqlFeatures,
-        [prod_id, memory, storage, processor,  display,  os,  others],
-        (err, featuresResult) => {
-          if (err) {
-            console.error('Error inserting features into database:', err);
-            return res.status(500).send('Error adding features');
-          }
+    // Insert product into the oneclick_product_category table
+    const sqlProduct =
+      "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,  offer_label, actual_price, category, prod_id, prod_name, prod_price, prod_img, status) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-          console.log('Product and features added successfully');
-          res.send('Product and features added successfully');
+    db.query(
+      sqlProduct,
+      [
+        productStatus,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "Computers",
+        prod_id,
+        name,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, productResult) => {
+        if (err) {
+          console.error("Error inserting product into database:", err);
+          return res.status(500).send("Error adding product");
         }
-      );
-    }
-  );
-});
+
+        // Insert features into the oneclick_mobile_features table
+        const sqlFeatures =
+          "INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, display,  os, others) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        db.query(
+          sqlFeatures,
+          [prod_id, memory, storage, processor, display, os, others],
+          (err, featuresResult) => {
+            if (err) {
+              console.error("Error inserting features into database:", err);
+              return res.status(500).send("Error adding features");
+            }
+
+            console.log("Product and features added successfully");
+            res.send("Product and features added successfully");
+          }
+        );
+      }
+    );
+  }
+);
 
 // app.get('/backend/fetchcomputers', (req, res) => {
-//   const sql = "SELECT * FROM oneclick_product_category WHERE category = 'computers' ORDER BY id DESC"; 
+//   const sql = "SELECT * FROM oneclick_product_category WHERE category = 'computers' ORDER BY id DESC";
 //   db.query(sql, (err, results) => {
 //     if (err) {
 //       console.error('Error fetching product:', err);
 //       return res.status(500).json({ message: 'Failed to fetch product' });
 //     }
-    
+
 //     // Parse the prod_img JSON string to an array for each product
 //     const products = results.map(product => ({
 //       ...product,
@@ -2167,8 +2460,7 @@ app.post('/backend/computers', computersUpload.array('images', 5), (req, res) =>
 //   });
 // });
 
-
-app.get('/backend/adminfetchcomputers', (req, res) => {
+app.get("/backend/adminfetchcomputers", (req, res) => {
   const sql = `
     SELECT 
       p.prod_id, 
@@ -2197,12 +2489,12 @@ app.get('/backend/adminfetchcomputers', (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching products:', err);
-      return res.status(500).json({ message: 'Failed to fetch products' });
+      console.error("Error fetching products:", err);
+      return res.status(500).json({ message: "Failed to fetch products" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -2212,8 +2504,7 @@ app.get('/backend/adminfetchcomputers', (req, res) => {
   });
 });
 
-
-app.get('/backend/fetchcomputers', (req, res) => {
+app.get("/backend/fetchcomputers", (req, res) => {
   const sql = `
     SELECT 
       p.prod_id, 
@@ -2242,12 +2533,12 @@ app.get('/backend/fetchcomputers', (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching products:', err);
-      return res.status(500).json({ message: 'Failed to fetch products' });
+      console.error("Error fetching products:", err);
+      return res.status(500).json({ message: "Failed to fetch products" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -2257,127 +2548,155 @@ app.get('/backend/fetchcomputers', (req, res) => {
   });
 });
 
-app.put('/backend/updatecomputers/image/:id', computersUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+app.put(
+  "/backend/updatecomputers/image/:id",
+  computersUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/computers/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/computers/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletecomputers/image/:id', (req, res) => {
+app.delete("/backend/deletecomputers/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/computers/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/computers/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
-
 
 // Update product route
 // app.put('/backend/updatecomputers/:id', computersUpload.single('image'), (req, res) => {
@@ -2419,27 +2738,27 @@ app.delete('/backend/deletecomputers/image/:id', (req, res) => {
 //   }
 // });
 
-app.put('/backend/updatecomputers/:id', (req, res) => {
+app.put("/backend/updatecomputers/:id", (req, res) => {
   const productId = req.params.id;
 
   const {
-    label, 
-    name, 
-    price, 
-    status, 
-    actual_price, 
+    label,
+    name,
+    price,
+    status,
+    actual_price,
     productStatus,
-    deliverycharge, 
-    subtitle, 
-    memory, 
-    storage, 
-    processor, 
-    // camera, 
-    display, 
-    // battery, 
-    os, 
-    // network, 
-    others
+    deliverycharge,
+    subtitle,
+    memory,
+    storage,
+    processor,
+    // camera,
+    display,
+    // battery,
+    os,
+    // network,
+    others,
   } = req.body;
 
   console.log("Computers Received update request for product ID :", productId);
@@ -2449,8 +2768,16 @@ app.put('/backend/updatecomputers/:id', (req, res) => {
   const checkProductSql = `SELECT * FROM oneclick_product_category WHERE prod_id = ?`;
   db.query(checkProductSql, [productId], (checkErr, checkResults) => {
     if (checkErr) {
-      console.error("Error checking product in `oneclick_product_category`:", checkErr);
-      return res.status(500).send({ message: "Failed to check product existence.", error: checkErr });
+      console.error(
+        "Error checking product in `oneclick_product_category`:",
+        checkErr
+      );
+      return res
+        .status(500)
+        .send({
+          message: "Failed to check product existence.",
+          error: checkErr,
+        });
     }
 
     if (checkResults.length === 0) {
@@ -2462,53 +2789,83 @@ app.put('/backend/updatecomputers/:id', (req, res) => {
                                               actual_price, offer_label, prod_name, prod_price, status)
         VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const insertProductValues = [
-        productId, 
-        productStatus || '', 
-        deliverycharge || 0, 
-        subtitle || '', 
-        actual_price || 0, 
-        label || '', 
-        name || '', 
-        price || 0, 
-        status || ''
+        productId,
+        productStatus || "",
+        deliverycharge || 0,
+        subtitle || "",
+        actual_price || 0,
+        label || "",
+        name || "",
+        price || 0,
+        status || "",
       ];
 
-      db.query(insertProductSql, insertProductValues, (insertErr, insertResults) => {
-        if (insertErr) {
-          console.error("Error inserting product in `oneclick_product_category`:", insertErr);
-          return res.status(500).send({ message: "Failed to insert new product.", error: insertErr });
-        }
+      db.query(
+        insertProductSql,
+        insertProductValues,
+        (insertErr, insertResults) => {
+          if (insertErr) {
+            console.error(
+              "Error inserting product in `oneclick_product_category`:",
+              insertErr
+            );
+            return res
+              .status(500)
+              .send({
+                message: "Failed to insert new product.",
+                error: insertErr,
+              });
+          }
 
-        console.log("New product inserted successfully in `oneclick_product_category`.");
+          console.log(
+            "New product inserted successfully in `oneclick_product_category`."
+          );
 
-        // Now insert features
-        const insertFeaturesSql = `
+          // Now insert features
+          const insertFeaturesSql = `
           INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor,  display, 
                                                  os,  others)
           VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        const insertFeaturesValues = [
-          productId, 
-          memory || '', 
-          storage || '', 
-          processor || '', 
-          // camera || '', 
-          display || '', 
-          // battery || '', 
-          os || '', 
-          // network || '', 
-          others || ''
-        ];
+          const insertFeaturesValues = [
+            productId,
+            memory || "",
+            storage || "",
+            processor || "",
+            // camera || '',
+            display || "",
+            // battery || '',
+            os || "",
+            // network || '',
+            others || "",
+          ];
 
-        db.query(insertFeaturesSql, insertFeaturesValues, (featuresInsertErr, featuresInsertResults) => {
-          if (featuresInsertErr) {
-            console.error("Error inserting features in `oneclick_mobile_features`:", featuresInsertErr);
-            return res.status(500).send({ message: "Failed to insert product features.", error: featuresInsertErr });
-          }
+          db.query(
+            insertFeaturesSql,
+            insertFeaturesValues,
+            (featuresInsertErr, featuresInsertResults) => {
+              if (featuresInsertErr) {
+                console.error(
+                  "Error inserting features in `oneclick_mobile_features`:",
+                  featuresInsertErr
+                );
+                return res
+                  .status(500)
+                  .send({
+                    message: "Failed to insert product features.",
+                    error: featuresInsertErr,
+                  });
+              }
 
-          console.log("Product features inserted successfully in `oneclick_mobile_features`.");
-          res.json({ message: "Product and features inserted successfully." });
-        });
-      });
+              console.log(
+                "Product features inserted successfully in `oneclick_mobile_features`."
+              );
+              res.json({
+                message: "Product and features inserted successfully.",
+              });
+            }
+          );
+        }
+      );
     } else {
       // Product exists, update the product and features
       console.log("Product found, updating the existing product.");
@@ -2520,123 +2877,195 @@ app.put('/backend/updatecomputers/:id', (req, res) => {
             status = ? 
         WHERE prod_id = ?`;
       const updateProductValues = [
-         productStatus || '', deliverycharge || 0, subtitle || '', 
-        actual_price || 0, label || '', name || '', price || 0, status || '', productId
+        productStatus || "",
+        deliverycharge || 0,
+        subtitle || "",
+        actual_price || 0,
+        label || "",
+        name || "",
+        price || 0,
+        status || "",
+        productId,
       ];
 
-      db.query(updateProductSql, updateProductValues, (updateErr, updateResults) => {
-        if (updateErr) {
-          console.error("Error updating product in `oneclick_product_category`:", updateErr);
-          return res.status(500).send({ message: "Failed to update product details.", error: updateErr });
-        }
-
-        console.log("Product updated successfully in `oneclick_product_category`.");
-        console.log("Affected rows:", updateResults.affectedRows);
-
-        // Check if features exist in the `oneclick_mobile_features` table
-        const checkFeaturesSql = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
-        db.query(checkFeaturesSql, [productId], (checkFeaturesErr, checkFeaturesResults) => {
-          if (checkFeaturesErr) {
-            console.error("Error checking product features in `oneclick_mobile_features`:", checkFeaturesErr);
-            return res.status(500).send({ message: "Failed to check product features.", error: checkFeaturesErr });
+      db.query(
+        updateProductSql,
+        updateProductValues,
+        (updateErr, updateResults) => {
+          if (updateErr) {
+            console.error(
+              "Error updating product in `oneclick_product_category`:",
+              updateErr
+            );
+            return res
+              .status(500)
+              .send({
+                message: "Failed to update product details.",
+                error: updateErr,
+              });
           }
 
-          if (checkFeaturesResults.length === 0) {
-            // Features don't exist, insert them
-            console.log("Features not found, inserting new features.");
+          console.log(
+            "Product updated successfully in `oneclick_product_category`."
+          );
+          console.log("Affected rows:", updateResults.affectedRows);
 
-            const insertFeaturesSql = `
-              INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, display, os, others)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`;
-            const insertFeaturesValues = [
-              productId, 
-              memory || '', 
-              storage || '', 
-              processor || '', 
-              display || '', 
-              os || '', 
-              others || ''
-            ];
-
-            db.query(insertFeaturesSql, insertFeaturesValues, (featuresInsertErr, featuresInsertResults) => {
-              if (featuresInsertErr) {
-                console.error("Error inserting features in `oneclick_mobile_features`:", featuresInsertErr);
-                return res.status(500).send({ message: "Failed to insert product features.", error: featuresInsertErr });
+          // Check if features exist in the `oneclick_mobile_features` table
+          const checkFeaturesSql = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
+          db.query(
+            checkFeaturesSql,
+            [productId],
+            (checkFeaturesErr, checkFeaturesResults) => {
+              if (checkFeaturesErr) {
+                console.error(
+                  "Error checking product features in `oneclick_mobile_features`:",
+                  checkFeaturesErr
+                );
+                return res
+                  .status(500)
+                  .send({
+                    message: "Failed to check product features.",
+                    error: checkFeaturesErr,
+                  });
               }
 
-              console.log("Product features inserted successfully in `oneclick_mobile_features`.");
-              res.json({ success: true, message: "Product updated and features inserted successfully." });
-            });
-          } else {
-            // Update features if they exist
-            console.log("Features found, updating product features.");
+              if (checkFeaturesResults.length === 0) {
+                // Features don't exist, insert them
+                console.log("Features not found, inserting new features.");
 
-            const updateFeaturesSql = `
+                const insertFeaturesSql = `
+              INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, display, os, others)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                const insertFeaturesValues = [
+                  productId,
+                  memory || "",
+                  storage || "",
+                  processor || "",
+                  display || "",
+                  os || "",
+                  others || "",
+                ];
+
+                db.query(
+                  insertFeaturesSql,
+                  insertFeaturesValues,
+                  (featuresInsertErr, featuresInsertResults) => {
+                    if (featuresInsertErr) {
+                      console.error(
+                        "Error inserting features in `oneclick_mobile_features`:",
+                        featuresInsertErr
+                      );
+                      return res
+                        .status(500)
+                        .send({
+                          message: "Failed to insert product features.",
+                          error: featuresInsertErr,
+                        });
+                    }
+
+                    console.log(
+                      "Product features inserted successfully in `oneclick_mobile_features`."
+                    );
+                    res.json({
+                      success: true,
+                      message:
+                        "Product updated and features inserted successfully.",
+                    });
+                  }
+                );
+              } else {
+                // Update features if they exist
+                console.log("Features found, updating product features.");
+
+                const updateFeaturesSql = `
               UPDATE oneclick_mobile_features 
               SET memory = ?, storage = ?, processor = ?, 
                   display = ?, os = ?, others = ? 
               WHERE prod_id = ?`;
-            const updateFeatureValues = [
-              memory || '', storage || '', processor || '', 
-              display || '', os || '', others || '', productId
-            ];
+                const updateFeatureValues = [
+                  memory || "",
+                  storage || "",
+                  processor || "",
+                  display || "",
+                  os || "",
+                  others || "",
+                  productId,
+                ];
 
-            db.query(updateFeaturesSql, updateFeatureValues, (featuresUpdateErr, featuresUpdateResults) => {
-              if (featuresUpdateErr) {
-                console.error("Error updating features in `oneclick_mobile_features`:", featuresUpdateErr);
-                return res.status(500).send({ message: "Failed to update product features.", error: featuresUpdateErr });
+                db.query(
+                  updateFeaturesSql,
+                  updateFeatureValues,
+                  (featuresUpdateErr, featuresUpdateResults) => {
+                    if (featuresUpdateErr) {
+                      console.error(
+                        "Error updating features in `oneclick_mobile_features`:",
+                        featuresUpdateErr
+                      );
+                      return res
+                        .status(500)
+                        .send({
+                          message: "Failed to update product features.",
+                          error: featuresUpdateErr,
+                        });
+                    }
+
+                    console.log(
+                      "Product features updated successfully in `oneclick_mobile_features`."
+                    );
+                    res.json({
+                      success: true,
+                      message: "Product and features updated successfully.",
+                    });
+                  }
+                );
               }
-
-              console.log("Product features updated successfully in `oneclick_mobile_features`.");
-              res.json({ success: true, message: "Product and features updated successfully." });
-            });
-          }
-        });
-      });
+            }
+          );
+        }
+      );
     }
   });
 });
 
-
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletecomputers/:id', (req, res) => {
+app.delete("/backend/deletecomputers/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/computers/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 
 ////////////////mobiles////////////////////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const mobilesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/mobiles directory exists
-    const dir = 'uploads/mobiles';
+    const dir = "uploads/mobiles";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -2646,63 +3075,78 @@ const mobilesStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const mobilesUpload = multer({ storage: mobilesStorage });
 
+app.post(
+  "/backend/uploadmobilesimages",
+  mobilesUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-app.post('/backend/uploadmobilesimages', mobilesUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
-
+    });
+  }
+);
 
 // // Endpoint to add a new product with multiple images
 // app.post('/backend/mobiles', mobilesUpload.array('images', 5), (req, res) => { // Accept up to 5 images
 //   const { name, features, price, category, actual_price, label, coupon_expiry_date , coupon,deliverycharge, subtitle  } = req.body;
 //   const images = req.files.map(file => file.filename); // Get all uploaded image filenames
-
-
 
 //   const sql = 'INSERT INTO oneclick_product_category (deliverycharge, subtitle ,coupon_expiry_date, coupon, offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 //   const status = 'available'; // or any other status you might want to set
@@ -2720,7 +3164,7 @@ app.post('/backend/uploadmobilesimages', mobilesUpload.array('images', 5), (req,
 //   });
 // });
 
-app.post('/backend/mobiles', mobilesUpload.array('images', 5), (req, res) => {
+app.post("/backend/mobiles", mobilesUpload.array("images", 5), (req, res) => {
   const {
     name,
     price,
@@ -2743,13 +3187,13 @@ app.post('/backend/mobiles', mobilesUpload.array('images', 5), (req, res) => {
     others,
   } = req.body;
 
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+  const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
   const prod_id = generateProductId(); // Generate unique product ID
-  const status = 'available'; // Default status
+  const status = "available"; // Default status
 
   // Insert product into the oneclick_product_category table
   const sqlProduct =
-    'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,  offer_label, actual_price, category, prod_id, prod_name, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,  offer_label, actual_price, category, prod_id, prod_name, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   db.query(
     sqlProduct,
@@ -2761,7 +3205,7 @@ app.post('/backend/mobiles', mobilesUpload.array('images', 5), (req, res) => {
       // coupon,
       label,
       actual_price,
-      'Mobiles',
+      "Mobiles",
       prod_id,
       name,
       price,
@@ -2770,40 +3214,50 @@ app.post('/backend/mobiles', mobilesUpload.array('images', 5), (req, res) => {
     ],
     (err, productResult) => {
       if (err) {
-        console.error('Error inserting product into database:', err);
-        return res.status(500).send('Error adding product');
+        console.error("Error inserting product into database:", err);
+        return res.status(500).send("Error adding product");
       }
 
       // Insert features into the oneclick_mobile_features table
       const sqlFeatures =
-        'INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, camera, display, battery, os, network, others) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        "INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, camera, display, battery, os, network, others) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
       db.query(
         sqlFeatures,
-        [prod_id, memory, storage, processor, camera, display, battery, os, network, others],
+        [
+          prod_id,
+          memory,
+          storage,
+          processor,
+          camera,
+          display,
+          battery,
+          os,
+          network,
+          others,
+        ],
         (err, featuresResult) => {
           if (err) {
-            console.error('Error inserting features into database:', err);
-            return res.status(500).send('Error adding features');
+            console.error("Error inserting features into database:", err);
+            return res.status(500).send("Error adding features");
           }
 
-          console.log('Product and features added successfully');
-          res.send('Product and features added successfully');
+          console.log("Product and features added successfully");
+          res.send("Product and features added successfully");
         }
       );
     }
   );
 });
 
-
 // app.get('/backend/fetchmobiles', (req, res) => {
-//   const sql = "SELECT * FROM oneclick_product_category WHERE category = 'mobiles' ORDER BY id DESC"; 
+//   const sql = "SELECT * FROM oneclick_product_category WHERE category = 'mobiles' ORDER BY id DESC";
 //   db.query(sql, (err, results) => {
 //     if (err) {
 //       console.error('Error fetching product:', err);
 //       return res.status(500).json({ message: 'Failed to fetch product' });
 //     }
-    
+
 //     // Parse the prod_img JSON string to an array for each product
 //     const products = results.map(product => ({
 //       ...product,
@@ -2814,8 +3268,7 @@ app.post('/backend/mobiles', mobilesUpload.array('images', 5), (req, res) => {
 //   });
 // });
 
-
-app.get('/backend/adminfetchmobiles', (req, res) => {
+app.get("/backend/adminfetchmobiles", (req, res) => {
   const sql = `
     SELECT 
       p.prod_id, 
@@ -2847,12 +3300,12 @@ app.get('/backend/adminfetchmobiles', (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching products:', err);
-      return res.status(500).json({ message: 'Failed to fetch products' });
+      console.error("Error fetching products:", err);
+      return res.status(500).json({ message: "Failed to fetch products" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -2862,7 +3315,7 @@ app.get('/backend/adminfetchmobiles', (req, res) => {
   });
 });
 
-app.get('/backend/fetchmobiles', (req, res) => {
+app.get("/backend/fetchmobiles", (req, res) => {
   const sql = `
     SELECT 
       p.prod_id, 
@@ -2894,12 +3347,12 @@ app.get('/backend/fetchmobiles', (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching products:', err);
-      return res.status(500).json({ message: 'Failed to fetch products' });
+      console.error("Error fetching products:", err);
+      return res.status(500).json({ message: "Failed to fetch products" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -2909,127 +3362,155 @@ app.get('/backend/fetchmobiles', (req, res) => {
   });
 });
 
-app.put('/backend/updatemobiles/image/:id', mobilesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+app.put(
+  "/backend/updatemobiles/image/:id",
+  mobilesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/mobiles/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/mobiles/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletemobiles/image/:id', (req, res) => {
+app.delete("/backend/deletemobiles/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/mobiles/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/mobiles/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
-
 
 // // Update product route with multiple images
 // app.put('/backend/updatemobiles/:id', mobilesUpload.array('images', 5), (req, res) => {
@@ -3072,28 +3553,28 @@ app.delete('/backend/deletemobiles/image/:id', (req, res) => {
 //     });
 //   }
 // });
-app.put('/backend/updatemobiles/:id', (req, res) => {
+app.put("/backend/updatemobiles/:id", (req, res) => {
   const productId = req.params.id;
   const {
-    label, 
-    name, 
-    price, 
-    status, 
-    actual_price, 
-    // coupon_expiry_date, 
-    // coupon, 
-    deliverycharge, 
-    subtitle, 
-    memory, 
-    storage, 
-    processor, 
-    camera, 
-    display, 
-    battery, 
-    os, 
-    network, 
-    others, 
-    productStatus
+    label,
+    name,
+    price,
+    status,
+    actual_price,
+    // coupon_expiry_date,
+    // coupon,
+    deliverycharge,
+    subtitle,
+    memory,
+    storage,
+    processor,
+    camera,
+    display,
+    battery,
+    os,
+    network,
+    others,
+    productStatus,
   } = req.body;
 
   console.log("Received update request for product ID:", productId);
@@ -3103,8 +3584,16 @@ app.put('/backend/updatemobiles/:id', (req, res) => {
   const checkProductSql = `SELECT * FROM oneclick_product_category WHERE prod_id = ?`;
   db.query(checkProductSql, [productId], (checkErr, checkResults) => {
     if (checkErr) {
-      console.error("Error checking product in `oneclick_product_category`:", checkErr);
-      return res.status(500).send({ message: "Failed to check product existence.", error: checkErr });
+      console.error(
+        "Error checking product in `oneclick_product_category`:",
+        checkErr
+      );
+      return res
+        .status(500)
+        .send({
+          message: "Failed to check product existence.",
+          error: checkErr,
+        });
     }
 
     if (checkResults.length === 0) {
@@ -3116,54 +3605,84 @@ app.put('/backend/updatemobiles/:id', (req, res) => {
                                               actual_price, offer_label, prod_name, prod_price, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const insertProductValues = [
-        productId, 
-        deliverycharge || 0, 
-        subtitle || '', 
-        // coupon_expiry_date || null, 
-        productStatus || '', 
-        actual_price || 0, 
-        label || '', 
-        name || '', 
-        price || 0, 
-        status || ''
+        productId,
+        deliverycharge || 0,
+        subtitle || "",
+        // coupon_expiry_date || null,
+        productStatus || "",
+        actual_price || 0,
+        label || "",
+        name || "",
+        price || 0,
+        status || "",
       ];
 
-      db.query(insertProductSql, insertProductValues, (insertErr, insertResults) => {
-        if (insertErr) {
-          console.error("Error inserting product in `oneclick_product_category`:", insertErr);
-          return res.status(500).send({ message: "Failed to insert new product.", error: insertErr });
-        }
+      db.query(
+        insertProductSql,
+        insertProductValues,
+        (insertErr, insertResults) => {
+          if (insertErr) {
+            console.error(
+              "Error inserting product in `oneclick_product_category`:",
+              insertErr
+            );
+            return res
+              .status(500)
+              .send({
+                message: "Failed to insert new product.",
+                error: insertErr,
+              });
+          }
 
-        console.log("New product inserted successfully in `oneclick_product_category`.");
+          console.log(
+            "New product inserted successfully in `oneclick_product_category`."
+          );
 
-        // Now insert features
-        const insertFeaturesSql = `
+          // Now insert features
+          const insertFeaturesSql = `
           INSERT INTO oneclick_mobile_features (prod_id, memory, storage, processor, camera, display, battery, 
                                                  os, network, others)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        const insertFeaturesValues = [
-          productId, 
-          memory || '', 
-          storage || '', 
-          processor || '', 
-          camera || '', 
-          display || '', 
-          battery || '', 
-          os || '', 
-          network || '', 
-          others || ''
-        ];
+          const insertFeaturesValues = [
+            productId,
+            memory || "",
+            storage || "",
+            processor || "",
+            camera || "",
+            display || "",
+            battery || "",
+            os || "",
+            network || "",
+            others || "",
+          ];
 
-        db.query(insertFeaturesSql, insertFeaturesValues, (featuresInsertErr, featuresInsertResults) => {
-          if (featuresInsertErr) {
-            console.error("Error inserting features in `oneclick_mobile_features`:", featuresInsertErr);
-            return res.status(500).send({ message: "Failed to insert product features.", error: featuresInsertErr });
-          }
+          db.query(
+            insertFeaturesSql,
+            insertFeaturesValues,
+            (featuresInsertErr, featuresInsertResults) => {
+              if (featuresInsertErr) {
+                console.error(
+                  "Error inserting features in `oneclick_mobile_features`:",
+                  featuresInsertErr
+                );
+                return res
+                  .status(500)
+                  .send({
+                    message: "Failed to insert product features.",
+                    error: featuresInsertErr,
+                  });
+              }
 
-          console.log("Product features inserted successfully in `oneclick_mobile_features`.");
-          res.json({ message: "Product and features inserted successfully." });
-        });
-      });
+              console.log(
+                "Product features inserted successfully in `oneclick_mobile_features`."
+              );
+              res.json({
+                message: "Product and features inserted successfully.",
+              });
+            }
+          );
+        }
+      );
     } else {
       // Product exists, update the product and features
       console.log("Product found, updating the existing product.");
@@ -3175,118 +3694,189 @@ app.put('/backend/updatemobiles/:id', (req, res) => {
             status = ? 
         WHERE prod_id = ?`;
       const updateProductValues = [
-        productStatus || '' , deliverycharge || 0, subtitle || '', 
-        actual_price || 0, label || '', name || '', price || 0, status || '', productId
+        productStatus || "",
+        deliverycharge || 0,
+        subtitle || "",
+        actual_price || 0,
+        label || "",
+        name || "",
+        price || 0,
+        status || "",
+        productId,
       ];
 
-      db.query(updateProductSql, updateProductValues, (updateErr, updateResults) => {
-        if (updateErr) {
-          console.error("Error updating product in `oneclick_product_category`:", updateErr);
-          return res.status(500).send({ message: "Failed to update product details.", error: updateErr });
-        }
-
-        console.log("Product updated successfully in `oneclick_product_category`.");
-        console.log("Affected rows:", updateResults.affectedRows);
-
-        // Check if features exist in the `oneclick_mobile_features` table
-        const checkFeaturesSql = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
-        db.query(checkFeaturesSql, [productId], (checkFeaturesErr, checkFeaturesResults) => {
-          if (checkFeaturesErr) {
-            console.error("Error checking product features in `oneclick_mobile_features`:", checkFeaturesErr);
-            return res.status(500).send({ message: "Failed to check product features.", error: checkFeaturesErr });
+      db.query(
+        updateProductSql,
+        updateProductValues,
+        (updateErr, updateResults) => {
+          if (updateErr) {
+            console.error(
+              "Error updating product in `oneclick_product_category`:",
+              updateErr
+            );
+            return res
+              .status(500)
+              .send({
+                message: "Failed to update product details.",
+                error: updateErr,
+              });
           }
 
-          if (checkFeaturesResults.length === 0) {
-            // Features don't exist, insert them
-            console.log("Features not found, inserting new features.");
+          console.log(
+            "Product updated successfully in `oneclick_product_category`."
+          );
+          console.log("Affected rows:", updateResults.affectedRows);
 
-            const insertFeaturesSql = `
-              INSERT INTO oneclick_mobile_features (prod_id, camera, battery, network, memory, storage, processor, display, os, others)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-            const insertFeaturesValues = [
-              productId, 
-              camera || '', 
-              battery || '', 
-              network || '', 
-              memory || '', 
-              storage || '', 
-              processor || '', 
-              display || '', 
-              os || '', 
-              others || ''
-            ];
-
-            db.query(insertFeaturesSql, insertFeaturesValues, (featuresInsertErr, featuresInsertResults) => {
-              if (featuresInsertErr) {
-                console.error("Error inserting features in `oneclick_mobile_features`:", featuresInsertErr);
-                return res.status(500).send({ message: "Failed to insert product features.", error: featuresInsertErr });
+          // Check if features exist in the `oneclick_mobile_features` table
+          const checkFeaturesSql = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
+          db.query(
+            checkFeaturesSql,
+            [productId],
+            (checkFeaturesErr, checkFeaturesResults) => {
+              if (checkFeaturesErr) {
+                console.error(
+                  "Error checking product features in `oneclick_mobile_features`:",
+                  checkFeaturesErr
+                );
+                return res
+                  .status(500)
+                  .send({
+                    message: "Failed to check product features.",
+                    error: checkFeaturesErr,
+                  });
               }
 
-              console.log("Product features inserted successfully in `oneclick_mobile_features`.");
-              res.json({ success: true, message: "Product updated and features inserted successfully." });
-            });
-          } else {
-            // Update features if they exist
-            console.log("Features found, updating product features.");
+              if (checkFeaturesResults.length === 0) {
+                // Features don't exist, insert them
+                console.log("Features not found, inserting new features.");
 
-            const updateFeaturesSql = `
+                const insertFeaturesSql = `
+              INSERT INTO oneclick_mobile_features (prod_id, camera, battery, network, memory, storage, processor, display, os, others)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                const insertFeaturesValues = [
+                  productId,
+                  camera || "",
+                  battery || "",
+                  network || "",
+                  memory || "",
+                  storage || "",
+                  processor || "",
+                  display || "",
+                  os || "",
+                  others || "",
+                ];
+
+                db.query(
+                  insertFeaturesSql,
+                  insertFeaturesValues,
+                  (featuresInsertErr, featuresInsertResults) => {
+                    if (featuresInsertErr) {
+                      console.error(
+                        "Error inserting features in `oneclick_mobile_features`:",
+                        featuresInsertErr
+                      );
+                      return res
+                        .status(500)
+                        .send({
+                          message: "Failed to insert product features.",
+                          error: featuresInsertErr,
+                        });
+                    }
+
+                    console.log(
+                      "Product features inserted successfully in `oneclick_mobile_features`."
+                    );
+                    res.json({
+                      success: true,
+                      message:
+                        "Product updated and features inserted successfully.",
+                    });
+                  }
+                );
+              } else {
+                // Update features if they exist
+                console.log("Features found, updating product features.");
+
+                const updateFeaturesSql = `
               UPDATE oneclick_mobile_features 
               SET camera = ?, battery = ?, network = ?, memory = ?, storage = ?, processor = ?, 
                   display = ?, os = ?, others = ? 
               WHERE prod_id = ?`;
-            const updateFeatureValues = [
-              camera || '', battery || '', network || '', memory || '', storage || '', processor || '', 
-              display || '', os || '', others || '', productId
-            ];
+                const updateFeatureValues = [
+                  camera || "",
+                  battery || "",
+                  network || "",
+                  memory || "",
+                  storage || "",
+                  processor || "",
+                  display || "",
+                  os || "",
+                  others || "",
+                  productId,
+                ];
 
-            db.query(updateFeaturesSql, updateFeatureValues, (featuresUpdateErr, featuresUpdateResults) => {
-              if (featuresUpdateErr) {
-                console.error("Error updating features in `oneclick_mobile_features`:", featuresUpdateErr);
-                return res.status(500).send({ message: "Failed to update product features.", error: featuresUpdateErr });
+                db.query(
+                  updateFeaturesSql,
+                  updateFeatureValues,
+                  (featuresUpdateErr, featuresUpdateResults) => {
+                    if (featuresUpdateErr) {
+                      console.error(
+                        "Error updating features in `oneclick_mobile_features`:",
+                        featuresUpdateErr
+                      );
+                      return res
+                        .status(500)
+                        .send({
+                          message: "Failed to update product features.",
+                          error: featuresUpdateErr,
+                        });
+                    }
+
+                    console.log(
+                      "Product features updated successfully in `oneclick_mobile_features`."
+                    );
+                    res.json({
+                      success: true,
+                      message: "Product and features updated successfully.",
+                    });
+                  }
+                );
               }
-
-              console.log("Product features updated successfully in `oneclick_mobile_features`.");
-              res.json({ success: true, message: "Product and features updated successfully." });
-            });
-          }
-        });
-      });
+            }
+          );
+        }
+      );
     }
   });
 });
 
-
-
-
-
-
-
 // Endpoint to delete a product
-app.delete('/backend/deletemobiles/:id', (req, res) => {
+app.delete("/backend/deletemobiles/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/mobiles/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
@@ -3296,7 +3886,7 @@ app.delete('/backend/deletemobiles/:id', (req, res) => {
 const cctvStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/cctv directory exists
-    const dir = 'uploads/cctv';
+    const dir = "uploads/cctv";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -3306,88 +3896,135 @@ const cctvStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const cctvUpload = multer({ storage: cctvStorage });
-app.post('/backend/uploadcctvimages', cctvUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/uploadcctvimages",
+  cctvUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
-
+    });
+  }
+);
 
 // Endpoint to add a new product with multiple images
-app.post('/backend/cctv', cctvUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const { name, features,productStatus, price, category, actual_price, label, deliverycharge, subtitle } = req.body;
+app.post("/backend/cctv", cctvUpload.array("images", 5), (req, res) => {
+  // Accept up to 5 images
+  const {
+    name,
+    features,
+    productStatus,
+    price,
+    category,
+    actual_price,
+    label,
+    deliverycharge,
+    subtitle,
+  } = req.body;
   // console.log('req.body', req.body)
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+  const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,   offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
+  const sql =
+    "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,   offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const status = "available"; // or any other status you might want to set
   const prod_id = generateProductId();
 
   // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle, label, actual_price, 'CCTV', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+  db.query(
+    sql,
+    [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      label,
+      actual_price,
+      "CCTV",
+      prod_id,
+      name,
+      features,
+      price,
+      JSON.stringify(images),
+      status,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Error inserting product into database:", err); // Log the error
+        return res.status(500).send("Error adding product");
+      }
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
+      console.log("Product added successfully with ID:", prod_id); // Log successful addition
+      res.send("Product added with multiple images");
+    }
+  );
 });
 
-app.get('/backend/adminfetchcctv', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'cctv' ORDER BY id DESC"; 
+app.get("/backend/adminfetchcctv", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'cctv' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -3396,17 +4033,17 @@ app.get('/backend/adminfetchcctv', (req, res) => {
   });
 });
 
-
-app.get('/backend/fetchcctv', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'cctv' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchcctv", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'cctv' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -3415,210 +4052,265 @@ app.get('/backend/fetchcctv', (req, res) => {
   });
 });
 
+app.put(
+  "/backend/updatecctv/image/:id",
+  cctvUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-app.put('/backend/updatecctv/image/:id', cctvUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
-
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/cctv/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/cctv/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletecctv/image/:id', (req, res) => {
+app.delete("/backend/deletecctv/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/cctv/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/cctv/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
 // Update product route with multiple images
-app.put('/backend/updatecctv/:id', cctvUpload.array('images', 5), (req, res) => {
-  console.log("Received update request with data:", req.body);
+app.put(
+  "/backend/updatecctv/:id",
+  cctvUpload.array("images", 5),
+  (req, res) => {
+    console.log("Received update request with data:", req.body);
 
-  const productId = req.params.id;
-  const {productStatus, subtitle, deliverycharge, label, name, features, price, status, actual_price,  } = req.body;
-  const images = req.files.map(file => file.filename);
+    const productId = req.params.id;
+    const {
+      productStatus,
+      subtitle,
+      deliverycharge,
+      label,
+      name,
+      features,
+      price,
+      status,
+      actual_price,
+    } = req.body;
+    const images = req.files.map((file) => file.filename);
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, subtitle, deliverycharge,  actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      subtitle,
+      deliverycharge,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (images.length > 0) {
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImages = JSON.parse(results[0].prod_img);
-      if (oldImages && oldImages.length > 0) {
-        oldImages.forEach((oldImage) => {
-          fs.unlink(`uploads/cctv/${oldImage}`, (err) => {
-            if (err) console.error('Failed to delete old image:', err);
+    if (images.length > 0) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImages = JSON.parse(results[0].prod_img);
+        if (oldImages && oldImages.length > 0) {
+          oldImages.forEach((oldImage) => {
+            fs.unlink(`uploads/cctv/${oldImage}`, (err) => {
+              if (err) console.error("Failed to delete old image:", err);
+            });
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(JSON.stringify(images), productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({
+            message: "Product updated successfully with multiple images",
           });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(JSON.stringify(images), productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully with multiple images' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletecctv/:id', (req, res) => {
+app.delete("/backend/deletecctv/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/cctv/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 ///////////////////////////////// secondhandproducts///////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const secondhandproductsStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/secondhandproducts directory exists
-    const dir = 'uploads/secondhandproducts';
+    const dir = "uploads/secondhandproducts";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -3628,89 +4320,140 @@ const secondhandproductsStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const secondhandproductsUpload = multer({ storage: secondhandproductsStorage });
 
-app.post('/backend/uploadsecondhandproductsimages', secondhandproductsUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/uploadsecondhandproductsimages",
+  secondhandproductsUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
-
+    });
+  }
+);
 
 // Endpoint to add a new product with multiple images
-app.post('/backend/secondhandproducts', secondhandproductsUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const { name, features,productStatus, price, category, actual_price, label, deliverycharge, subtitle } = req.body;
-  // console.log('req.body', req.body)
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/secondhandproducts",
+  secondhandproductsUpload.array("images", 5),
+  (req, res) => {
+    // Accept up to 5 images
+    const {
+      name,
+      features,
+      productStatus,
+      price,
+      category,
+      actual_price,
+      label,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    // console.log('req.body', req.body)
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
+    const sql =
+      "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,   offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const status = "available"; // or any other status you might want to set
+    const prod_id = generateProductId();
 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,   offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
-  const prod_id = generateProductId();
+    // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
+    db.query(
+      sql,
+      [
+        productStatus,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "secondhandproducts",
+        prod_id,
+        name,
+        features,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting product into database:", err); // Log the error
+          return res.status(500).send("Error adding product");
+        }
 
-  // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle, label, actual_price, 'secondhandproducts', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+        console.log("Product added successfully with ID:", prod_id); // Log successful addition
+        res.send("Product added with multiple images");
+      }
+    );
+  }
+);
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
-});
-
-app.get('/backend/adminfetchsecondhandproducts', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'secondhandproducts' ORDER BY id DESC"; 
+app.get("/backend/adminfetchsecondhandproducts", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'secondhandproducts' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -3719,17 +4462,17 @@ app.get('/backend/adminfetchsecondhandproducts', (req, res) => {
   });
 });
 
-
-app.get('/backend/fetchsecondhandproducts', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'secondhandproducts' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchsecondhandproducts", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'secondhandproducts' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -3738,210 +4481,265 @@ app.get('/backend/fetchsecondhandproducts', (req, res) => {
   });
 });
 
+app.put(
+  "/backend/updatesecondhandproducts/image/:id",
+  secondhandproductsUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-app.put('/backend/updatesecondhandproducts/image/:id', secondhandproductsUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
-
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/secondhandproducts/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/secondhandproducts/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletesecondhandproducts/image/:id', (req, res) => {
+app.delete("/backend/deletesecondhandproducts/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/secondhandproducts/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/secondhandproducts/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
 // Update product route with multiple images
-app.put('/backend/updatesecondhandproducts/:id', secondhandproductsUpload.array('images', 5), (req, res) => {
-  console.log("Received update request with data:", req.body);
+app.put(
+  "/backend/updatesecondhandproducts/:id",
+  secondhandproductsUpload.array("images", 5),
+  (req, res) => {
+    console.log("Received update request with data:", req.body);
 
-  const productId = req.params.id;
-  const {productStatus, subtitle, deliverycharge, label, name, features, price, status, actual_price,  } = req.body;
-  const images = req.files.map(file => file.filename);
+    const productId = req.params.id;
+    const {
+      productStatus,
+      subtitle,
+      deliverycharge,
+      label,
+      name,
+      features,
+      price,
+      status,
+      actual_price,
+    } = req.body;
+    const images = req.files.map((file) => file.filename);
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, subtitle, deliverycharge,  actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      subtitle,
+      deliverycharge,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (images.length > 0) {
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImages = JSON.parse(results[0].prod_img);
-      if (oldImages && oldImages.length > 0) {
-        oldImages.forEach((oldImage) => {
-          fs.unlink(`uploads/secondhandproducts/${oldImage}`, (err) => {
-            if (err) console.error('Failed to delete old image:', err);
+    if (images.length > 0) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImages = JSON.parse(results[0].prod_img);
+        if (oldImages && oldImages.length > 0) {
+          oldImages.forEach((oldImage) => {
+            fs.unlink(`uploads/secondhandproducts/${oldImage}`, (err) => {
+              if (err) console.error("Failed to delete old image:", err);
+            });
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(JSON.stringify(images), productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({
+            message: "Product updated successfully with multiple images",
           });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(JSON.stringify(images), productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully with multiple images' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletesecondhandproducts/:id', (req, res) => {
+app.delete("/backend/deletesecondhandproducts/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/secondhandproducts/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 /////////////////////////tv///////////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const tvStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/tv directory exists
-    const dir = 'uploads/tv';
+    const dir = "uploads/tv";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -3951,86 +4749,127 @@ const tvStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const tvUpload = multer({ storage: tvStorage });
 
-app.post('/backend/uploadtvimages', tvUpload.array('images', 5), (req, res) => {
+app.post("/backend/uploadtvimages", tvUpload.array("images", 5), (req, res) => {
   const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+  const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
   console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+  console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImagesSql =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   db.query(fetchImagesSql, [productId], (err, results) => {
-      if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
-      }
+    if (err) {
+      console.error("Error fetching product images:", err.message);
+      return res.status(500).send("Error fetching product images");
+    }
 
-      if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+    if (results.length > 0) {
+      const existingImages = JSON.parse(results[0].prod_img) || [];
+      const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+      console.log(
+        `Existing images found for product ID ${productId}:`,
+        existingImages
+      );
+      console.log(`Updated images for product ID ${productId}:`, updatedImages);
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+      const updateImagesSql =
+        "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+      db.query(
+        updateImagesSql,
+        [JSON.stringify(updatedImages), productId],
+        (err, result) => {
+          if (err) {
+            console.error("Error updating product images:", err.message);
+            return res.status(500).send("Error updating product images");
+          }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
-      } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
-      }
+          console.log("Number of rows affected:", result.affectedRows);
+          if (result.affectedRows === 0) {
+            console.warn("No rows updated. Check if the product ID exists.");
+          } else {
+            console.log(
+              "Images updated successfully for product ID:",
+              productId
+            );
+            res.send("Images uploaded and updated successfully");
+          }
+        }
+      );
+    } else {
+      console.warn(`Product not found for ID: ${productId}`);
+      res.status(404).send("Product not found");
+    }
   });
 });
 // Endpoint to add a new product with multiple images
-app.post('/backend/tv', tvUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, name, features, price, category, actual_price, label, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post("/backend/tv", tvUpload.array("images", 5), (req, res) => {
+  // Accept up to 5 images
+  const {
+    productStatus,
+    name,
+    features,
+    price,
+    category,
+    actual_price,
+    label,
+    deliverycharge,
+    subtitle,
+  } = req.body;
+  const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle ,offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
+  const sql =
+    "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle ,offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const status = "available"; // or any other status you might want to set
   const prod_id = generateProductId();
 
   // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle, label, actual_price, 'TV', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+  db.query(
+    sql,
+    [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      label,
+      actual_price,
+      "TV",
+      prod_id,
+      name,
+      features,
+      price,
+      JSON.stringify(images),
+      status,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Error inserting product into database:", err); // Log the error
+        return res.status(500).send("Error adding product");
+      }
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
+      console.log("Product added successfully with ID:", prod_id); // Log successful addition
+      res.send("Product added with multiple images");
+    }
+  );
 });
 
-app.get('/backend/adminfetchtv', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'tv' ORDER BY id DESC"; 
+app.get("/backend/adminfetchtv", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'tv' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4038,16 +4877,17 @@ app.get('/backend/adminfetchtv', (req, res) => {
     res.json(products);
   });
 });
-app.get('/backend/fetchtv', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'tv' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchtv", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'tv' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4055,209 +4895,256 @@ app.get('/backend/fetchtv', (req, res) => {
     res.json(products);
   });
 });
-app.put('/backend/updatetv/image/:id', tvUpload.single('image'), (req, res) => {
+app.put("/backend/updatetv/image/:id", tvUpload.single("image"), (req, res) => {
   const productId = req.params.id;
   const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+  console.log(
+    "Received request to update image for product ID:",
+    productId,
+    "at index:",
+    imageIndex
+  );
 
   // Check if a new image file is uploaded
   if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const oldImageQuery =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-      // Fetch the existing image data
-      db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+    // Fetch the existing image data
+    db.query(oldImageQuery, [productId], (err, results) => {
+      if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+      console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/tv/${oldImages[imageIndex]}`; // Old image path
+      // Check if the specified index is valid
+      if (imageIndex >= 0 && imageIndex < oldImages.length) {
+        const oldImagePath = `uploads/tv/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+        // Delete the old image file
+        fs.unlink(oldImagePath, (err) => {
+          if (err) console.error("Failed to delete old image:", err);
+        });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+        // Prepare the new images array, replacing the specified old image
+        const newImageFileName = req.file.filename; // Get the new image filename
+        oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+        // Log the new images array
+        console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            // Pass both parameters here
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+            console.log("Update results:", results);
+            res.json({ message: "Product image updated successfully" });
           }
-      });
+        );
+      } else {
+        // Invalid index
+        res.status(400).json({ message: "Invalid image index." });
+      }
+    });
   } else {
-      // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+    // No image uploaded
+    res.status(400).json({ message: "No image file uploaded" });
   }
 });
 
-
-app.delete('/backend/deletetv/image/:id', (req, res) => {
+app.delete("/backend/deletetv/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/tv/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/tv/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
-
 // Update product route with multiple images
-app.put('/backend/updatetv/:id', tvUpload.array('images', 5), (req, res) => {
+app.put("/backend/updatetv/:id", tvUpload.array("images", 5), (req, res) => {
   const productId = req.params.id;
-  const {productStatus,  label , name, features, price, status, actual_price, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename);
+  const {
+    productStatus,
+    label,
+    name,
+    features,
+    price,
+    status,
+    actual_price,
+    deliverycharge,
+    subtitle,
+  } = req.body;
+  const images = req.files.map((file) => file.filename);
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?,   prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, deliverycharge, subtitle , actual_price, label, name, features, price, status];
+  let sql =
+    "UPDATE oneclick_product_category SET productStatus = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?,   prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+  let values = [
+    productStatus,
+    deliverycharge,
+    subtitle,
+    actual_price,
+    label,
+    name,
+    features,
+    price,
+    status,
+  ];
 
   if (images.length > 0) {
     // Update image and remove the old image files
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const oldImageQuery =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
     db.query(oldImageQuery, [productId], (err, results) => {
       if (err) return res.status(500).send(err);
       const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
       if (oldImages && oldImages.length > 0) {
         oldImages.forEach((oldImage) => {
           fs.unlink(`uploads/tv/${oldImage}`, (err) => {
-            if (err) console.error('Failed to delete old image:', err);
+            if (err) console.error("Failed to delete old image:", err);
           });
         });
       }
 
-      sql += ', prod_img = ? WHERE id = ?';
+      sql += ", prod_img = ? WHERE id = ?";
       values.push(JSON.stringify(images), productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully with multiple images' });
+        res.json({
+          message: "Product updated successfully with multiple images",
+        });
       });
     });
   } else {
-    sql += ' WHERE id = ?';
+    sql += " WHERE id = ?";
     values.push(productId);
 
     db.query(sql, values, (err, results) => {
       if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
+      res.json({ message: "Product updated successfully" });
     });
   }
 });
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletetv/:id', (req, res) => {
+app.delete("/backend/deletetv/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/tv/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 ////////////////headphones///////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const headphonesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/headphones directory exists
-    const dir = 'uploads/headphones';
+    const dir = "uploads/headphones";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -4267,86 +5154,138 @@ const headphonesStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const headphonesUpload = multer({ storage: headphonesStorage });
 
-app.post('/backend/uploadheadphonesimages', headphonesUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/uploadheadphonesimages",
+  headphonesUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/headphones', headphonesUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, name, features, price, category, actual_price, label,deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/headphones",
+  headphonesUpload.array("images", 5),
+  (req, res) => {
+    // Accept up to 5 images
+    const {
+      productStatus,
+      name,
+      features,
+      price,
+      category,
+      actual_price,
+      label,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
- 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ? , ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
-  const prod_id = generateProductId();
+    const sql =
+      "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ? , ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const status = "available"; // or any other status you might want to set
+    const prod_id = generateProductId();
 
-  // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle , label, actual_price, 'Headphones', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+    // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
+    db.query(
+      sql,
+      [
+        productStatus,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "Headphones",
+        prod_id,
+        name,
+        features,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting product into database:", err); // Log the error
+          return res.status(500).send("Error adding product");
+        }
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
-});
+        console.log("Product added successfully with ID:", prod_id); // Log successful addition
+        res.send("Product added with multiple images");
+      }
+    );
+  }
+);
 
-app.get('/backend/adminfetchheadphones', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'headphones' ORDER BY id DESC"; 
+app.get("/backend/adminfetchheadphones", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'headphones' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4355,21 +5294,21 @@ app.get('/backend/adminfetchheadphones', (req, res) => {
   });
 });
 
-
-app.get('/backend/fetchheadphones', (req, res) => {
+app.get("/backend/fetchheadphones", (req, res) => {
   console.log("Received request to fetch headphones");
 
-  const sql = "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'headphones' AND productStatus = 'approved' ORDER BY id DESC";
-  
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'headphones' AND productStatus = 'approved' ORDER BY id DESC";
+
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching products from database:', err);
-      return res.status(500).json({ message: 'Failed to fetch products' });
+      console.error("Error fetching products from database:", err);
+      return res.status(500).json({ message: "Failed to fetch products" });
     }
 
     console.log(`Fetched ${results.length} products from the database`);
 
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4379,206 +5318,260 @@ app.get('/backend/fetchheadphones', (req, res) => {
   });
 });
 
+app.put(
+  "/backend/updateheadphones/image/:id",
+  headphonesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-app.put('/backend/updateheadphones/image/:id', headphonesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
-
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/headphones/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/headphones/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deleteheadphones/image/:id', (req, res) => {
+app.delete("/backend/deleteheadphones/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/headphones/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/headphones/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
 // Update product route
-app.put('/backend/updateheadphones/:id', headphonesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus,  name, features, price, status, label,actual_price, deliverycharge, subtitle  } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updateheadphones/:id",
+  headphonesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      name,
+      features,
+      price,
+      status,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, deliverycharge = ?, subtitle = ?,  actual_price = ?,  offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, deliverycharge, subtitle , actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, deliverycharge = ?, subtitle = ?,  actual_price = ?,  offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/headphones/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/headphones/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deleteheadphones/:id', (req, res) => {
+app.delete("/backend/deleteheadphones/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/headphones/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 /////////////speaker////////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const speakersStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/speakers directory exists
-    const dir = 'uploads/speakers';
+    const dir = "uploads/speakers";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -4588,87 +5581,134 @@ const speakersStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const speakersUpload = multer({ storage: speakersStorage });
 
-app.post('/backend/uploadspeakersimages', speakersUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/uploadspeakersimages",
+  speakersUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/speakers', speakersUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, name, features, price, category, actual_price, label, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post("/backend/speakers", speakersUpload.array("images", 5), (req, res) => {
+  // Accept up to 5 images
+  const {
+    productStatus,
+    name,
+    features,
+    price,
+    category,
+    actual_price,
+    label,
+    deliverycharge,
+    subtitle,
+  } = req.body;
+  const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-
-
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle ,  offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
+  const sql =
+    "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle ,  offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const status = "available"; // or any other status you might want to set
   const prod_id = generateProductId();
 
   // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle, label, actual_price, 'Speakers', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+  db.query(
+    sql,
+    [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      label,
+      actual_price,
+      "Speakers",
+      prod_id,
+      name,
+      features,
+      price,
+      JSON.stringify(images),
+      status,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Error inserting product into database:", err); // Log the error
+        return res.status(500).send("Error adding product");
+      }
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
+      console.log("Product added successfully with ID:", prod_id); // Log successful addition
+      res.send("Product added with multiple images");
+    }
+  );
 });
 
-app.get('/backend/adminfetchspeakers', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'speakers' ORDER BY id DESC"; 
+app.get("/backend/adminfetchspeakers", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'speakers' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4676,16 +5716,17 @@ app.get('/backend/adminfetchspeakers', (req, res) => {
     res.json(products);
   });
 });
-app.get('/backend/fetchspeakers', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'speakers' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchspeakers", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'speakers' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4693,196 +5734,250 @@ app.get('/backend/fetchspeakers', (req, res) => {
     res.json(products);
   });
 });
-app.put('/backend/updatespeakers/image/:id', speakersUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+app.put(
+  "/backend/updatespeakers/image/:id",
+  speakersUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/speakers/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/speakers/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletespeakers/image/:id', (req, res) => {
+app.delete("/backend/deletespeakers/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/speakers/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/speakers/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
-
 // Update product route
-app.put('/backend/updatespeakers/:id', speakersUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus,  name, features, price, status, label, actual_price, deliverycharge, subtitle  } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updatespeakers/:id",
+  speakersUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      name,
+      features,
+      price,
+      status,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?,  deliverycharge = ?, subtitle = ?,  actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, deliverycharge, subtitle, actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?,  deliverycharge = ?, subtitle = ?,  actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/speakers/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/speakers/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletespeakers/:id', (req, res) => {
+app.delete("/backend/deletespeakers/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/speakers/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
@@ -4892,7 +5987,7 @@ app.delete('/backend/deletespeakers/:id', (req, res) => {
 const watchStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/watch directory exists
-    const dir = 'uploads/watch';
+    const dir = "uploads/watch";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -4902,85 +5997,133 @@ const watchStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const watchUpload = multer({ storage: watchStorage });
-app.post('/backend/uploadwatchimages', watchUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/uploadwatchimages",
+  watchUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/watch', watchUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus,  name, features, price, category, actual_price, label, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post("/backend/watch", watchUpload.array("images", 5), (req, res) => {
+  // Accept up to 5 images
+  const {
+    productStatus,
+    name,
+    features,
+    price,
+    category,
+    actual_price,
+    label,
+    deliverycharge,
+    subtitle,
+  } = req.body;
+  const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
- 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
+  const sql =
+    "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const status = "available"; // or any other status you might want to set
   const prod_id = generateProductId();
 
   // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle,  label, actual_price, 'Watch', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+  db.query(
+    sql,
+    [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      label,
+      actual_price,
+      "Watch",
+      prod_id,
+      name,
+      features,
+      price,
+      JSON.stringify(images),
+      status,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Error inserting product into database:", err); // Log the error
+        return res.status(500).send("Error adding product");
+      }
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
+      console.log("Product added successfully with ID:", prod_id); // Log successful addition
+      res.send("Product added with multiple images");
+    }
+  );
 });
 
-app.get('/backend/adminfetchwatch', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'watch' ORDER BY id DESC"; 
+app.get("/backend/adminfetchwatch", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'watch' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -4988,16 +6131,17 @@ app.get('/backend/adminfetchwatch', (req, res) => {
     res.json(products);
   });
 });
-app.get('/backend/fetchwatch', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'watch' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchwatch", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'watch' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5005,211 +6149,265 @@ app.get('/backend/fetchwatch', (req, res) => {
     res.json(products);
   });
 });
-app.put('/backend/updatewatch/image/:id', watchUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+app.put(
+  "/backend/updatewatch/image/:id",
+  watchUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/watch/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/watch/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletewatch/image/:id', (req, res) => {
+app.delete("/backend/deletewatch/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/watch/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/watch/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
-
-
 // Update product route with multiple images
-app.put('/backend/updatewatch/:id', watchUpload.array('images', 5), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus,  label , name, features, price, status, actual_price, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename);
+app.put(
+  "/backend/updatewatch/:id",
+  watchUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      label,
+      name,
+      features,
+      price,
+      status,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const images = req.files.map((file) => file.filename);
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?,   prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, deliverycharge, subtitle , actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?,   prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (images.length > 0) {
-    // Update image and remove the old image files
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-      if (oldImages && oldImages.length > 0) {
-        oldImages.forEach((oldImage) => {
-          fs.unlink(`uploads/watch/${oldImage}`, (err) => {
-            if (err) console.error('Failed to delete old image:', err);
+    if (images.length > 0) {
+      // Update image and remove the old image files
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        if (oldImages && oldImages.length > 0) {
+          oldImages.forEach((oldImage) => {
+            fs.unlink(`uploads/watch/${oldImage}`, (err) => {
+              if (err) console.error("Failed to delete old image:", err);
+            });
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(JSON.stringify(images), productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({
+            message: "Product updated successfully with multiple images",
           });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(JSON.stringify(images), productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully with multiple images' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletewatch/:id', (req, res) => {
+app.delete("/backend/deletewatch/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/watch/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 
 //////////////printers//////////////////////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const printersStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/printers directory exists
-    const dir = 'uploads/printers';
+    const dir = "uploads/printers";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -5219,86 +6417,134 @@ const printersStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const printersUpload = multer({ storage: printersStorage });
 
-app.post('/backend/uploadprintersimages', printersUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/uploadprintersimages",
+  printersUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/printers', printersUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, name, features, price, category, actual_price, label, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post("/backend/printers", printersUpload.array("images", 5), (req, res) => {
+  // Accept up to 5 images
+  const {
+    productStatus,
+    name,
+    features,
+    price,
+    category,
+    actual_price,
+    label,
+    deliverycharge,
+    subtitle,
+  } = req.body;
+  const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
+  const sql =
+    "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const status = "available"; // or any other status you might want to set
   const prod_id = generateProductId();
 
   // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle , label, actual_price, 'Printers', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+  db.query(
+    sql,
+    [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      label,
+      actual_price,
+      "Printers",
+      prod_id,
+      name,
+      features,
+      price,
+      JSON.stringify(images),
+      status,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Error inserting product into database:", err); // Log the error
+        return res.status(500).send("Error adding product");
+      }
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
+      console.log("Product added successfully with ID:", prod_id); // Log successful addition
+      res.send("Product added with multiple images");
+    }
+  );
 });
 
-app.get('/backend/adminfetchprinters', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'printers' ORDER BY id DESC"; 
+app.get("/backend/adminfetchprinters", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'printers' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5306,16 +6552,17 @@ app.get('/backend/adminfetchprinters', (req, res) => {
     res.json(products);
   });
 });
-app.get('/backend/fetchprinters', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'printers' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchprinters", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE LOWER(category) = 'printers' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5324,206 +6571,259 @@ app.get('/backend/fetchprinters', (req, res) => {
   });
 });
 
+app.put(
+  "/backend/updateprinters/image/:id",
+  printersUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-app.put('/backend/updateprinters/image/:id', printersUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
-
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/printers/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/printers/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deleteprinters/image/:id', (req, res) => {
+app.delete("/backend/deleteprinters/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/printers/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/printers/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
 // Update product route
-app.put('/backend/updateprinters/:id', printersUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const { productStatus, name, features, price, status, label, actual_price, deliverycharge, subtitle  } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updateprinters/:id",
+  printersUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      name,
+      features,
+      price,
+      status,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?,  deliverycharge = ?, subtitle = ?,   actual_price = ?,  offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, deliverycharge, subtitle , actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?,  deliverycharge = ?, subtitle = ?,   actual_price = ?,  offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/printers/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/printers/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
-app.delete('/backend/deleteprinters/:id', (req, res) => {
+app.delete("/backend/deleteprinters/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/printers/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 /////////////mobileaccessories////////////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const mobileaccessoriesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/mobileaccessories directory exists
-    const dir = 'uploads/mobileaccessories';
+    const dir = "uploads/mobileaccessories";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -5533,88 +6833,140 @@ const mobileaccessoriesStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const mobileaccessoriesUpload = multer({ storage: mobileaccessoriesStorage });
 
+app.post(
+  "/backend/uploadmobileaccessoriesimages",
+  mobileaccessoriesUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-app.post('/backend/uploadmobileaccessoriesimages', mobileaccessoriesUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/mobileaccessories', mobileaccessoriesUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, effectiveprice,  name, features, price, category, actual_price, label, deliverycharge, subtitle   } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/mobileaccessories",
+  mobileaccessoriesUpload.array("images", 5),
+  (req, res) => {
+    // Accept up to 5 images
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      category,
+      actual_price,
+      label,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
+    const sql =
+      "INSERT INTO oneclick_product_category (productStatus, effectiveprice, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const status = "available"; // or any other status you might want to set
+    const prod_id = generateProductId();
 
+    // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
+    db.query(
+      sql,
+      [
+        productStatus,
+        effectiveprice,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "MobileAccessories",
+        prod_id,
+        name,
+        features,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting product into database:", err); // Log the error
+          return res.status(500).send("Error adding product");
+        }
 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, effectiveprice, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
-  const prod_id = generateProductId();
+        console.log("Product added successfully with ID:", prod_id); // Log successful addition
+        res.send("Product added with multiple images");
+      }
+    );
+  }
+);
 
-  // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, effectiveprice, deliverycharge, subtitle, label, actual_price, 'MobileAccessories', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
-
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
-});
-
-app.get('/backend/adminfetchmobileaccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'mobileaccessories' ORDER BY id DESC"; 
+app.get("/backend/adminfetchmobileaccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'mobileaccessories' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5623,16 +6975,17 @@ app.get('/backend/adminfetchmobileaccessories', (req, res) => {
   });
 });
 
-app.get('/backend/fetchmobileaccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'mobileaccessories' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchmobileaccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'mobileaccessories' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5640,199 +6993,255 @@ app.get('/backend/fetchmobileaccessories', (req, res) => {
     res.json(products);
   });
 });
-app.put('/backend/updatemobileaccessories/image/:id', mobileaccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+app.put(
+  "/backend/updatemobileaccessories/image/:id",
+  mobileaccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/mobileaccessories/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/mobileaccessories/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletemobileaccessories/image/:id', (req, res) => {
+app.delete("/backend/deletemobileaccessories/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/mobileaccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/mobileaccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
 // Update product route
-app.put('/backend/updatemobileaccessories/:id', mobileaccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus, effectiveprice,  name, features, price, status, label, actual_price, deliverycharge, subtitle  } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updatemobileaccessories/:id",
+  mobileaccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      status,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?,  deliverycharge = ?, subtitle = ?,  actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, effectiveprice, deliverycharge, subtitle ,actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?,  deliverycharge = ?, subtitle = ?,  actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      effectiveprice,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/mobileaccessories/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/mobileaccessories/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletemobileaccessories/:id', (req, res) => {
+app.delete("/backend/deletemobileaccessories/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/mobileaccessories/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
-
 
 ////////////////////printeraccessories/////////////////////
 
@@ -5840,7 +7249,7 @@ app.delete('/backend/deletemobileaccessories/:id', (req, res) => {
 const printeraccessoriesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/printeraccessories directory exists
-    const dir = 'uploads/printeraccessories';
+    const dir = "uploads/printeraccessories";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -5850,88 +7259,140 @@ const printeraccessoriesStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const printeraccessoriesUpload = multer({ storage: printeraccessoriesStorage });
 
+app.post(
+  "/backend/uploadprinteraccessoriesimages",
+  printeraccessoriesUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-app.post('/backend/uploadprinteraccessoriesimages', printeraccessoriesUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/printeraccessories', printeraccessoriesUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, effectiveprice,  name, features, price, category, actual_price, label, deliverycharge, subtitle  } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/printeraccessories",
+  printeraccessoriesUpload.array("images", 5),
+  (req, res) => {
+    // Accept up to 5 images
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      category,
+      actual_price,
+      label,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
+    const sql =
+      "INSERT INTO oneclick_product_category (productStatus, effectiveprice, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const status = "available"; // or any other status you might want to set
+    const prod_id = generateProductId();
 
+    // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
+    db.query(
+      sql,
+      [
+        productStatus,
+        effectiveprice,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "PrinterAccessories",
+        prod_id,
+        name,
+        features,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting product into database:", err); // Log the error
+          return res.status(500).send("Error adding product");
+        }
 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, effectiveprice, deliverycharge, subtitle , offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
-  const prod_id = generateProductId();
+        console.log("Product added successfully with ID:", prod_id); // Log successful addition
+        res.send("Product added with multiple images");
+      }
+    );
+  }
+);
 
-  // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, effectiveprice, deliverycharge, subtitle , label, actual_price, 'PrinterAccessories', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
-
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
-});
-
-app.get('/backend/adminfetchprinteraccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'printeraccessories' ORDER BY id DESC"; 
+app.get("/backend/adminfetchprinteraccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'printeraccessories' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5939,16 +7400,17 @@ app.get('/backend/adminfetchprinteraccessories', (req, res) => {
     res.json(products);
   });
 });
-app.get('/backend/fetchprinteraccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'printeraccessories' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchprinteraccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'printeraccessories' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -5956,206 +7418,262 @@ app.get('/backend/fetchprinteraccessories', (req, res) => {
     res.json(products);
   });
 });
-app.put('/backend/updateprinteraccessories/image/:id', printeraccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
+app.put(
+  "/backend/updateprinteraccessories/image/:id",
+  printeraccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/printeraccessories/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/printeraccessories/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deleteprinteraccessories/image/:id', (req, res) => {
+app.delete("/backend/deleteprinteraccessories/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/printeraccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/printeraccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
 // Update product route
-app.put('/backend/updateprinteraccessories/:id', printeraccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus, effectiveprice,  name, features, price, status, label, actual_price, deliverycharge, subtitle  } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updateprinteraccessories/:id",
+  printeraccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      status,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, effectiveprice, deliverycharge, subtitle ,actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      effectiveprice,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/printeraccessories/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/printeraccessories/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deleteprinteraccessories/:id', (req, res) => {
+app.delete("/backend/deleteprinteraccessories/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/printeraccessories/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 ///////////////////////cctvaccessories////////////////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const cctvaccessoriesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/cctvaccessories directory exists
-    const dir = 'uploads/cctvaccessories';
+    const dir = "uploads/cctvaccessories";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -6165,88 +7683,139 @@ const cctvaccessoriesStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
 const cctvaccessoriesUpload = multer({ storage: cctvaccessoriesStorage });
 
+app.post(
+  "/backend/uploadcctvaccessoriesimages",
+  cctvaccessoriesUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-app.post('/backend/uploadcctvaccessoriesimages', cctvaccessoriesUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
+    });
+  }
+);
 // Endpoint to add a new product with multiple images
-app.post('/backend/cctvaccessories', cctvaccessoriesUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const { name, features,productStatus, price, category, actual_price, label, deliverycharge, subtitle } = req.body;
-  // console.log('req.body', req.body)
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/cctvaccessories",
+  cctvaccessoriesUpload.array("images", 5),
+  (req, res) => {
+    // Accept up to 5 images
+    const {
+      name,
+      features,
+      productStatus,
+      price,
+      category,
+      actual_price,
+      label,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    // console.log('req.body', req.body)
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
+    const sql =
+      "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,   offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const status = "available"; // or any other status you might want to set
+    const prod_id = generateProductId();
 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle,   offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
-  const prod_id = generateProductId();
+    // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
+    db.query(
+      sql,
+      [
+        productStatus,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "CCTVAccessories",
+        prod_id,
+        name,
+        features,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting product into database:", err); // Log the error
+          return res.status(500).send("Error adding product");
+        }
 
-  // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, deliverycharge, subtitle, label, actual_price, 'CCTVAccessories', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
+        console.log("Product added successfully with ID:", prod_id); // Log successful addition
+        res.send("Product added with multiple images");
+      }
+    );
+  }
+);
 
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
-});
-
-app.get('/backend/adminfetchcctvaccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'cctvaccessories' ORDER BY id DESC"; 
+app.get("/backend/adminfetchcctvaccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'cctvaccessories' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -6255,16 +7824,17 @@ app.get('/backend/adminfetchcctvaccessories', (req, res) => {
   });
 });
 
-app.get('/backend/fetchcctvaccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'cctvaccessories' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchcctvaccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'cctvaccessories' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -6273,207 +7843,262 @@ app.get('/backend/fetchcctvaccessories', (req, res) => {
   });
 });
 
+app.put(
+  "/backend/updatecctvaccessories/image/:id",
+  cctvaccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-app.put('/backend/updatecctvaccessories/image/:id', cctvaccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
-
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/cctvaccessories/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/cctvaccessories/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletecctvaccessories/image/:id', (req, res) => {
+app.delete("/backend/deletecctvaccessories/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/cctvaccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/cctvaccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
-
 // Update product route
-app.put('/backend/updatecctvaccessories/:id', cctvaccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus, effectiveprice, name, features, price, status, label, actual_price, deliverycharge, subtitle   } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updatecctvaccessories/:id",
+  cctvaccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      status,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?';
-  let values = [productStatus, effectiveprice, deliverycharge, subtitle , actual_price, label, name, features, price, status];
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?, deliverycharge = ?, subtitle = ?,   actual_price = ?, offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?";
+    let values = [
+      productStatus,
+      effectiveprice,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/cctvaccessories/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/cctvaccessories/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletecctvaccessories/:id', (req, res) => {
+app.delete("/backend/deletecctvaccessories/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/cctvaccessories/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
 ///////////////////////////computeraccessories///////////////
 
-
 // Set up multer for file uploads in the `/cctv` endpoint
 const computeraccessoriesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/computeraccessories directory exists
-    const dir = 'uploads/computeraccessories';
+    const dir = "uploads/computeraccessories";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -6483,91 +8108,143 @@ const computeraccessoriesStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const computeraccessoriesUpload = multer({ storage: computeraccessoriesStorage });
+const computeraccessoriesUpload = multer({
+  storage: computeraccessoriesStorage,
+});
 
+app.post(
+  "/backend/uploadcomputeraccessoriesimages",
+  computeraccessoriesUpload.array("images", 5),
+  (req, res) => {
+    const productId = req.body.productId; // Get the product ID from the request body
+    const newImages = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
-app.post('/backend/uploadcomputeraccessoriesimages', computeraccessoriesUpload.array('images', 5), (req, res) => {
-  const productId = req.body.productId; // Get the product ID from the request body
-  const newImages = req.files.map(file => file.filename); // Get all uploaded image filenames
+    console.log(`Received upload request for product ID: ${productId}`); // Log product ID
+    console.log("New images:", newImages); // Log new images
 
-  console.log(`Received upload request for product ID: ${productId}`); // Log product ID
-  console.log('New images:', newImages); // Log new images
+    const fetchImagesSql =
+      "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
-  const fetchImagesSql = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-
-  db.query(fetchImagesSql, [productId], (err, results) => {
+    db.query(fetchImagesSql, [productId], (err, results) => {
       if (err) {
-          console.error("Error fetching product images:", err.message);
-          return res.status(500).send('Error fetching product images');
+        console.error("Error fetching product images:", err.message);
+        return res.status(500).send("Error fetching product images");
       }
 
       if (results.length > 0) {
-          const existingImages = JSON.parse(results[0].prod_img) || [];
-          const updatedImages = [...existingImages, ...newImages];
+        const existingImages = JSON.parse(results[0].prod_img) || [];
+        const updatedImages = [...existingImages, ...newImages];
 
-          console.log(`Existing images found for product ID ${productId}:`, existingImages);
-          console.log(`Updated images for product ID ${productId}:`, updatedImages);
+        console.log(
+          `Existing images found for product ID ${productId}:`,
+          existingImages
+        );
+        console.log(
+          `Updated images for product ID ${productId}:`,
+          updatedImages
+        );
 
-          const updateImagesSql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-          db.query(updateImagesSql, [JSON.stringify(updatedImages), productId], (err, result) => {
-              if (err) {
-                  console.error("Error updating product images:", err.message);
-                  return res.status(500).send('Error updating product images');
-              }
+        const updateImagesSql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          updateImagesSql,
+          [JSON.stringify(updatedImages), productId],
+          (err, result) => {
+            if (err) {
+              console.error("Error updating product images:", err.message);
+              return res.status(500).send("Error updating product images");
+            }
 
-              console.log("Number of rows affected:", result.affectedRows);
-              if (result.affectedRows === 0) {
-                  console.warn("No rows updated. Check if the product ID exists.");
-              } else {
-                  console.log("Images updated successfully for product ID:", productId);
-                  res.send('Images uploaded and updated successfully');
-              }
-          });
+            console.log("Number of rows affected:", result.affectedRows);
+            if (result.affectedRows === 0) {
+              console.warn("No rows updated. Check if the product ID exists.");
+            } else {
+              console.log(
+                "Images updated successfully for product ID:",
+                productId
+              );
+              res.send("Images uploaded and updated successfully");
+            }
+          }
+        );
       } else {
-          console.warn(`Product not found for ID: ${productId}`);
-          res.status(404).send('Product not found');
+        console.warn(`Product not found for ID: ${productId}`);
+        res.status(404).send("Product not found");
       }
-  });
-});
-
-
+    });
+  }
+);
 
 // Endpoint to add a new product with multiple images
-app.post('/backend/computeraccessories', computeraccessoriesUpload.array('images', 5), (req, res) => { // Accept up to 5 images
-  const {productStatus, effectiveprice, name, features, price, category, actual_price, label,  subtitle, deliverycharge } = req.body;
-  const images = req.files.map(file => file.filename); // Get all uploaded image filenames
+app.post(
+  "/backend/computeraccessories",
+  computeraccessoriesUpload.array("images", 5),
+  (req, res) => {
+    // Accept up to 5 images
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      category,
+      actual_price,
+      label,
+      subtitle,
+      deliverycharge,
+    } = req.body;
+    const images = req.files.map((file) => file.filename); // Get all uploaded image filenames
 
+    const sql =
+      "INSERT INTO oneclick_product_category (productStatus, effectiveprice, deliverycharge, subtitle,  offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const status = "available"; // or any other status you might want to set
+    const prod_id = generateProductId();
 
+    // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
+    db.query(
+      sql,
+      [
+        productStatus,
+        effectiveprice,
+        deliverycharge,
+        subtitle,
+        label,
+        actual_price,
+        "ComputerAccessories",
+        prod_id,
+        name,
+        features,
+        price,
+        JSON.stringify(images),
+        status,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting product into database:", err); // Log the error
+          return res.status(500).send("Error adding product");
+        }
 
-  const sql = 'INSERT INTO oneclick_product_category (productStatus, effectiveprice, deliverycharge, subtitle,  offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  const status = 'available'; // or any other status you might want to set
-  const prod_id = generateProductId();
+        console.log("Product added successfully with ID:", prod_id); // Log successful addition
+        res.send("Product added with multiple images");
+      }
+    );
+  }
+);
 
-  // Save the product with multiple image names (you can store them as a JSON string or in a separate table)
-  db.query(sql, [productStatus, effectiveprice, deliverycharge, subtitle,  label, actual_price, 'ComputerAccessories', prod_id, name, features, price, JSON.stringify(images), status], (err, result) => {
-    if (err) {
-      console.error("Error inserting product into database:", err); // Log the error
-      return res.status(500).send('Error adding product');
-    }
-
-    console.log("Product added successfully with ID:", prod_id); // Log successful addition
-    res.send('Product added with multiple images');
-  });
-});
-
-app.get('/backend/adminfetchcomputeraccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'computeraccessories'  ORDER BY id DESC"; 
+app.get("/backend/adminfetchcomputeraccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'computeraccessories'  ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -6576,16 +8253,17 @@ app.get('/backend/adminfetchcomputeraccessories', (req, res) => {
   });
 });
 
-app.get('/backend/fetchcomputeraccessories', (req, res) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'computeraccessories' AND productStatus = 'approved' ORDER BY id DESC"; 
+app.get("/backend/fetchcomputeraccessories", (req, res) => {
+  const sql =
+    "SELECT * FROM oneclick_product_category WHERE category = 'computeraccessories' AND productStatus = 'approved' ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
-    
+
     // Parse the prod_img JSON string to an array for each product
-    const products = results.map(product => ({
+    const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img), // Convert to an array
     }));
@@ -6594,195 +8272,254 @@ app.get('/backend/fetchcomputeraccessories', (req, res) => {
   });
 });
 
+app.put(
+  "/backend/updatecomputeraccessories/image/:id",
+  computeraccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
+    console.log(
+      "Received request to update image for product ID:",
+      productId,
+      "at index:",
+      imageIndex
+    );
 
-app.put('/backend/updatecomputeraccessories/image/:id', computeraccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const imageIndex = parseInt(req.query.index); // Get the image index from the query parameters
-  console.log('Received request to update image for product ID:', productId, 'at index:', imageIndex);
-
-  // Check if a new image file is uploaded
-  if (req.file) {
-      const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+    // Check if a new image file is uploaded
+    if (req.file) {
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
       // Fetch the existing image data
       db.query(oldImageQuery, [productId], (err, results) => {
-          if (err) return res.status(500).send(err);
+        if (err) return res.status(500).send(err);
 
-          const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
-          console.log('Current images in DB before update:', oldImages);
+        const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log("Current images in DB before update:", oldImages);
 
-          // Check if the specified index is valid
-          if (imageIndex >= 0 && imageIndex < oldImages.length) {
-              const oldImagePath = `uploads/computeraccessories/${oldImages[imageIndex]}`; // Old image path
+        // Check if the specified index is valid
+        if (imageIndex >= 0 && imageIndex < oldImages.length) {
+          const oldImagePath = `uploads/computeraccessories/${oldImages[imageIndex]}`; // Old image path
 
-              // Delete the old image file
-              fs.unlink(oldImagePath, (err) => {
-                  if (err) console.error('Failed to delete old image:', err);
-              });
+          // Delete the old image file
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
 
-              // Prepare the new images array, replacing the specified old image
-              const newImageFileName = req.file.filename; // Get the new image filename
-              oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
+          // Prepare the new images array, replacing the specified old image
+          const newImageFileName = req.file.filename; // Get the new image filename
+          oldImages[imageIndex] = newImageFileName; // Replace the old image with the new one
 
-              // Log the new images array
-              console.log('New images array to be updated in DB:', oldImages);
+          // Log the new images array
+          console.log("New images array to be updated in DB:", oldImages);
 
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => { // Pass both parameters here
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-                  console.log('Update results:', results);
-                  res.json({ message: 'Product image updated successfully' });
-              });
-          } else {
-              // Invalid index
-              res.status(400).json({ message: 'Invalid image index.' });
-          }
+          // Update the database with the modified images array
+          const sql =
+            "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+          db.query(
+            sql,
+            [JSON.stringify(oldImages), productId],
+            (err, results) => {
+              // Pass both parameters here
+              if (err) {
+                console.error("Error updating images in DB:", err);
+                return res.status(500).send(err);
+              }
+              console.log("Update results:", results);
+              res.json({ message: "Product image updated successfully" });
+            }
+          );
+        } else {
+          // Invalid index
+          res.status(400).json({ message: "Invalid image index." });
+        }
       });
-  } else {
+    } else {
       // No image uploaded
-      res.status(400).json({ message: 'No image file uploaded' });
+      res.status(400).json({ message: "No image file uploaded" });
+    }
   }
-});
+);
 
-
-app.delete('/backend/deletecomputeraccessories/image/:id', (req, res) => {
+app.delete("/backend/deletecomputeraccessories/image/:id", (req, res) => {
   const productId = req.params.id;
   const imageIndex = req.query.index; // Get the index of the image to delete
 
-  console.log(`Received request to delete image for product ID: ${productId} at index: ${imageIndex}`);
+  console.log(
+    `Received request to delete image for product ID: ${productId} at index: ${imageIndex}`
+  );
 
-  const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const oldImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
 
   // Fetch the existing image data
   db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-          console.error('Error fetching old images:', err);
-          return res.status(500).send('Error fetching old images');
+    if (err) {
+      console.error("Error fetching old images:", err);
+      return res.status(500).send("Error fetching old images");
+    }
+
+    console.log("Fetched images from DB:", results);
+
+    if (results.length === 0) {
+      console.log(`No product found with ID: ${productId}`);
+      return res.status(404).send("Product not found");
+    }
+
+    const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+
+    // If there are old images
+    if (oldImages && oldImages.length > 0) {
+      if (imageIndex < 0 || imageIndex >= oldImages.length) {
+        console.log(
+          `Invalid index: ${imageIndex}. Must be between 0 and ${
+            oldImages.length - 1
+          }`
+        );
+        return res.status(400).json({ message: "Invalid image index." });
       }
 
-      console.log('Fetched images from DB:', results);
+      const oldImagePath = `uploads/computeraccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
+      console.log(`Attempting to delete image at path: ${oldImagePath}`);
 
-      if (results.length === 0) {
-          console.log(`No product found with ID: ${productId}`);
-          return res.status(404).send('Product not found');
-      }
+      // Delete the old image file from the server
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Failed to delete old image:", err);
+          return res.status(500).send("Error deleting image file");
+        }
 
-      const oldImages = JSON.parse(results[0].prod_img); // Assuming stored images are in JSON format
+        console.log(`Successfully deleted image: ${oldImagePath}`);
 
-      // If there are old images
-      if (oldImages && oldImages.length > 0) {
-          if (imageIndex < 0 || imageIndex >= oldImages.length) {
-              console.log(`Invalid index: ${imageIndex}. Must be between 0 and ${oldImages.length - 1}`);
-              return res.status(400).json({ message: 'Invalid image index.' });
+        // Prepare the new images array, removing the old image
+        oldImages.splice(imageIndex, 1); // Remove the image at the specified index
+        console.log("Updated images array after deletion:", oldImages);
+
+        // Update the database with the modified images array
+        const sql =
+          "UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?";
+        db.query(
+          sql,
+          [JSON.stringify(oldImages), productId],
+          (err, results) => {
+            if (err) {
+              console.error("Error updating images in DB:", err);
+              return res.status(500).send(err);
+            }
+
+            console.log(`Updated product images for product ID: ${productId}`);
+            res.json({ message: "Product image deleted successfully" });
           }
-
-          const oldImagePath = `uploads/computeraccessories/${oldImages[imageIndex]}`; // Get the old image path using the index
-          console.log(`Attempting to delete image at path: ${oldImagePath}`);
-
-          // Delete the old image file from the server
-          fs.unlink(oldImagePath, (err) => {
-              if (err) {
-                  console.error('Failed to delete old image:', err);
-                  return res.status(500).send('Error deleting image file');
-              }
-
-              console.log(`Successfully deleted image: ${oldImagePath}`);
-
-              // Prepare the new images array, removing the old image
-              oldImages.splice(imageIndex, 1); // Remove the image at the specified index
-              console.log('Updated images array after deletion:', oldImages);
-
-              // Update the database with the modified images array
-              const sql = 'UPDATE oneclick_product_category SET prod_img = ? WHERE id = ?';
-              db.query(sql, [JSON.stringify(oldImages), productId], (err, results) => {
-                  if (err) {
-                      console.error('Error updating images in DB:', err);
-                      return res.status(500).send(err);
-                  }
-
-                  console.log(`Updated product images for product ID: ${productId}`);
-                  res.json({ message: 'Product image deleted successfully' });
-              });
-          });
-      } else {
-          // No old images found, handle accordingly
-          console.log(`No old images found for product ID: ${productId}`);
-          res.status(400).json({ message: 'No old images found for this product.' });
-      }
+        );
+      });
+    } else {
+      // No old images found, handle accordingly
+      console.log(`No old images found for product ID: ${productId}`);
+      res
+        .status(400)
+        .json({ message: "No old images found for this product." });
+    }
   });
 });
 
 // Update product route
-app.put('/backend/updatecomputeraccessories/:id', computeraccessoriesUpload.single('image'), (req, res) => {
-  const productId = req.params.id;
-  const {productStatus, effectiveprice, name, features, price, status, category, label, actual_price, deliverycharge, subtitle  } = req.body;
-  const image = req.file ? req.file.filename : null;
-console.log("req.body",req.body)
-  let sql = 'UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?, deliverycharge = ?, subtitle = ?,   actual_price =?,  offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?,category = ?';
-  let values = [productStatus, effectiveprice, deliverycharge, subtitle , actual_price, label, name, features, price, status, category];
+app.put(
+  "/backend/updatecomputeraccessories/:id",
+  computeraccessoriesUpload.single("image"),
+  (req, res) => {
+    const productId = req.params.id;
+    const {
+      productStatus,
+      effectiveprice,
+      name,
+      features,
+      price,
+      status,
+      category,
+      label,
+      actual_price,
+      deliverycharge,
+      subtitle,
+    } = req.body;
+    const image = req.file ? req.file.filename : null;
+    console.log("req.body", req.body);
+    let sql =
+      "UPDATE oneclick_product_category SET productStatus = ?, effectiveprice = ?, deliverycharge = ?, subtitle = ?,   actual_price =?,  offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?,category = ?";
+    let values = [
+      productStatus,
+      effectiveprice,
+      deliverycharge,
+      subtitle,
+      actual_price,
+      label,
+      name,
+      features,
+      price,
+      status,
+      category,
+    ];
 
-  if (image) {
-    // Update image and remove the old image file
-    const oldImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) return res.status(500).send(err);
-      const oldImage = results[0] && results[0].prod_img;
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/computeraccessories/${oldImage}`, (err) => {
-          if (err) console.error('Failed to delete old image:', err);
+    if (image) {
+      // Update image and remove the old image file
+      const oldImageQuery =
+        "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        const oldImage = results[0] && results[0].prod_img;
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/computeraccessories/${oldImage}`, (err) => {
+            if (err) console.error("Failed to delete old image:", err);
+          });
+        }
+
+        sql += ", prod_img = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', prod_img = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) return res.status(500).send(err);
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
+);
 
 // Endpoint to delete a product
 // Endpoint to delete a product
-app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
+app.delete("/backend/deletecomputeraccessories/:id", (req, res) => {
   const { id } = req.params;
 
   // Fetch the product to get the image file name
-  const fetchImageQuery = 'SELECT prod_img FROM oneclick_product_category WHERE id = ?';
+  const fetchImageQuery =
+    "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [id], (err, results) => {
-    if (err) return res.status(500).send('Failed to fetch product image');
+    if (err) return res.status(500).send("Failed to fetch product image");
 
     const image = results[0] && results[0].prod_img;
     if (image) {
       const imagePath = `uploads/computeraccessories/${image}`;
       fs.unlink(imagePath, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imagePath);
+          console.log("Image deleted:", imagePath);
         }
       });
     }
 
     // Proceed to delete the product after the image is handled
-    const deleteQuery = 'DELETE FROM oneclick_product_category WHERE id = ?';
+    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(deleteQuery, [id], (err, result) => {
-      if (err) return res.status(500).send('Failed to delete product');
-      res.json({ message: 'Product deleted successfully' });
+      if (err) return res.status(500).send("Failed to delete product");
+      res.json({ message: "Product deleted successfully" });
     });
   });
 });
@@ -6825,7 +8562,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 
 // const edithomepageUploadSingle = multer({ storage: edithomepageStorageSingle }).single('image');
 
-
 // // Route to fetch all products
 // app.get('/backend/fetchedithomepage', (req, res) => {
 //   const sql = 'SELECT * FROM oneclick_edithomepage ORDER By id DESC LIMIT 1 ';
@@ -6838,7 +8574,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 //     res.json(results);
 //   });
 // });
-
 
 // // Endpoint to add a new product with multiple images
 // app.post('/backend/edithomepage', edithomepageUploadMultiple, (req, res) => {
@@ -6998,7 +8733,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 //   });
 // });
 
-
 // app.put('/backend/deleteedithomepageimage/:id', (req, res) => {
 //   const productId = req.params.id;
 //   const updatedImages = req.body.images ? req.body.images.split(',') : [];
@@ -7046,8 +8780,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 //   });
 // });
 
-
-
 // // server.js or routes.js (Backend API)
 // app.delete('/backend/api/deletehomepagead/:id', (req, res) => {
 //   const productId = req.params.id;
@@ -7062,7 +8794,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 //     return res.status(200).json({ message: 'Product deleted successfully' });
 //   });
 // });
-
 
 /////////////new edit home page/////////////////////
 
@@ -7101,7 +8832,6 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 // });
 
 // const edithomepageUploadSingle = multer({ storage: edithomepageStorageSingle }).single('image');
-
 
 // // Route to fetch all products
 // app.get('/backend/fetchedithomepage', (req, res) => {
@@ -7301,13 +9031,21 @@ app.delete('/backend/deletecomputeraccessories/:id', (req, res) => {
 //   });
 // });
 
-app.get('/backend/api/mostpopular', (req, res) => {
-  console.log('Received request for most popular products');
+app.get("/backend/api/mostpopular", (req, res) => {
+  console.log("Received request for most popular products");
 
   const categories = [
-    'Mobiles', 'Computers', 'CCTV', 'Printers', 'ComputerAccessories', 
-    'MobileAccessories', 'CCTVAccessories', 'PrinterAccessories', 'Speakers', 
-    'Headphones', 'Watch'
+    "Mobiles",
+    "Computers",
+    "CCTV",
+    "Printers",
+    "ComputerAccessories",
+    "MobileAccessories",
+    "CCTVAccessories",
+    "PrinterAccessories",
+    "Speakers",
+    "Headphones",
+    "Watch",
   ];
 
   let query = `
@@ -7351,30 +9089,34 @@ app.get('/backend/api/mostpopular', (req, res) => {
     FROM oneclick_product_category p
     LEFT JOIN oneclick_mobile_features m 
     ON p.prod_id = m.prod_id AND p.category IN ('Mobiles', 'Computers')
-    WHERE p.category IN (${categories.map(() => '?').join(',')}) 
+    WHERE p.category IN (${categories.map(() => "?").join(",")}) 
     AND p.productStatus = 'approved' 
     ORDER BY p.category, p.id DESC`;
 
-  console.log('Executing query:', query);
-  console.log('Query Parameters:', categories);
+  console.log("Executing query:", query);
+  console.log("Query Parameters:", categories);
 
   db.query(query, categories, (err, products) => {
     if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error', details: err });
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error", details: err });
     }
 
-    console.log('Raw products fetched:', products);
+    console.log("Raw products fetched:", products);
 
     if (!products || products.length === 0) {
-      console.error('No products found in the database for the given categories.');
-      return res.status(404).json({ error: 'No products found' });
+      console.error(
+        "No products found in the database for the given categories."
+      );
+      return res.status(404).json({ error: "No products found" });
     }
 
     // Group the products by category and select one per category
     try {
       const latestProducts = categories.reduce((result, category) => {
-        const product = products.find(product => product.category === category);
+        const product = products.find(
+          (product) => product.category === category
+        );
         if (product) {
           result.push(product);
         } else {
@@ -7383,16 +9125,17 @@ app.get('/backend/api/mostpopular', (req, res) => {
         return result;
       }, []);
 
-      console.log('Latest products:', latestProducts);
+      console.log("Latest products:", latestProducts);
 
       res.json(latestProducts);
     } catch (error) {
-      console.error('Error while processing products:', error);
-      return res.status(500).json({ error: 'Error processing products', details: error });
+      console.error("Error while processing products:", error);
+      return res
+        .status(500)
+        .json({ error: "Error processing products", details: error });
     }
   });
 });
-
 
 // app.put('/backend/deleteedithomepageimage/:id', (req, res) => {
 //   const productId = req.params.id;
@@ -7442,8 +9185,6 @@ app.get('/backend/api/mostpopular', (req, res) => {
 // });
 // /////////////////////////////////////////
 
-
-
 // // Configure multer for file uploads
 // const upload = multer({
 //   storage: multer.diskStorage({
@@ -7482,7 +9223,7 @@ app.get('/backend/api/mostpopular', (req, res) => {
 
 //     // Add new images to existing images
 //     const updatedImages = [...existingImages, ...images];
-    
+
 //     // Update the database with the new list of images
 //     const updateSql = 'UPDATE oneclick_edithomepage SET image = ? WHERE id = ?';
 //     db.query(updateSql, [updatedImages.join(','), productId], (err, result) => {
@@ -7497,18 +9238,20 @@ app.get('/backend/api/mostpopular', (req, res) => {
 
 ////////////////updated new edit home page //////////////////////
 
-
 // Serve static files (for serving images)
-app.use('/backend/uploads/edithomepage', express.static(path.join(__dirname, 'uploads/edithomepage')));
+app.use(
+  "/backend/uploads/edithomepage",
+  express.static(path.join(__dirname, "uploads/edithomepage"))
+);
 
 // Multer setup for image upload
 const edithomepagestorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/edithomepage/');
+    cb(null, "uploads/edithomepage/");
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
-  }
+  },
 });
 
 const upload13 = multer({
@@ -7516,148 +9259,164 @@ const upload13 = multer({
   limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB limit
 });
 // Fetch all single ad page images
-app.get('/backend/fetchedithomepage', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_edithomepage ORDER BY id DESC';
+app.get("/backend/fetchedithomepage", (req, res) => {
+  const sql = "SELECT * FROM oneclick_edithomepage ORDER BY id DESC";
 
   // console.log('Received request to fetch homepage data'); // Log the incoming request
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
 
-    console.log('Fetched results:', results); // Log the fetched results
+    console.log("Fetched results:", results); // Log the fetched results
     res.json(results);
   });
 });
 
 // Add a new image
-app.post('/backend/edithomepage', upload13.single('image'), (req, res) => {
+app.post("/backend/edithomepage", upload13.single("image"), (req, res) => {
   const { category } = req.body; // Get the category from the request body
   if (!req.file || !category) {
-    return res.status(400).json({ error: 'Image and category are required' });
+    return res.status(400).json({ error: "Image and category are required" });
   }
 
   const image = req.file.filename;
-  const query = 'INSERT INTO oneclick_edithomepage (image, category) VALUES (?, ?)';
+  const query =
+    "INSERT INTO oneclick_edithomepage (image, category) VALUES (?, ?)";
   db.query(query, [image, category], (err, result) => {
     if (err) {
-      console.error('Error inserting image:', err);
-      res.status(500).json({ error: 'Failed to add image' });
+      console.error("Error inserting image:", err);
+      res.status(500).json({ error: "Failed to add image" });
     } else {
-      res.json({ message: 'Image added successfully', id: result.insertId });
+      res.json({ message: "Image added successfully", id: result.insertId });
     }
   });
 });
-app.put('/backend/updateedithomepageimage/:id', upload13.single('image'), (req, res) => {
-  const { id } = req.params;
-  const { category } = req.body; // Get the new category from the request body
+app.put(
+  "/backend/updateedithomepageimage/:id",
+  upload13.single("image"),
+  (req, res) => {
+    const { id } = req.params;
+    const { category } = req.body; // Get the new category from the request body
 
-  // Initialize variables for new image and category updates
-  let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
-  let updateFields = [];
-  let updateValues = [];
+    // Initialize variables for new image and category updates
+    let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
+    let updateFields = [];
+    let updateValues = [];
 
-  // Check if both image and category are provided
-  if (!newImage && !category) {
-    return res.status(400).json({ error: 'Image or category is required' });
-  }
-
-  const selectQuery = 'SELECT image FROM oneclick_edithomepage WHERE id = ?';
-  db.query(selectQuery, [id], (selectErr, selectResult) => {
-    if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch current image' });
+    // Check if both image and category are provided
+    if (!newImage && !category) {
+      return res.status(400).json({ error: "Image or category is required" });
     }
 
-    if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    const oldImage = selectResult[0].image;
-
-    // Prepare update query based on fields that need to be updated
-    if (newImage) {
-      updateFields.push('image = ?');
-      updateValues.push(newImage);
-    }
-
-    if (category) {
-      updateFields.push('category = ?');
-      updateValues.push(category);
-    }
-
-    // Always add the ID at the end of update values
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE oneclick_edithomepage SET ${updateFields.join(', ')} WHERE id = ?`;
-    
-    db.query(updateQuery, updateValues, (updateErr, updateResult) => {
-      if (updateErr) {
-        console.error('Error updating image or category:', updateErr);
-        return res.status(500).json({ error: 'Failed to update image or category' });
+    const selectQuery = "SELECT image FROM oneclick_edithomepage WHERE id = ?";
+    db.query(selectQuery, [id], (selectErr, selectResult) => {
+      if (selectErr) {
+        console.error("Error fetching image:", selectErr);
+        return res.status(500).json({ error: "Failed to fetch current image" });
       }
 
-      // Delete the old image if a new image has been uploaded
+      if (selectResult.length === 0) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const oldImage = selectResult[0].image;
+
+      // Prepare update query based on fields that need to be updated
       if (newImage) {
-        const oldImagePath = path.join(__dirname, 'uploads', 'edithomepage', oldImage);
-        fs.unlink(oldImagePath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error('Error deleting old image:', unlinkErr);
-          }
-        });
+        updateFields.push("image = ?");
+        updateValues.push(newImage);
       }
 
-      res.json({ message: 'Image and/or category updated successfully', updatedImage: newImage });
-    });
-  });
-});
+      if (category) {
+        updateFields.push("category = ?");
+        updateValues.push(category);
+      }
 
+      // Always add the ID at the end of update values
+      updateValues.push(id);
+
+      const updateQuery = `UPDATE oneclick_edithomepage SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+
+      db.query(updateQuery, updateValues, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error("Error updating image or category:", updateErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to update image or category" });
+        }
+
+        // Delete the old image if a new image has been uploaded
+        if (newImage) {
+          const oldImagePath = path.join(
+            __dirname,
+            "uploads",
+            "edithomepage",
+            oldImage
+          );
+          fs.unlink(oldImagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("Error deleting old image:", unlinkErr);
+            }
+          });
+        }
+
+        res.json({
+          message: "Image and/or category updated successfully",
+          updatedImage: newImage,
+        });
+      });
+    });
+  }
+);
 
 // Delete an image
-app.delete('/backend/deleteedithomepageimage/:id', (req, res) => {
+app.delete("/backend/deleteedithomepageimage/:id", (req, res) => {
   const { id } = req.params;
 
   // First, fetch the image filename from the database
-  const selectQuery = 'SELECT image FROM oneclick_edithomepage WHERE id = ?';
+  const selectQuery = "SELECT image FROM oneclick_edithomepage WHERE id = ?";
   db.query(selectQuery, [id], (selectErr, selectResult) => {
     if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch image' });
+      console.error("Error fetching image:", selectErr);
+      return res.status(500).json({ error: "Failed to fetch image" });
     }
 
     if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
+      return res.status(404).json({ error: "Image not found" });
     }
 
     const image = selectResult[0].image;
 
     // Delete the image file from the folder
-    const imagePath = path.join(__dirname, 'uploads', 'edithomepage', image);
+    const imagePath = path.join(__dirname, "uploads", "edithomepage", image);
     fs.unlink(imagePath, (unlinkErr) => {
       if (unlinkErr) {
-        console.error('Error deleting image file:', unlinkErr);
-        return res.status(500).json({ error: 'Failed to delete image file' });
+        console.error("Error deleting image file:", unlinkErr);
+        return res.status(500).json({ error: "Failed to delete image file" });
       }
 
       // Delete the entry from the database
-      const deleteQuery = 'DELETE FROM oneclick_edithomepage WHERE id = ?';
+      const deleteQuery = "DELETE FROM oneclick_edithomepage WHERE id = ?";
       db.query(deleteQuery, [id], (deleteErr, deleteResult) => {
         if (deleteErr) {
-          console.error('Error deleting image from database:', deleteErr);
-          return res.status(500).json({ error: 'Failed to delete image from database' });
+          console.error("Error deleting image from database:", deleteErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to delete image from database" });
         }
 
-        res.json({ message: 'Image deleted successfully' });
+        res.json({ message: "Image deleted successfully" });
       });
     });
   });
 });
 
 ////////////////////doubleadpage/////////////////////////////////
-
-
 
 // // Set up multer for file uploads (multiple files)
 // const doubleadpageStorageMultiple = multer.diskStorage({
@@ -7695,7 +9454,6 @@ app.delete('/backend/deleteedithomepageimage/:id', (req, res) => {
 
 // const doubleadpageUploadSingle = multer({ storage: doubleadpageStorageSingle }).single('image');
 
-
 // // Route to fetch all products
 // app.get('/backend/fetchdoubleadpage', (req, res) => {
 //   const sql = 'SELECT * FROM oneclick_doubleadpage ORDER BY id DESC LIMIT 4 ';
@@ -7708,7 +9466,6 @@ app.delete('/backend/deleteedithomepageimage/:id', (req, res) => {
 //     res.json(results);
 //   });
 // });
-
 
 // // Endpoint to add a new product with multiple images
 // app.post('/backend/doubleadpage', doubleadpageUploadMultiple, (req, res) => {
@@ -7836,7 +9593,6 @@ app.delete('/backend/deleteedithomepageimage/:id', (req, res) => {
 //   });
 // });
 
-
 // app.put('/backend/updatedoubleadpageimage/:id/:imageIndex', doubleadpageUploadSingle, (req, res) => {
 //   const productId = req.params.id;
 //   const imageIndex = parseInt(req.params.imageIndex, 10);
@@ -7883,7 +9639,6 @@ app.delete('/backend/deleteedithomepageimage/:id', (req, res) => {
 //     });
 //   });
 // });
-
 
 // app.put('/backend/deletedoubleadpageimage/:id', (req, res) => {
 //   const productId = req.params.id;
@@ -7934,155 +9689,177 @@ app.delete('/backend/deleteedithomepageimage/:id', (req, res) => {
 
 /////////// new doubleadpage ///////////////////////////
 
-
-
 // Serve static files (for serving images)
-app.use('/backend/uploads/doubleadpage', express.static(path.join(__dirname, 'uploads/doubleadpage')));
+app.use(
+  "/backend/uploads/doubleadpage",
+  express.static(path.join(__dirname, "uploads/doubleadpage"))
+);
 
 // Multer setup for image upload
 const doubleadstorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/doubleadpage/');
+    cb(null, "uploads/doubleadpage/");
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
-  }
+  },
 });
 
 const doubleadupload = multer({ storage: doubleadstorage });
 
-app.get('/backend/fetchdoubleadpage', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_doubleadpage ORDER BY id DESC LIMIT 4 ';
+app.get("/backend/fetchdoubleadpage", (req, res) => {
+  const sql = "SELECT * FROM oneclick_doubleadpage ORDER BY id DESC LIMIT 4 ";
   db.query(sql, (err, results) => {
-     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+    if (err) {
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
 
     res.json(results);
   });
 });
 
-
 // Add a new image
-app.post('/backend/doubleadpage', doubleadupload.single('image'), (req, res) => {
-  const { category } = req.body; // Get the category from the request body
-  if (!req.file || !category) {
-    return res.status(400).json({ error: 'Image and category are required' });
-  }
-
-  const image = req.file.filename;
-  const query = 'INSERT INTO oneclick_doubleadpage (image, category) VALUES (?, ?)';
-  db.query(query, [image, category], (err, result) => {
-    if (err) {
-      console.error('Error inserting image:', err);
-      res.status(500).json({ error: 'Failed to add image' });
-    } else {
-      res.json({ message: 'Image added successfully', id: result.insertId });
-    }
-  });
-});
-
-app.put('/backend/updatedoubleadpageimage/:id', doubleadupload.single('image'), (req, res) => {
-  const { id } = req.params;
-  const { category } = req.body; // Get the new category from the request body
-
-  // Initialize variables for new image and category updates
-  let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
-  let updateFields = [];
-  let updateValues = [];
-
-  // Check if both image and category are provided
-  if (!newImage && !category) {
-    return res.status(400).json({ error: 'Image or category is required' });
-  }
-
-  const selectQuery = 'SELECT image FROM oneclick_doubleadpage WHERE id = ?';
-  db.query(selectQuery, [id], (selectErr, selectResult) => {
-    if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch current image' });
+app.post(
+  "/backend/doubleadpage",
+  doubleadupload.single("image"),
+  (req, res) => {
+    const { category } = req.body; // Get the category from the request body
+    if (!req.file || !category) {
+      return res.status(400).json({ error: "Image and category are required" });
     }
 
-    if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    const oldImage = selectResult[0].image;
-
-    // Prepare update query based on fields that need to be updated
-    if (newImage) {
-      updateFields.push('image = ?');
-      updateValues.push(newImage);
-    }
-
-    if (category) {
-      updateFields.push('category = ?');
-      updateValues.push(category);
-    }
-
-    // Always add the ID at the end of update values
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE oneclick_doubleadpage SET ${updateFields.join(', ')} WHERE id = ?`;
-    
-    db.query(updateQuery, updateValues, (updateErr, updateResult) => {
-      if (updateErr) {
-        console.error('Error updating image or category:', updateErr);
-        return res.status(500).json({ error: 'Failed to update image or category' });
+    const image = req.file.filename;
+    const query =
+      "INSERT INTO oneclick_doubleadpage (image, category) VALUES (?, ?)";
+    db.query(query, [image, category], (err, result) => {
+      if (err) {
+        console.error("Error inserting image:", err);
+        res.status(500).json({ error: "Failed to add image" });
+      } else {
+        res.json({ message: "Image added successfully", id: result.insertId });
       }
-
-      // Delete the old image if a new image has been uploaded
-      if (newImage) {
-        const oldImagePath = path.join(__dirname, 'uploads', 'doubleadpage', oldImage);
-        fs.unlink(oldImagePath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error('Error deleting old image:', unlinkErr);
-          }
-        });
-      }
-
-      res.json({ message: 'Image and/or category updated successfully', updatedImage: newImage });
     });
-  });
-});
+  }
+);
 
+app.put(
+  "/backend/updatedoubleadpageimage/:id",
+  doubleadupload.single("image"),
+  (req, res) => {
+    const { id } = req.params;
+    const { category } = req.body; // Get the new category from the request body
+
+    // Initialize variables for new image and category updates
+    let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
+    let updateFields = [];
+    let updateValues = [];
+
+    // Check if both image and category are provided
+    if (!newImage && !category) {
+      return res.status(400).json({ error: "Image or category is required" });
+    }
+
+    const selectQuery = "SELECT image FROM oneclick_doubleadpage WHERE id = ?";
+    db.query(selectQuery, [id], (selectErr, selectResult) => {
+      if (selectErr) {
+        console.error("Error fetching image:", selectErr);
+        return res.status(500).json({ error: "Failed to fetch current image" });
+      }
+
+      if (selectResult.length === 0) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const oldImage = selectResult[0].image;
+
+      // Prepare update query based on fields that need to be updated
+      if (newImage) {
+        updateFields.push("image = ?");
+        updateValues.push(newImage);
+      }
+
+      if (category) {
+        updateFields.push("category = ?");
+        updateValues.push(category);
+      }
+
+      // Always add the ID at the end of update values
+      updateValues.push(id);
+
+      const updateQuery = `UPDATE oneclick_doubleadpage SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+
+      db.query(updateQuery, updateValues, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error("Error updating image or category:", updateErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to update image or category" });
+        }
+
+        // Delete the old image if a new image has been uploaded
+        if (newImage) {
+          const oldImagePath = path.join(
+            __dirname,
+            "uploads",
+            "doubleadpage",
+            oldImage
+          );
+          fs.unlink(oldImagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("Error deleting old image:", unlinkErr);
+            }
+          });
+        }
+
+        res.json({
+          message: "Image and/or category updated successfully",
+          updatedImage: newImage,
+        });
+      });
+    });
+  }
+);
 
 // Delete an image
-app.delete('/backend/deletedoubleadpageimage/:id', (req, res) => {
+app.delete("/backend/deletedoubleadpageimage/:id", (req, res) => {
   const { id } = req.params;
 
   // First, fetch the image filename from the database
-  const selectQuery = 'SELECT image FROM oneclick_doubleadpage WHERE id = ?';
+  const selectQuery = "SELECT image FROM oneclick_doubleadpage WHERE id = ?";
   db.query(selectQuery, [id], (selectErr, selectResult) => {
     if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch image' });
+      console.error("Error fetching image:", selectErr);
+      return res.status(500).json({ error: "Failed to fetch image" });
     }
 
     if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
+      return res.status(404).json({ error: "Image not found" });
     }
 
     const image = selectResult[0].image;
 
     // Delete the image file from the folder
-    const imagePath = path.join(__dirname, 'uploads', 'doubleadpage', image);
+    const imagePath = path.join(__dirname, "uploads", "doubleadpage", image);
     fs.unlink(imagePath, (unlinkErr) => {
       if (unlinkErr) {
-        console.error('Error deleting image file:', unlinkErr);
-        return res.status(500).json({ error: 'Failed to delete image file' });
+        console.error("Error deleting image file:", unlinkErr);
+        return res.status(500).json({ error: "Failed to delete image file" });
       }
 
       // Delete the entry from the database
-      const deleteQuery = 'DELETE FROM oneclick_doubleadpage WHERE id = ?';
+      const deleteQuery = "DELETE FROM oneclick_doubleadpage WHERE id = ?";
       db.query(deleteQuery, [id], (deleteErr, deleteResult) => {
         if (deleteErr) {
-          console.error('Error deleting image from database:', deleteErr);
-          return res.status(500).json({ error: 'Failed to delete image from database' });
+          console.error("Error deleting image from database:", deleteErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to delete image from database" });
         }
 
-        res.json({ message: 'Image deleted successfully' });
+        res.json({ message: "Image deleted successfully" });
       });
     });
   });
@@ -8090,13 +9867,10 @@ app.delete('/backend/deletedoubleadpageimage/:id', (req, res) => {
 
 //////////////////computersoffers page ////////////////
 
-
-
-
 // Set up multer for file uploads (multiple files)
 const offerspageStorageMultiple = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/offerspage';
+    const dir = "uploads/offerspage";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -8106,15 +9880,17 @@ const offerspageStorageMultiple = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const offerspageUploadMultiple = multer({ storage: offerspageStorageMultiple }).array('images');
+const offerspageUploadMultiple = multer({
+  storage: offerspageStorageMultiple,
+}).array("images");
 
 // Set up multer for file uploads (single file)
 const offerspageStorageSingle = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/offerspage';
+    const dir = "uploads/offerspage";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -8124,222 +9900,247 @@ const offerspageStorageSingle = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const offerspageUploadSingle = multer({ storage: offerspageStorageSingle }).single('image');
-
+const offerspageUploadSingle = multer({
+  storage: offerspageStorageSingle,
+}).single("image");
 
 // Route to fetch all products
-app.get('/backend/fetchcomputersofferspage', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_offerspage WHERE category="computers" ORDER BY id DESC ';
+app.get("/backend/fetchcomputersofferspage", (req, res) => {
+  const sql =
+    'SELECT * FROM oneclick_offerspage WHERE category="computers" ORDER BY id DESC ';
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
 
     res.json(results);
   });
 });
 
-
 // Endpoint to add a new product with multiple images
-app.post('/backend/computersofferspage', offerspageUploadMultiple, (req, res) => {
-  // console.log('Received files:', req.files);
-  // console.log('Request body:', req.body);
+app.post(
+  "/backend/computersofferspage",
+  offerspageUploadMultiple,
+  (req, res) => {
+    // console.log('Received files:', req.files);
+    // console.log('Request body:', req.body);
 
-  const { offer, brand_name, title, description } = req.body;
-  const images = req.files.map(file => file.filename);
-  // const createdAt = new Date();
+    const { offer, brand_name, title, description } = req.body;
+    const images = req.files.map((file) => file.filename);
+    // const createdAt = new Date();
 
-  const sql = 'INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)';
-  db.query(sql, [offer, brand_name, title, description, 'computers', images.join(',')], (err, result) => {
-    if (err) {
-      console.error('Error inserting into database:', err);
-      return res.status(500).send(err);
-    }
-    // console.log('Product added:', result);
-    res.send('Product added');
-  });
-});
+    const sql =
+      "INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)";
+    db.query(
+      sql,
+      [offer, brand_name, title, description, "computers", images.join(",")],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting into database:", err);
+          return res.status(500).send(err);
+        }
+        // console.log('Product added:', result);
+        res.send("Product added");
+      }
+    );
+  }
+);
 
 // Endpoint to update a product with a single image
-app.put('/backend/computersupdateofferspage/:id', offerspageUploadSingle, (req, res) => {
-  const productId = req.params.id;
-  const { title, description, brand_name, offer } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/computersupdateofferspage/:id",
+  offerspageUploadSingle,
+  (req, res) => {
+    const productId = req.params.id;
+    const { title, description, brand_name, offer } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_offerspage SET title = ?, description = ?, brand_name =?, offer = ? ';
-  let values = [title, description, brand_name, offer];
+    let sql =
+      "UPDATE oneclick_offerspage SET title = ?, description = ?, brand_name =?, offer = ? ";
+    let values = [title, description, brand_name, offer];
 
-  if (image) {
-    const oldImageQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-        // console.error('Error fetching old image:', err);
-        return res.status(500).send(err);
-      }
+    if (image) {
+      const oldImageQuery =
+        "SELECT image FROM oneclick_offerspage WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) {
+          // console.error('Error fetching old image:', err);
+          return res.status(500).send(err);
+        }
 
-      const oldImage = results[0] && results[0].image;
-      // const oldImage = results[0]?.image;
+        const oldImage = results[0] && results[0].image;
+        // const oldImage = results[0]?.image;
 
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/offerspage/${oldImage}`, (err) => {
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/offerspage/${oldImage}`, (err) => {
+            if (err) {
+              console.error("Failed to delete old image:", err);
+            } else {
+              console.log("Old image deleted:", oldImage);
+            }
+          });
+        }
+
+        sql += ", image = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
           if (err) {
-            console.error('Failed to delete old image:', err);
-          } else {
-            console.log('Old image deleted:', oldImage);
+            console.error("Error updating database:", err);
+            return res.status(500).send(err);
           }
+          console.log("Product updated:", results);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', image = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) {
-          console.error('Error updating database:', err);
+          console.error("Error updating database:", err);
           return res.status(500).send(err);
         }
-        console.log('Product updated:', results);
-        res.json({ message: 'Product updated successfully' });
+        console.log("Product updated:", results);
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) {
-        console.error('Error updating database:', err);
-        return res.status(500).send(err);
-      }
-      console.log('Product updated:', results);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
-
-
+);
 
 // server.js or routes.js (Backend API)
-app.delete('/backend/api/deletecomputersofferspage/:id', (req, res) => {
+app.delete("/backend/api/deletecomputersofferspage/:id", (req, res) => {
   const productId = req.params.id;
-  const deleteQuery = 'DELETE FROM oneclick_offerspage WHERE id = ?';
+  const deleteQuery = "DELETE FROM oneclick_offerspage WHERE id = ?";
 
   db.query(deleteQuery, [productId], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Failed to delete product' });
+      return res.status(500).json({ message: "Failed to delete product" });
     }
 
-    return res.status(200).json({ message: 'Product deleted successfully' });
+    return res.status(200).json({ message: "Product deleted successfully" });
   });
 });
 
-app.put('/backend/updatecomputersofferspageimage/:id', offerspageUploadSingle, (req, res) => {
-  const productId = req.params.id;
-  const newImage = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updatecomputersofferspageimage/:id",
+  offerspageUploadSingle,
+  (req, res) => {
+    const productId = req.params.id;
+    const newImage = req.file ? req.file.filename : null;
 
-  console.log(`Received request to update image for product ID: ${productId}`);
+    console.log(
+      `Received request to update image for product ID: ${productId}`
+    );
 
-  if (!newImage) {
-    console.error('No image uploaded');
-    return res.status(400).json({ message: 'No image uploaded' });
-  }
-
-  const fetchImagesQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
-  db.query(fetchImagesQuery, [productId], (err, results) => {
-    if (err) {
-      console.error('Error fetching old images:', err);
-      return res.status(500).send(err);
+    if (!newImage) {
+      console.error("No image uploaded");
+      return res.status(400).json({ message: "No image uploaded" });
     }
 
-    const images = results[0] && results[0].image ? results[0].image.split(',') : [];
-    console.log(`Current images for product ID ${productId}:`, images);
-
-    // Delete old images if they exist
-    images.forEach(oldImage => {
-      const oldImagePath = `uploads/offerspage/${oldImage}`;
-      fs.unlink(oldImagePath, (err) => {
-        if (err) {
-          console.error(`Failed to delete old image ${oldImage}:`, err);
-        } else {
-          console.log(`Old image deleted: ${oldImage}`);
-        }
-      });
-    });
-
-    // Set the new image (or reset images to only the new image)
-    const updatedImages = newImage; // You may use newImage as a string or modify this as needed
-    const updateQuery = 'UPDATE oneclick_offerspage SET image = ? WHERE id = ?';
-    db.query(updateQuery, [updatedImages, productId], (err, results) => {
+    const fetchImagesQuery =
+      "SELECT image FROM oneclick_offerspage WHERE id = ?";
+    db.query(fetchImagesQuery, [productId], (err, results) => {
       if (err) {
-        console.error('Error updating image in database:', err);
+        console.error("Error fetching old images:", err);
         return res.status(500).send(err);
       }
-      console.log('Image updated successfully:', results);
-      res.json({ updatedImages: updatedImages });
+
+      const images =
+        results[0] && results[0].image ? results[0].image.split(",") : [];
+      console.log(`Current images for product ID ${productId}:`, images);
+
+      // Delete old images if they exist
+      images.forEach((oldImage) => {
+        const oldImagePath = `uploads/offerspage/${oldImage}`;
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            console.error(`Failed to delete old image ${oldImage}:`, err);
+          } else {
+            console.log(`Old image deleted: ${oldImage}`);
+          }
+        });
+      });
+
+      // Set the new image (or reset images to only the new image)
+      const updatedImages = newImage; // You may use newImage as a string or modify this as needed
+      const updateQuery =
+        "UPDATE oneclick_offerspage SET image = ? WHERE id = ?";
+      db.query(updateQuery, [updatedImages, productId], (err, results) => {
+        if (err) {
+          console.error("Error updating image in database:", err);
+          return res.status(500).send(err);
+        }
+        console.log("Image updated successfully:", results);
+        res.json({ updatedImages: updatedImages });
+      });
     });
-  });
-});
+  }
+);
 
-
-app.put('/backend/deletecomputersofferspageimage/:id', (req, res) => {
+app.put("/backend/deletecomputersofferspageimage/:id", (req, res) => {
   const productId = req.params.id;
-  const updatedImages = req.body.images ? req.body.images.split(',') : [];
+  const updatedImages = req.body.images ? req.body.images.split(",") : [];
 
   // Fetch the current images from the database
-  const fetchImageQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
+  const fetchImageQuery = "SELECT image FROM oneclick_offerspage WHERE id = ?";
   db.query(fetchImageQuery, [productId], (err, results) => {
     if (err) {
-      console.error('Error fetching image for deletion:', err);
+      console.error("Error fetching image for deletion:", err);
       return res.status(500).send(err);
     }
 
-    const currentImages = results[0] && results[0].image ? results[0].image.split(',') : [];
+    const currentImages =
+      results[0] && results[0].image ? results[0].image.split(",") : [];
 
     // Ensure the images are correctly synchronized
     if (currentImages.length !== updatedImages.length + 1) {
-      console.error('Image count mismatch, skipping file deletion.');
-      return res.status(400).json({ message: 'Image count mismatch, skipping file deletion.' });
+      console.error("Image count mismatch, skipping file deletion.");
+      return res
+        .status(400)
+        .json({ message: "Image count mismatch, skipping file deletion." });
     }
 
     // Find the image to delete
-    const imageToDelete = currentImages.find(img => !updatedImages.includes(img));
+    const imageToDelete = currentImages.find(
+      (img) => !updatedImages.includes(img)
+    );
 
     if (imageToDelete) {
       // Delete the image file from the filesystem
       fs.unlink(`uploads/offerspage/${imageToDelete}`, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imageToDelete);
+          console.log("Image deleted:", imageToDelete);
         }
       });
     }
 
     // Update the image array in the database
-    const sql = 'UPDATE oneclick_offerspage SET image = ? WHERE id = ?';
-    db.query(sql, [updatedImages.join(','), productId], (err, result) => {
+    const sql = "UPDATE oneclick_offerspage SET image = ? WHERE id = ?";
+    db.query(sql, [updatedImages.join(","), productId], (err, result) => {
       if (err) {
-        console.error('Error updating image in database:', err);
+        console.error("Error updating image in database:", err);
         return res.status(500).send(err);
       }
-      console.log('Image updated:', result);
-      res.json({ message: 'Image deleted and updated successfully' });
+      console.log("Image updated:", result);
+      res.json({ message: "Image deleted and updated successfully" });
     });
   });
 });
 /////////////////////// end//////////////////
 
-
-
 // Set up multer for file uploads (multiple files)
 const mobileofferspageStorageMultiple = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/offerspage';
+    const dir = "uploads/offerspage";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -8349,15 +10150,17 @@ const mobileofferspageStorageMultiple = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const mobileofferspageUploadMultiple = multer({ storage: mobileofferspageStorageMultiple }).array('images');
+const mobileofferspageUploadMultiple = multer({
+  storage: mobileofferspageStorageMultiple,
+}).array("images");
 
 // Set up multer for file uploads (single file)
 const mobileofferspageStorageSingle = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/offerspage';
+    const dir = "uploads/offerspage";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -8367,222 +10170,247 @@ const mobileofferspageStorageSingle = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const mobileofferspageUploadSingle = multer({ storage: mobileofferspageStorageSingle }).single('image');
-
+const mobileofferspageUploadSingle = multer({
+  storage: mobileofferspageStorageSingle,
+}).single("image");
 
 // Route to fetch all products
-app.get('/backend/fetchmobileofferspage', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_offerspage WHERE category="mobiles" ORDER BY id DESC ';
+app.get("/backend/fetchmobileofferspage", (req, res) => {
+  const sql =
+    'SELECT * FROM oneclick_offerspage WHERE category="mobiles" ORDER BY id DESC ';
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
 
     res.json(results);
   });
 });
 
-
 // Endpoint to add a new product with multiple images
-app.post('/backend/mobileofferspage', mobileofferspageUploadMultiple, (req, res) => {
-  // console.log('Received files:', req.files);
-  // console.log('Request body:', req.body);
+app.post(
+  "/backend/mobileofferspage",
+  mobileofferspageUploadMultiple,
+  (req, res) => {
+    // console.log('Received files:', req.files);
+    // console.log('Request body:', req.body);
 
-  const { offer, brand_name, title, description } = req.body;
-  const images = req.files.map(file => file.filename);
-  // const createdAt = new Date();
+    const { offer, brand_name, title, description } = req.body;
+    const images = req.files.map((file) => file.filename);
+    // const createdAt = new Date();
 
-  const sql = 'INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)';
-  db.query(sql, [offer, brand_name, title, description, 'mobiles', images.join(',')], (err, result) => {
-    if (err) {
-      console.error('Error inserting into database:', err);
-      return res.status(500).send(err);
-    }
-    // console.log('Product added:', result);
-    res.send('Product added');
-  });
-});
+    const sql =
+      "INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)";
+    db.query(
+      sql,
+      [offer, brand_name, title, description, "mobiles", images.join(",")],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting into database:", err);
+          return res.status(500).send(err);
+        }
+        // console.log('Product added:', result);
+        res.send("Product added");
+      }
+    );
+  }
+);
 
 // Endpoint to update a product with a single image
-app.put('/backend/mobileupdateofferspage/:id', mobileofferspageUploadSingle, (req, res) => {
-  const productId = req.params.id;
-  const { title, description, brand_name, offer } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/mobileupdateofferspage/:id",
+  mobileofferspageUploadSingle,
+  (req, res) => {
+    const productId = req.params.id;
+    const { title, description, brand_name, offer } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_offerspage SET title = ?, description = ?, brand_name =?, offer = ? ';
-  let values = [title, description, brand_name, offer];
+    let sql =
+      "UPDATE oneclick_offerspage SET title = ?, description = ?, brand_name =?, offer = ? ";
+    let values = [title, description, brand_name, offer];
 
-  if (image) {
-    const oldImageQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-        // console.error('Error fetching old image:', err);
-        return res.status(500).send(err);
-      }
+    if (image) {
+      const oldImageQuery =
+        "SELECT image FROM oneclick_offerspage WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) {
+          // console.error('Error fetching old image:', err);
+          return res.status(500).send(err);
+        }
 
-      const oldImage = results[0] && results[0].image;
-      // const oldImage = results[0]?.image;
+        const oldImage = results[0] && results[0].image;
+        // const oldImage = results[0]?.image;
 
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/offerspage/${oldImage}`, (err) => {
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/offerspage/${oldImage}`, (err) => {
+            if (err) {
+              console.error("Failed to delete old image:", err);
+            } else {
+              console.log("Old image deleted:", oldImage);
+            }
+          });
+        }
+
+        sql += ", image = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
           if (err) {
-            console.error('Failed to delete old image:', err);
-          } else {
-            console.log('Old image deleted:', oldImage);
+            console.error("Error updating database:", err);
+            return res.status(500).send(err);
           }
+          console.log("Product updated:", results);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', image = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) {
-          console.error('Error updating database:', err);
+          console.error("Error updating database:", err);
           return res.status(500).send(err);
         }
-        console.log('Product updated:', results);
-        res.json({ message: 'Product updated successfully' });
+        console.log("Product updated:", results);
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) {
-        console.error('Error updating database:', err);
-        return res.status(500).send(err);
-      }
-      console.log('Product updated:', results);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
-
-
+);
 
 // server.js or routes.js (Backend API)
-app.delete('/backend/api/deletemobileofferspage/:id', (req, res) => {
+app.delete("/backend/api/deletemobileofferspage/:id", (req, res) => {
   const productId = req.params.id;
-  const deleteQuery = 'DELETE FROM oneclick_offerspage WHERE id = ?';
+  const deleteQuery = "DELETE FROM oneclick_offerspage WHERE id = ?";
 
   db.query(deleteQuery, [productId], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Failed to delete product' });
+      return res.status(500).json({ message: "Failed to delete product" });
     }
 
-    return res.status(200).json({ message: 'Product deleted successfully' });
+    return res.status(200).json({ message: "Product deleted successfully" });
   });
 });
 
-app.put('/backend/updatemobileofferspageimage/:id', mobileofferspageUploadSingle, (req, res) => {
-  const productId = req.params.id;
-  const newImage = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updatemobileofferspageimage/:id",
+  mobileofferspageUploadSingle,
+  (req, res) => {
+    const productId = req.params.id;
+    const newImage = req.file ? req.file.filename : null;
 
-  console.log(`Received request to update image for product ID: ${productId}`);
+    console.log(
+      `Received request to update image for product ID: ${productId}`
+    );
 
-  if (!newImage) {
-    console.error('No image uploaded');
-    return res.status(400).json({ message: 'No image uploaded' });
-  }
-
-  const fetchImagesQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
-  db.query(fetchImagesQuery, [productId], (err, results) => {
-    if (err) {
-      console.error('Error fetching old images:', err);
-      return res.status(500).send(err);
+    if (!newImage) {
+      console.error("No image uploaded");
+      return res.status(400).json({ message: "No image uploaded" });
     }
 
-    const images = results[0] && results[0].image ? results[0].image.split(',') : [];
-    console.log(`Current images for product ID ${productId}:`, images);
-
-    // Delete old images if they exist
-    images.forEach(oldImage => {
-      const oldImagePath = `uploads/offerspage/${oldImage}`;
-      fs.unlink(oldImagePath, (err) => {
-        if (err) {
-          console.error(`Failed to delete old image ${oldImage}:`, err);
-        } else {
-          console.log(`Old image deleted: ${oldImage}`);
-        }
-      });
-    });
-
-    // Set the new image (or reset images to only the new image)
-    const updatedImages = newImage; // You may use newImage as a string or modify this as needed
-    const updateQuery = 'UPDATE oneclick_offerspage SET image = ? WHERE id = ?';
-    db.query(updateQuery, [updatedImages, productId], (err, results) => {
+    const fetchImagesQuery =
+      "SELECT image FROM oneclick_offerspage WHERE id = ?";
+    db.query(fetchImagesQuery, [productId], (err, results) => {
       if (err) {
-        console.error('Error updating image in database:', err);
+        console.error("Error fetching old images:", err);
         return res.status(500).send(err);
       }
-      console.log('Image updated successfully:', results);
-      res.json({ updatedImages: updatedImages });
+
+      const images =
+        results[0] && results[0].image ? results[0].image.split(",") : [];
+      console.log(`Current images for product ID ${productId}:`, images);
+
+      // Delete old images if they exist
+      images.forEach((oldImage) => {
+        const oldImagePath = `uploads/offerspage/${oldImage}`;
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            console.error(`Failed to delete old image ${oldImage}:`, err);
+          } else {
+            console.log(`Old image deleted: ${oldImage}`);
+          }
+        });
+      });
+
+      // Set the new image (or reset images to only the new image)
+      const updatedImages = newImage; // You may use newImage as a string or modify this as needed
+      const updateQuery =
+        "UPDATE oneclick_offerspage SET image = ? WHERE id = ?";
+      db.query(updateQuery, [updatedImages, productId], (err, results) => {
+        if (err) {
+          console.error("Error updating image in database:", err);
+          return res.status(500).send(err);
+        }
+        console.log("Image updated successfully:", results);
+        res.json({ updatedImages: updatedImages });
+      });
     });
-  });
-});
+  }
+);
 
-
-app.put('/backend/deletemobileofferspageimage/:id', (req, res) => {
+app.put("/backend/deletemobileofferspageimage/:id", (req, res) => {
   const productId = req.params.id;
-  const updatedImages = req.body.images ? req.body.images.split(',') : [];
+  const updatedImages = req.body.images ? req.body.images.split(",") : [];
 
   // Fetch the current images from the database
-  const fetchImageQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
+  const fetchImageQuery = "SELECT image FROM oneclick_offerspage WHERE id = ?";
   db.query(fetchImageQuery, [productId], (err, results) => {
     if (err) {
-      console.error('Error fetching image for deletion:', err);
+      console.error("Error fetching image for deletion:", err);
       return res.status(500).send(err);
     }
 
-    const currentImages = results[0] && results[0].image ? results[0].image.split(',') : [];
+    const currentImages =
+      results[0] && results[0].image ? results[0].image.split(",") : [];
 
     // Ensure the images are correctly synchronized
     if (currentImages.length !== updatedImages.length + 1) {
-      console.error('Image count mismatch, skipping file deletion.');
-      return res.status(400).json({ message: 'Image count mismatch, skipping file deletion.' });
+      console.error("Image count mismatch, skipping file deletion.");
+      return res
+        .status(400)
+        .json({ message: "Image count mismatch, skipping file deletion." });
     }
 
     // Find the image to delete
-    const imageToDelete = currentImages.find(img => !updatedImages.includes(img));
+    const imageToDelete = currentImages.find(
+      (img) => !updatedImages.includes(img)
+    );
 
     if (imageToDelete) {
       // Delete the image file from the filesystem
       fs.unlink(`uploads/offerspage/${imageToDelete}`, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imageToDelete);
+          console.log("Image deleted:", imageToDelete);
         }
       });
     }
 
     // Update the image array in the database
-    const sql = 'UPDATE oneclick_offerspage SET image = ? WHERE id = ?';
-    db.query(sql, [updatedImages.join(','), productId], (err, result) => {
+    const sql = "UPDATE oneclick_offerspage SET image = ? WHERE id = ?";
+    db.query(sql, [updatedImages.join(","), productId], (err, result) => {
       if (err) {
-        console.error('Error updating image in database:', err);
+        console.error("Error updating image in database:", err);
         return res.status(500).send(err);
       }
-      console.log('Image updated:', result);
-      res.json({ message: 'Image deleted and updated successfully' });
+      console.log("Image updated:", result);
+      res.json({ message: "Image deleted and updated successfully" });
     });
   });
 });
 //////////////////end////////////////////////////////
 
-
-
 // Set up multer for file uploads (multiple files)
 const cctvofferspageStorageMultiple = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/offerspage';
+    const dir = "uploads/offerspage";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -8592,15 +10420,17 @@ const cctvofferspageStorageMultiple = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const cctvofferspageUploadMultiple = multer({ storage: cctvofferspageStorageMultiple }).array('images');
+const cctvofferspageUploadMultiple = multer({
+  storage: cctvofferspageStorageMultiple,
+}).array("images");
 
 // Set up multer for file uploads (single file)
 const cctvofferspageStorageSingle = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/offerspage';
+    const dir = "uploads/offerspage";
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -8610,230 +10440,255 @@ const cctvofferspageStorageSingle = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     cb(null, `${name}_${Date.now()}${ext}`);
-  }
+  },
 });
 
-const cctvofferspageUploadSingle = multer({ storage: cctvofferspageStorageSingle }).single('image');
-
+const cctvofferspageUploadSingle = multer({
+  storage: cctvofferspageStorageSingle,
+}).single("image");
 
 // Route to fetch all products
-app.get('/backend/fetchcctvofferspage', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_offerspage WHERE category="cctv" ORDER BY id DESC ';
+app.get("/backend/fetchcctvofferspage", (req, res) => {
+  const sql =
+    'SELECT * FROM oneclick_offerspage WHERE category="cctv" ORDER BY id DESC ';
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
 
     res.json(results);
   });
 });
 
-
 // Route to fetch all products
-app.get('/backend/productdetailsofferspage', (req, res) => {
-  const sql = 'SELECT * FROM oneclick_offerspage ORDER BY id DESC ';
+app.get("/backend/productdetailsofferspage", (req, res) => {
+  const sql = "SELECT * FROM oneclick_offerspage ORDER BY id DESC ";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching product:', err);
-      return res.status(500).json({ message: 'Failed to fetch product' });
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
     }
 
     res.json(results);
   });
 });
-
 
 // Endpoint to add a new product with multiple images
-app.post('/backend/cctvofferspage', cctvofferspageUploadMultiple, (req, res) => {
-  // console.log('Received files:', req.files);
-  // console.log('Request body:', req.body);
+app.post(
+  "/backend/cctvofferspage",
+  cctvofferspageUploadMultiple,
+  (req, res) => {
+    // console.log('Received files:', req.files);
+    // console.log('Request body:', req.body);
 
-  const { offer, brand_name, title, description } = req.body;
-  const images = req.files.map(file => file.filename);
-  // const createdAt = new Date();
+    const { offer, brand_name, title, description } = req.body;
+    const images = req.files.map((file) => file.filename);
+    // const createdAt = new Date();
 
-  const sql = 'INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)';
-  db.query(sql, [offer, brand_name, title, description, 'cctv', images.join(',')], (err, result) => {
-    if (err) {
-      console.error('Error inserting into database:', err);
-      return res.status(500).send(err);
-    }
-    // console.log('Product added:', result);
-    res.send('Product added');
-  });
-});
+    const sql =
+      "INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)";
+    db.query(
+      sql,
+      [offer, brand_name, title, description, "cctv", images.join(",")],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting into database:", err);
+          return res.status(500).send(err);
+        }
+        // console.log('Product added:', result);
+        res.send("Product added");
+      }
+    );
+  }
+);
 
 // Endpoint to update a product with a single image
-app.put('/backend/cctvupdateofferspage/:id', cctvofferspageUploadSingle, (req, res) => {
-  const productId = req.params.id;
-  const { title, description, brand_name, offer } = req.body;
-  const image = req.file ? req.file.filename : null;
+app.put(
+  "/backend/cctvupdateofferspage/:id",
+  cctvofferspageUploadSingle,
+  (req, res) => {
+    const productId = req.params.id;
+    const { title, description, brand_name, offer } = req.body;
+    const image = req.file ? req.file.filename : null;
 
-  let sql = 'UPDATE oneclick_offerspage SET title = ?, description = ?, brand_name =?, offer = ? ';
-  let values = [title, description, brand_name, offer];
+    let sql =
+      "UPDATE oneclick_offerspage SET title = ?, description = ?, brand_name =?, offer = ? ";
+    let values = [title, description, brand_name, offer];
 
-  if (image) {
-    const oldImageQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
-    db.query(oldImageQuery, [productId], (err, results) => {
-      if (err) {
-        // console.error('Error fetching old image:', err);
-        return res.status(500).send(err);
-      }
+    if (image) {
+      const oldImageQuery =
+        "SELECT image FROM oneclick_offerspage WHERE id = ?";
+      db.query(oldImageQuery, [productId], (err, results) => {
+        if (err) {
+          // console.error('Error fetching old image:', err);
+          return res.status(500).send(err);
+        }
 
-      const oldImage = results[0] && results[0].image;
-      // const oldImage = results[0]?.image;
+        const oldImage = results[0] && results[0].image;
+        // const oldImage = results[0]?.image;
 
-      if (oldImage && oldImage !== image) {
-        fs.unlink(`uploads/offerspage/${oldImage}`, (err) => {
+        if (oldImage && oldImage !== image) {
+          fs.unlink(`uploads/offerspage/${oldImage}`, (err) => {
+            if (err) {
+              console.error("Failed to delete old image:", err);
+            } else {
+              console.log("Old image deleted:", oldImage);
+            }
+          });
+        }
+
+        sql += ", image = ? WHERE id = ?";
+        values.push(image, productId);
+
+        db.query(sql, values, (err, results) => {
           if (err) {
-            console.error('Failed to delete old image:', err);
-          } else {
-            console.log('Old image deleted:', oldImage);
+            console.error("Error updating database:", err);
+            return res.status(500).send(err);
           }
+          console.log("Product updated:", results);
+          res.json({ message: "Product updated successfully" });
         });
-      }
-
-      sql += ', image = ? WHERE id = ?';
-      values.push(image, productId);
+      });
+    } else {
+      sql += " WHERE id = ?";
+      values.push(productId);
 
       db.query(sql, values, (err, results) => {
         if (err) {
-          console.error('Error updating database:', err);
+          console.error("Error updating database:", err);
           return res.status(500).send(err);
         }
-        console.log('Product updated:', results);
-        res.json({ message: 'Product updated successfully' });
+        console.log("Product updated:", results);
+        res.json({ message: "Product updated successfully" });
       });
-    });
-  } else {
-    sql += ' WHERE id = ?';
-    values.push(productId);
-
-    db.query(sql, values, (err, results) => {
-      if (err) {
-        console.error('Error updating database:', err);
-        return res.status(500).send(err);
-      }
-      console.log('Product updated:', results);
-      res.json({ message: 'Product updated successfully' });
-    });
+    }
   }
-});
-
-
+);
 
 // server.js or routes.js (Backend API)
-app.delete('/backend/api/deletecctvofferspage/:id', (req, res) => {
+app.delete("/backend/api/deletecctvofferspage/:id", (req, res) => {
   const productId = req.params.id;
-  const deleteQuery = 'DELETE FROM oneclick_offerspage WHERE id = ?';
+  const deleteQuery = "DELETE FROM oneclick_offerspage WHERE id = ?";
 
   db.query(deleteQuery, [productId], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Failed to delete product' });
+      return res.status(500).json({ message: "Failed to delete product" });
     }
 
-    return res.status(200).json({ message: 'Product deleted successfully' });
+    return res.status(200).json({ message: "Product deleted successfully" });
   });
 });
 
-app.put('/backend/updatecctvofferspageimage/:id', cctvofferspageUploadSingle, (req, res) => {
-  const productId = req.params.id;
-  const newImage = req.file ? req.file.filename : null;
+app.put(
+  "/backend/updatecctvofferspageimage/:id",
+  cctvofferspageUploadSingle,
+  (req, res) => {
+    const productId = req.params.id;
+    const newImage = req.file ? req.file.filename : null;
 
-  console.log(`Received request to update image for product ID: ${productId}`);
+    console.log(
+      `Received request to update image for product ID: ${productId}`
+    );
 
-  if (!newImage) {
-    console.error('No image uploaded');
-    return res.status(400).json({ message: 'No image uploaded' });
-  }
-
-  const fetchImagesQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
-  db.query(fetchImagesQuery, [productId], (err, results) => {
-    if (err) {
-      console.error('Error fetching old images:', err);
-      return res.status(500).send(err);
+    if (!newImage) {
+      console.error("No image uploaded");
+      return res.status(400).json({ message: "No image uploaded" });
     }
 
-    const images = results[0] && results[0].image ? results[0].image.split(',') : [];
-    console.log(`Current images for product ID ${productId}:`, images);
-
-    // Delete old images if they exist
-    images.forEach(oldImage => {
-      const oldImagePath = `uploads/offerspage/${oldImage}`;
-      fs.unlink(oldImagePath, (err) => {
-        if (err) {
-          console.error(`Failed to delete old image ${oldImage}:`, err);
-        } else {
-          console.log(`Old image deleted: ${oldImage}`);
-        }
-      });
-    });
-
-    // Set the new image (or reset images to only the new image)
-    const updatedImages = newImage; // You may use newImage as a string or modify this as needed
-    const updateQuery = 'UPDATE oneclick_offerspage SET image = ? WHERE id = ?';
-    db.query(updateQuery, [updatedImages, productId], (err, results) => {
+    const fetchImagesQuery =
+      "SELECT image FROM oneclick_offerspage WHERE id = ?";
+    db.query(fetchImagesQuery, [productId], (err, results) => {
       if (err) {
-        console.error('Error updating image in database:', err);
+        console.error("Error fetching old images:", err);
         return res.status(500).send(err);
       }
-      console.log('Image updated successfully:', results);
-      res.json({ updatedImages: updatedImages });
+
+      const images =
+        results[0] && results[0].image ? results[0].image.split(",") : [];
+      console.log(`Current images for product ID ${productId}:`, images);
+
+      // Delete old images if they exist
+      images.forEach((oldImage) => {
+        const oldImagePath = `uploads/offerspage/${oldImage}`;
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            console.error(`Failed to delete old image ${oldImage}:`, err);
+          } else {
+            console.log(`Old image deleted: ${oldImage}`);
+          }
+        });
+      });
+
+      // Set the new image (or reset images to only the new image)
+      const updatedImages = newImage; // You may use newImage as a string or modify this as needed
+      const updateQuery =
+        "UPDATE oneclick_offerspage SET image = ? WHERE id = ?";
+      db.query(updateQuery, [updatedImages, productId], (err, results) => {
+        if (err) {
+          console.error("Error updating image in database:", err);
+          return res.status(500).send(err);
+        }
+        console.log("Image updated successfully:", results);
+        res.json({ updatedImages: updatedImages });
+      });
     });
-  });
-});
+  }
+);
 
-
-app.put('/backend/deletecctvofferspageimage/:id', (req, res) => {
+app.put("/backend/deletecctvofferspageimage/:id", (req, res) => {
   const productId = req.params.id;
-  const updatedImages = req.body.images ? req.body.images.split(',') : [];
+  const updatedImages = req.body.images ? req.body.images.split(",") : [];
 
   // Fetch the current images from the database
-  const fetchImageQuery = 'SELECT image FROM oneclick_offerspage WHERE id = ?';
+  const fetchImageQuery = "SELECT image FROM oneclick_offerspage WHERE id = ?";
   db.query(fetchImageQuery, [productId], (err, results) => {
     if (err) {
-      console.error('Error fetching image for deletion:', err);
+      console.error("Error fetching image for deletion:", err);
       return res.status(500).send(err);
     }
 
-    const currentImages = results[0] && results[0].image ? results[0].image.split(',') : [];
+    const currentImages =
+      results[0] && results[0].image ? results[0].image.split(",") : [];
 
     // Ensure the images are correctly synchronized
     if (currentImages.length !== updatedImages.length + 1) {
-      console.error('Image count mismatch, skipping file deletion.');
-      return res.status(400).json({ message: 'Image count mismatch, skipping file deletion.' });
+      console.error("Image count mismatch, skipping file deletion.");
+      return res
+        .status(400)
+        .json({ message: "Image count mismatch, skipping file deletion." });
     }
 
     // Find the image to delete
-    const imageToDelete = currentImages.find(img => !updatedImages.includes(img));
+    const imageToDelete = currentImages.find(
+      (img) => !updatedImages.includes(img)
+    );
 
     if (imageToDelete) {
       // Delete the image file from the filesystem
       fs.unlink(`uploads/offerspage/${imageToDelete}`, (err) => {
         if (err) {
-          console.error('Failed to delete image:', err);
+          console.error("Failed to delete image:", err);
         } else {
-          console.log('Image deleted:', imageToDelete);
+          console.log("Image deleted:", imageToDelete);
         }
       });
     }
 
     // Update the image array in the database
-    const sql = 'UPDATE oneclick_offerspage SET image = ? WHERE id = ?';
-    db.query(sql, [updatedImages.join(','), productId], (err, result) => {
+    const sql = "UPDATE oneclick_offerspage SET image = ? WHERE id = ?";
+    db.query(sql, [updatedImages.join(","), productId], (err, result) => {
       if (err) {
-        console.error('Error updating image in database:', err);
+        console.error("Error updating image in database:", err);
         return res.status(500).send(err);
       }
-      console.log('Image updated:', result);
-      res.json({ message: 'Image deleted and updated successfully' });
+      console.log("Image updated:", result);
+      res.json({ message: "Image deleted and updated successfully" });
     });
   });
 });
 //////////////////////////////////////////end///////////////
-
 
 // // Configure multer for file uploads
 // const upload2 = multer({
@@ -8873,7 +10728,7 @@ app.put('/backend/deletecctvofferspageimage/:id', (req, res) => {
 
 //     // Add new images to existing images
 //     const updatedImages = [...existingImages, ...images];
-    
+
 //     // Update the database with the new list of images
 //     const updateSql = 'UPDATE doubleadpage SET image = ? WHERE id = ?';
 //     db.query(updateSql, [updatedImages.join(','), productId], (err, result) => {
@@ -8888,29 +10743,31 @@ app.put('/backend/deletecctvofferspageimage/:id', (req, res) => {
 
 /////////////////////////////singleadpage /////////////////////////
 
-
 // Serve static files (for serving images)
-app.use('/backend/uploads/singleadpage', express.static(path.join(__dirname, 'uploads/singleadpage')));
+app.use(
+  "/backend/uploads/singleadpage",
+  express.static(path.join(__dirname, "uploads/singleadpage"))
+);
 
 // Multer setup for image upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/singleadpage/');
+    cb(null, "uploads/singleadpage/");
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
-  }
+  },
 });
 
 const upload3 = multer({ storage: storage });
 
 // Fetch all single ad page images
-app.get('/backend/fetchsingleadpage', (req, res) => {
+app.get("/backend/fetchsingleadpage", (req, res) => {
   const query = `SELECT * FROM oneclick_singleadpage WHERE category != 'loginbg' ORDER BY id DESC LIMIT 1`;
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching images:', err);
-      res.status(500).json({ error: 'Failed to fetch images' });
+      console.error("Error fetching images:", err);
+      res.status(500).json({ error: "Failed to fetch images" });
     } else {
       res.json(results);
     }
@@ -8918,123 +10775,141 @@ app.get('/backend/fetchsingleadpage', (req, res) => {
 });
 
 // Add a new image
-app.post('/backend/singleadpage', upload3.single('image'), (req, res) => {
+app.post("/backend/singleadpage", upload3.single("image"), (req, res) => {
   const { category } = req.body; // Get the category from the request body
   if (!req.file || !category) {
-    return res.status(400).json({ error: 'Image and category are required' });
+    return res.status(400).json({ error: "Image and category are required" });
   }
 
   const image = req.file.filename;
-  const query = 'INSERT INTO oneclick_singleadpage (image, category) VALUES (?, ?)';
+  const query =
+    "INSERT INTO oneclick_singleadpage (image, category) VALUES (?, ?)";
   db.query(query, [image, category], (err, result) => {
     if (err) {
-      console.error('Error inserting image:', err);
-      res.status(500).json({ error: 'Failed to add image' });
+      console.error("Error inserting image:", err);
+      res.status(500).json({ error: "Failed to add image" });
     } else {
-      res.json({ message: 'Image added successfully', id: result.insertId });
+      res.json({ message: "Image added successfully", id: result.insertId });
     }
   });
 });
-app.put('/backend/updatesingleadpageimage/:id', upload3.single('image'), (req, res) => {
-  const { id } = req.params;
-  const { category } = req.body; // Get the new category from the request body
+app.put(
+  "/backend/updatesingleadpageimage/:id",
+  upload3.single("image"),
+  (req, res) => {
+    const { id } = req.params;
+    const { category } = req.body; // Get the new category from the request body
 
-  // Initialize variables for new image and category updates
-  let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
-  let updateFields = [];
-  let updateValues = [];
+    // Initialize variables for new image and category updates
+    let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
+    let updateFields = [];
+    let updateValues = [];
 
-  // Check if both image and category are provided
-  if (!newImage && !category) {
-    return res.status(400).json({ error: 'Image or category is required' });
-  }
-
-  const selectQuery = 'SELECT image FROM oneclick_singleadpage WHERE id = ?';
-  db.query(selectQuery, [id], (selectErr, selectResult) => {
-    if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch current image' });
+    // Check if both image and category are provided
+    if (!newImage && !category) {
+      return res.status(400).json({ error: "Image or category is required" });
     }
 
-    if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    const oldImage = selectResult[0].image;
-
-    // Prepare update query based on fields that need to be updated
-    if (newImage) {
-      updateFields.push('image = ?');
-      updateValues.push(newImage);
-    }
-
-    if (category) {
-      updateFields.push('category = ?');
-      updateValues.push(category);
-    }
-
-    // Always add the ID at the end of update values
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE oneclick_singleadpage SET ${updateFields.join(', ')} WHERE id = ?`;
-    
-    db.query(updateQuery, updateValues, (updateErr, updateResult) => {
-      if (updateErr) {
-        console.error('Error updating image or category:', updateErr);
-        return res.status(500).json({ error: 'Failed to update image or category' });
+    const selectQuery = "SELECT image FROM oneclick_singleadpage WHERE id = ?";
+    db.query(selectQuery, [id], (selectErr, selectResult) => {
+      if (selectErr) {
+        console.error("Error fetching image:", selectErr);
+        return res.status(500).json({ error: "Failed to fetch current image" });
       }
 
-      // Delete the old image if a new image has been uploaded
+      if (selectResult.length === 0) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const oldImage = selectResult[0].image;
+
+      // Prepare update query based on fields that need to be updated
       if (newImage) {
-        const oldImagePath = path.join(__dirname, 'uploads', 'singleadpage', oldImage);
-        fs.unlink(oldImagePath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error('Error deleting old image:', unlinkErr);
-          }
-        });
+        updateFields.push("image = ?");
+        updateValues.push(newImage);
       }
 
-      res.json({ message: 'Image and/or category updated successfully', updatedImage: newImage });
-    });
-  });
-});
+      if (category) {
+        updateFields.push("category = ?");
+        updateValues.push(category);
+      }
 
+      // Always add the ID at the end of update values
+      updateValues.push(id);
+
+      const updateQuery = `UPDATE oneclick_singleadpage SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+
+      db.query(updateQuery, updateValues, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error("Error updating image or category:", updateErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to update image or category" });
+        }
+
+        // Delete the old image if a new image has been uploaded
+        if (newImage) {
+          const oldImagePath = path.join(
+            __dirname,
+            "uploads",
+            "singleadpage",
+            oldImage
+          );
+          fs.unlink(oldImagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("Error deleting old image:", unlinkErr);
+            }
+          });
+        }
+
+        res.json({
+          message: "Image and/or category updated successfully",
+          updatedImage: newImage,
+        });
+      });
+    });
+  }
+);
 
 // Delete an image
-app.delete('/backend/deletesingleadpageimage/:id', (req, res) => {
+app.delete("/backend/deletesingleadpageimage/:id", (req, res) => {
   const { id } = req.params;
 
   // First, fetch the image filename from the database
-  const selectQuery = 'SELECT image FROM oneclick_singleadpage WHERE id = ?';
+  const selectQuery = "SELECT image FROM oneclick_singleadpage WHERE id = ?";
   db.query(selectQuery, [id], (selectErr, selectResult) => {
     if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch image' });
+      console.error("Error fetching image:", selectErr);
+      return res.status(500).json({ error: "Failed to fetch image" });
     }
 
     if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
+      return res.status(404).json({ error: "Image not found" });
     }
 
     const image = selectResult[0].image;
 
     // Delete the image file from the folder
-    const imagePath = path.join(__dirname, 'uploads', 'singleadpage', image);
+    const imagePath = path.join(__dirname, "uploads", "singleadpage", image);
     fs.unlink(imagePath, (unlinkErr) => {
       if (unlinkErr) {
-        console.error('Error deleting image file:', unlinkErr);
-        return res.status(500).json({ error: 'Failed to delete image file' });
+        console.error("Error deleting image file:", unlinkErr);
+        return res.status(500).json({ error: "Failed to delete image file" });
       }
 
       // Delete the entry from the database
-      const deleteQuery = 'DELETE FROM oneclick_singleadpage WHERE id = ?';
+      const deleteQuery = "DELETE FROM oneclick_singleadpage WHERE id = ?";
       db.query(deleteQuery, [id], (deleteErr, deleteResult) => {
         if (deleteErr) {
-          console.error('Error deleting image from database:', deleteErr);
-          return res.status(500).json({ error: 'Failed to delete image from database' });
+          console.error("Error deleting image from database:", deleteErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to delete image from database" });
         }
 
-        res.json({ message: 'Image deleted successfully' });
+        res.json({ message: "Image deleted successfully" });
       });
     });
   });
@@ -9043,12 +10918,12 @@ app.delete('/backend/deletesingleadpageimage/:id', (req, res) => {
 /////////loginbg///////
 
 // Fetch all single ad page images
-app.get('/backend/fetchloginbg', (req, res) => {
+app.get("/backend/fetchloginbg", (req, res) => {
   const query = `SELECT * FROM oneclick_singleadpage WHERE category = 'loginbg'  ORDER BY id DESC LIMIT 1`;
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching images:', err);
-      res.status(500).json({ error: 'Failed to fetch images' });
+      console.error("Error fetching images:", err);
+      res.status(500).json({ error: "Failed to fetch images" });
     } else {
       res.json(results);
     }
@@ -9056,166 +10931,201 @@ app.get('/backend/fetchloginbg', (req, res) => {
 });
 
 // Add a new image
-app.post('/backend/loginbg', upload3.single('image'), (req, res) => {
-  const category = 'loginbg'; // Set default category to "loginbg"
+app.post("/backend/loginbg", upload3.single("image"), (req, res) => {
+  const category = "loginbg"; // Set default category to "loginbg"
   if (!req.file || !category) {
-    return res.status(400).json({ error: 'Image and category are required' });
+    return res.status(400).json({ error: "Image and category are required" });
   }
 
   const image = req.file.filename;
-  const query = 'INSERT INTO oneclick_singleadpage (image, category) VALUES (?, ?)';
+  const query =
+    "INSERT INTO oneclick_singleadpage (image, category) VALUES (?, ?)";
   db.query(query, [image, category], (err, result) => {
     if (err) {
-      console.error('Error inserting image:', err);
-      res.status(500).json({ error: 'Failed to add image' });
+      console.error("Error inserting image:", err);
+      res.status(500).json({ error: "Failed to add image" });
     } else {
-      res.json({ message: 'Image added successfully', id: result.insertId });
+      res.json({ message: "Image added successfully", id: result.insertId });
     }
   });
 });
 
-app.put('/backend/updateloginbgimage/:id', upload3.single('image'), (req, res) => {
-  const { id } = req.params;
-  const category = 'loginbg'; // Set default category to "loginbg"
+app.put(
+  "/backend/updateloginbgimage/:id",
+  upload3.single("image"),
+  (req, res) => {
+    const { id } = req.params;
+    const category = "loginbg"; // Set default category to "loginbg"
 
-  // Initialize variables for new image and category updates
-  let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
-  let updateFields = [];
-  let updateValues = [];
+    // Initialize variables for new image and category updates
+    let newImage = req.file ? req.file.filename : null; // Set newImage if a new file is uploaded
+    let updateFields = [];
+    let updateValues = [];
 
-  // Check if both image and category are provided
-  if (!newImage ) {
-    return res.status(400).json({ error: 'Image is required' });
-  }
-
-  const selectQuery = 'SELECT image FROM oneclick_singleadpage WHERE id = ?';
-  db.query(selectQuery, [id], (selectErr, selectResult) => {
-    if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch current image' });
+    // Check if both image and category are provided
+    if (!newImage) {
+      return res.status(400).json({ error: "Image is required" });
     }
 
-    if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    const oldImage = selectResult[0].image;
-
-    // Prepare update query based on fields that need to be updated
-    if (newImage) {
-      updateFields.push('image = ?');
-      updateValues.push(newImage);
-    }
-
-    if (category) {
-      updateFields.push('category = ?');
-      updateValues.push(category);
-    }
-
-    // Always add the ID at the end of update values
-    updateValues.push(id);
-
-    const updateQuery = `UPDATE oneclick_singleadpage SET ${updateFields.join(', ')} WHERE id = ?`;
-    
-    db.query(updateQuery, updateValues, (updateErr, updateResult) => {
-      if (updateErr) {
-        console.error('Error updating image or category:', updateErr);
-        return res.status(500).json({ error: 'Failed to update image or category' });
+    const selectQuery = "SELECT image FROM oneclick_singleadpage WHERE id = ?";
+    db.query(selectQuery, [id], (selectErr, selectResult) => {
+      if (selectErr) {
+        console.error("Error fetching image:", selectErr);
+        return res.status(500).json({ error: "Failed to fetch current image" });
       }
 
-      // Delete the old image if a new image has been uploaded
+      if (selectResult.length === 0) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const oldImage = selectResult[0].image;
+
+      // Prepare update query based on fields that need to be updated
       if (newImage) {
-        const oldImagePath = path.join(__dirname, 'uploads', 'singleadpage', oldImage);
-        fs.unlink(oldImagePath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error('Error deleting old image:', unlinkErr);
-          }
-        });
+        updateFields.push("image = ?");
+        updateValues.push(newImage);
       }
 
-      res.json({ message: 'Image and/or category updated successfully', updatedImage: newImage });
-    });
-  });
-});
+      if (category) {
+        updateFields.push("category = ?");
+        updateValues.push(category);
+      }
 
+      // Always add the ID at the end of update values
+      updateValues.push(id);
+
+      const updateQuery = `UPDATE oneclick_singleadpage SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+
+      db.query(updateQuery, updateValues, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error("Error updating image or category:", updateErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to update image or category" });
+        }
+
+        // Delete the old image if a new image has been uploaded
+        if (newImage) {
+          const oldImagePath = path.join(
+            __dirname,
+            "uploads",
+            "singleadpage",
+            oldImage
+          );
+          fs.unlink(oldImagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("Error deleting old image:", unlinkErr);
+            }
+          });
+        }
+
+        res.json({
+          message: "Image and/or category updated successfully",
+          updatedImage: newImage,
+        });
+      });
+    });
+  }
+);
 
 // Delete an image
-app.delete('/backend/deleteloginbgimage/:id', (req, res) => {
+app.delete("/backend/deleteloginbgimage/:id", (req, res) => {
   const { id } = req.params;
 
   // First, fetch the image filename from the database
-  const selectQuery = 'SELECT image FROM oneclick_singleadpage WHERE id = ?';
+  const selectQuery = "SELECT image FROM oneclick_singleadpage WHERE id = ?";
   db.query(selectQuery, [id], (selectErr, selectResult) => {
     if (selectErr) {
-      console.error('Error fetching image:', selectErr);
-      return res.status(500).json({ error: 'Failed to fetch image' });
+      console.error("Error fetching image:", selectErr);
+      return res.status(500).json({ error: "Failed to fetch image" });
     }
 
     if (selectResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
+      return res.status(404).json({ error: "Image not found" });
     }
 
     const image = selectResult[0].image;
 
     // Delete the image file from the folder
-    const imagePath = path.join(__dirname, 'uploads', 'singleadpage', image);
+    const imagePath = path.join(__dirname, "uploads", "singleadpage", image);
     fs.unlink(imagePath, (unlinkErr) => {
       if (unlinkErr) {
-        console.error('Error deleting image file:', unlinkErr);
-        return res.status(500).json({ error: 'Failed to delete image file' });
+        console.error("Error deleting image file:", unlinkErr);
+        return res.status(500).json({ error: "Failed to delete image file" });
       }
 
       // Delete the entry from the database
-      const deleteQuery = 'DELETE FROM oneclick_singleadpage WHERE id = ?';
+      const deleteQuery = "DELETE FROM oneclick_singleadpage WHERE id = ?";
       db.query(deleteQuery, [id], (deleteErr, deleteResult) => {
         if (deleteErr) {
-          console.error('Error deleting image from database:', deleteErr);
-          return res.status(500).json({ error: 'Failed to delete image from database' });
+          console.error("Error deleting image from database:", deleteErr);
+          return res
+            .status(500)
+            .json({ error: "Failed to delete image from database" });
         }
 
-        res.json({ message: 'Image deleted successfully' });
+        res.json({ message: "Image deleted successfully" });
       });
     });
   });
 });
 
-
 /////////////////changepassword///////////
 
 // Change Password API Endpoint
-app.post('/backend/api/change-password', (req, res) => {
+app.post("/backend/api/change-password", (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   if (!oldPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: 'Old and new passwords are required' });
+    return res
+      .status(400)
+      .json({ success: false, message: "Old and new passwords are required" });
   }
 
   // Query to check if old password is correct
-  db.query('SELECT * FROM oneclick_admin WHERE password = ?', [oldPassword], (err, results) => {
-    if (err) {
-      console.error('Database query error:', err);
-      return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(400).json({ success: false, message: 'Old password is incorrect' });
-    }
-
-    // Query to update the password
-    db.query('UPDATE oneclick_admin SET password = ? WHERE password = ?', [newPassword, oldPassword], (err) => {
+  db.query(
+    "SELECT * FROM oneclick_admin WHERE password = ?",
+    [oldPassword],
+    (err, results) => {
       if (err) {
-        console.error('Database update error:', err);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error("Database query error:", err);
+        return res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
       }
 
-      res.status(200).json({ success: true, message: 'Password updated successfully' });
-    });
-  });
+      if (results.length === 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Old password is incorrect" });
+      }
+
+      // Query to update the password
+      db.query(
+        "UPDATE oneclick_admin SET password = ? WHERE password = ?",
+        [newPassword, oldPassword],
+        (err) => {
+          if (err) {
+            console.error("Database update error:", err);
+            return res
+              .status(500)
+              .json({ success: false, message: "Internal server error" });
+          }
+
+          res
+            .status(200)
+            .json({ success: true, message: "Password updated successfully" });
+        }
+      );
+    }
+  );
 });
 //////////////////////searchbox suggestion////////////////////////////////
 // app.get('/backend/api/suggestions', (req, res) => {
 //   const query = req.query.query.toLowerCase();
-  
+
 //   // Define categories and products
 //   const suggestions = [
 //     { term: "Computers", keywords: ["laptop","laptops", "desktop","desktops", "computer","computers", "notebook"] },
@@ -9243,7 +11153,7 @@ app.post('/backend/api/change-password', (req, res) => {
 //   }
 // });
 // API endpoint for fetching product suggestions
-app.get('/backend/api/suggestions', (req, res) => {
+app.get("/backend/api/suggestions", (req, res) => {
   const query = req.query.query.toLowerCase();
 
   // Log the incoming search query
@@ -9271,65 +11181,78 @@ app.get('/backend/api/suggestions', (req, res) => {
   const searchTerm = `%${query}%`;
 
   // Execute the query
-  db.query(sql, [searchTerm, searchTerm, searchTerm, searchTerm], (error, results) => {
-    if (error) {
-      console.error('Error executing query:', error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
+  db.query(
+    sql,
+    [searchTerm, searchTerm, searchTerm, searchTerm],
+    (error, results) => {
+      if (error) {
+        console.error("Error executing query:", error);
+        return res.status(500).json({ message: "Internal server error" });
+      }
 
-    // Log the results from the database
-    console.log(`Query results:`, results);
+      // Log the results from the database
+      console.log(`Query results:`, results);
 
-    if (results.length > 0) {
-      // If products are found, send the first product's category
-      console.log(`Product found. Category: "${results[0].category}"`);
-      res.json({ category: results[0].category });
-    } else {
-      // If no products are found, send a not found message
-      console.warn(`No products found for query: "${query}"`);
-      res.status(404).json({ message: "Product not found" });
+      if (results.length > 0) {
+        // If products are found, send the first product's category
+        console.log(`Product found. Category: "${results[0].category}"`);
+        res.json({ category: results[0].category });
+      } else {
+        // If no products are found, send a not found message
+        console.warn(`No products found for query: "${query}"`);
+        res.status(404).json({ message: "Product not found" });
+      }
     }
-  });
+  );
 });
-
-
-
 
 ////////////useraddress/////////////////////
 
 // Route to handle address submission
-app.post('/backend/useraddress', (req, res) => {
+app.post("/backend/useraddress", (req, res) => {
   const { userId, address } = req.body;
 
   if (!userId || !address) {
-    return res.status(400).send('User ID and address are required');
+    return res.status(400).send("User ID and address are required");
   }
 
   // Update all existing addresses for the user to not current
-  const updateQuery = 'UPDATE oneclick_useraddress SET current_address = 0 WHERE user_id = ?';
-  
+  const updateQuery =
+    "UPDATE oneclick_useraddress SET current_address = 0 WHERE user_id = ?";
+
   db.query(updateQuery, [userId], (err) => {
     if (err) {
-      console.error('Error updating existing addresses:', err);
-      return res.status(500).send('Server error');
+      console.error("Error updating existing addresses:", err);
+      return res.status(500).send("Server error");
     }
 
     // Insert the new address and set it as the current address
-    const insertQuery = 'INSERT INTO oneclick_useraddress (user_id, name, street, city, state, postal_code, country, phone, current_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const values = [userId, address.name, address.street, address.city, address.state, address.postal_code, address.country, address.phone, 1];
+    const insertQuery =
+      "INSERT INTO oneclick_useraddress (user_id, name, street, city, state, postal_code, country, phone, current_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const values = [
+      userId,
+      address.name,
+      address.street,
+      address.city,
+      address.state,
+      address.postal_code,
+      address.country,
+      address.phone,
+      1,
+    ];
 
     db.query(insertQuery, values, (err) => {
       if (err) {
-        console.error('Error inserting address:', err);
-        return res.status(500).send('Server error');
+        console.error("Error inserting address:", err);
+        return res.status(500).send("Server error");
       }
-      res.status(200).send('Address added successfully');
+      res.status(200).send("Address added successfully");
     });
   });
 });
 
 // Update address
-app.put('/backend/updateuseraddress/:id', (req, res) => {
+app.put("/backend/updateuseraddress/:id", (req, res) => {
   const addressId = req.params.id;
   const updatedAddress = req.body;
   const sql = `
@@ -9337,34 +11260,37 @@ app.put('/backend/updateuseraddress/:id', (req, res) => {
     SET name = ?, street = ?, city = ?, state = ?, postal_code = ?, country = ?, phone = ? 
     WHERE address_id = ?
   `;
-  db.query(sql, [
-    updatedAddress.name, 
-    updatedAddress.street, 
-    updatedAddress.city, 
-    updatedAddress.state, 
-    updatedAddress.postal_code, 
-    updatedAddress.country, 
-    updatedAddress.phone, 
-    addressId
-  ], (err, results) => {
-    if (err) {
-      console.error('Error updating address:', err);
-      return res.status(500).json({ message: 'Error updating address' });
+  db.query(
+    sql,
+    [
+      updatedAddress.name,
+      updatedAddress.street,
+      updatedAddress.city,
+      updatedAddress.state,
+      updatedAddress.postal_code,
+      updatedAddress.country,
+      updatedAddress.phone,
+      addressId,
+    ],
+    (err, results) => {
+      if (err) {
+        console.error("Error updating address:", err);
+        return res.status(500).json({ message: "Error updating address" });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      res.json({ message: "Address updated successfully" });
     }
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ message: 'Address not found' });
-    }
-    res.json({ message: 'Address updated successfully' });
-  });
+  );
 });
 
-
 // Check for existing address
-app.post('/backend/checkAddressExists', (req, res) => {
+app.post("/backend/checkAddressExists", (req, res) => {
   const { userId, address } = req.body;
 
   if (!userId || !address) {
-    return res.status(400).send('User ID and address are required');
+    return res.status(400).send("User ID and address are required");
   }
 
   const checkQuery = `
@@ -9378,128 +11304,133 @@ app.post('/backend/checkAddressExists', (req, res) => {
     country = ? AND 
     phone = ?
   `;
-  
+
   const values = [
-    userId, 
-    address.name, 
-    address.street, 
-    address.city, 
-    address.state, 
-    address.postal_code, 
-    address.country, 
-    address.phone
+    userId,
+    address.name,
+    address.street,
+    address.city,
+    address.state,
+    address.postal_code,
+    address.country,
+    address.phone,
   ];
 
   db.query(checkQuery, values, (err, results) => {
     if (err) {
-      console.error('Error checking address:', err);
-      return res.status(500).send('Server error');
+      console.error("Error checking address:", err);
+      return res.status(500).send("Server error");
     }
 
     const count = results[0].count;
     if (count > 0) {
-      return res.status(409).send('Address already exists'); // Conflict
+      return res.status(409).send("Address already exists"); // Conflict
     }
-    
-    return res.status(200).send('Address does not exist'); // Address is unique
+
+    return res.status(200).send("Address does not exist"); // Address is unique
   });
 });
 
-
-
 // Check if phone number exists for different user
-app.post('/backend/checkPhoneNumber', (req, res) => {
+app.post("/backend/checkPhoneNumber", (req, res) => {
   const { phone, userId } = req.body;
-  console.log("phone",phone)
-  console.log("userId",userId)
+  console.log("phone", phone);
+  console.log("userId", userId);
   if (!phone) {
-    return res.status(400).send('Phone number is required');
+    return res.status(400).send("Phone number is required");
   }
 
-  const sql = 'SELECT COUNT(*) AS count FROM oneclick_useraddress WHERE phone = ? AND user_id != ?';
-  
+  const sql =
+    "SELECT COUNT(*) AS count FROM oneclick_useraddress WHERE phone = ? AND user_id != ?";
+
   db.query(sql, [phone, userId], (err, results) => {
     if (err) {
-      console.error('Error checking phone number:', err);
-      return res.status(500).send('Server error');
+      console.error("Error checking phone number:", err);
+      return res.status(500).send("Server error");
     }
 
     if (results[0].count > 0) {
       // Phone number exists for a different user
-      return res.status(200).send('Phone number exists for a different user');
+      return res.status(200).send("Phone number exists for a different user");
     } else {
       // Phone number does not exist for a different user
-      return res.status(404).send('Phone number does not exist for a different user');
+      return res
+        .status(404)
+        .send("Phone number does not exist for a different user");
     }
   });
 });
 
-
-
-app.delete('/backend/deleteuseraddress/:address_id', (req, res) => {
+app.delete("/backend/deleteuseraddress/:address_id", (req, res) => {
   const addressId = req.params.address_id;
 
   if (!addressId) {
-    return res.status(400).json({ message: 'Address ID is required' });
+    return res.status(400).json({ message: "Address ID is required" });
   }
 
-  const sql = 'DELETE FROM oneclick_useraddress WHERE address_id = ?';
+  const sql = "DELETE FROM oneclick_useraddress WHERE address_id = ?";
   db.query(sql, [addressId], (err, results) => {
     if (err) {
-      console.error('Error deleting address:', err);
-      return res.status(500).json({ message: 'Error deleting address' });
+      console.error("Error deleting address:", err);
+      return res.status(500).json({ message: "Error deleting address" });
     }
     if (results.affectedRows === 0) {
-      return res.status(404).json({ message: 'Address not found' });
+      return res.status(404).json({ message: "Address not found" });
     }
-    res.json({ message: 'Address deleted successfully' });
+    res.json({ message: "Address deleted successfully" });
   });
 });
 
-
 // Fetch addresses for a specific user
-app.get('/backend/useraddress/:userId', (req, res) => {
+app.get("/backend/useraddress/:userId", (req, res) => {
   const userId = req.params.userId;
-  const query = 'SELECT * FROM oneclick_useraddress WHERE user_id = ? order by address_id DESC';
+  const query =
+    "SELECT * FROM oneclick_useraddress WHERE user_id = ? order by address_id DESC";
   db.query(query, [userId], (err, results) => {
     if (err) {
-      console.error('Error fetching addresses:', err);
-      return res.status(500).send('Server Error');
+      console.error("Error fetching addresses:", err);
+      return res.status(500).send("Server Error");
     }
     res.json(results);
   });
 });
 
-
 // Update the current address
-app.post('/backend/update-current-address', async (req, res) => {
+app.post("/backend/update-current-address", async (req, res) => {
   const { userId, addressId } = req.body;
 
   try {
     // Set all addresses to false
-    await db.query('UPDATE oneclick_useraddress SET current_address = FALSE WHERE user_id = ?', [userId]);
+    await db.query(
+      "UPDATE oneclick_useraddress SET current_address = FALSE WHERE user_id = ?",
+      [userId]
+    );
 
     // Set the selected address to true
-    await db.query('UPDATE oneclick_useraddress SET current_address = TRUE WHERE user_id = ? AND address_id = ?', [userId, addressId]);
+    await db.query(
+      "UPDATE oneclick_useraddress SET current_address = TRUE WHERE user_id = ? AND address_id = ?",
+      [userId, addressId]
+    );
 
-    res.status(200).json({ message: 'Address updated successfully' });
+    res.status(200).json({ message: "Address updated successfully" });
   } catch (error) {
-    console.error('Error updating address:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error updating address:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
-app.get('/backend/singleaddress/:userId', (req, res) => {
+app.get("/backend/singleaddress/:userId", (req, res) => {
   const userId = req.params.userId;
 
   // Log the incoming userId
   console.log(`Fetching address for userId: ${userId}`);
 
-  const query = 'SELECT * FROM oneclick_useraddress WHERE user_id = ? AND current_address = 1';
+  const query =
+    "SELECT * FROM oneclick_useraddress WHERE user_id = ? AND current_address = 1";
   db.query(query, [userId], (err, results) => {
     if (err) {
-      console.error('Error fetching addresses:', err);
-      return res.status(500).send('Server Error');
+      console.error("Error fetching addresses:", err);
+      return res.status(500).send("Server Error");
     }
 
     // Log the results fetched from the database
@@ -9509,15 +11440,15 @@ app.get('/backend/singleaddress/:userId', (req, res) => {
   });
 });
 
-
-
 // API endpoint to update current address
-app.post('/backend/update-current-address', (req, res) => {
+app.post("/backend/update-current-address", (req, res) => {
   const { userId, addressId } = req.body;
 
   // Validate input
   if (!userId || !addressId) {
-    return res.status(400).json({ error: 'User ID and Address ID are required' });
+    return res
+      .status(400)
+      .json({ error: "User ID and Address ID are required" });
   }
 
   // Begin a transaction
@@ -9529,8 +11460,8 @@ app.post('/backend/update-current-address', (req, res) => {
     db.query(resetSql, [userId], (error) => {
       if (error) {
         return db.rollback(() => {
-          console.error('Error resetting addresses:', error);
-          return res.status(500).json({ error: 'Failed to reset addresses' });
+          console.error("Error resetting addresses:", error);
+          return res.status(500).json({ error: "Failed to reset addresses" });
         });
       }
 
@@ -9539,8 +11470,8 @@ app.post('/backend/update-current-address', (req, res) => {
       db.query(updateSql, [addressId, userId], (error, results) => {
         if (error) {
           return db.rollback(() => {
-            console.error('Error updating address:', error);
-            return res.status(500).json({ error: 'Failed to update address' });
+            console.error("Error updating address:", error);
+            return res.status(500).json({ error: "Failed to update address" });
           });
         }
 
@@ -9548,27 +11479,30 @@ app.post('/backend/update-current-address', (req, res) => {
         db.commit((err) => {
           if (err) {
             return db.rollback(() => {
-              console.error('Transaction commit failed:', err);
-              return res.status(500).json({ error: 'Transaction commit failed' });
+              console.error("Transaction commit failed:", err);
+              return res
+                .status(500)
+                .json({ error: "Transaction commit failed" });
             });
           }
 
           // Check if any rows were affected
           if (results.affectedRows === 0) {
-            return res.status(404).json({ error: 'Address not found or not updated' });
+            return res
+              .status(404)
+              .json({ error: "Address not found or not updated" });
           }
 
-          res.status(200).json({ message: 'Current address updated successfully' });
+          res
+            .status(200)
+            .json({ message: "Current address updated successfully" });
         });
       });
     });
   });
 });
 
-
-
 /////////////////////products order and store details /////////////////////
-
 
 // Function to generate unique ID
 const generateUniqueId = () => {
@@ -9581,13 +11515,14 @@ const generateUniqueId = () => {
 // Configure multer to store images in the 'uploads/products' folder
 const productStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/products'); // Destination folder
+    cb(null, "uploads/products"); // Destination folder
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const filename = file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const filename =
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname);
     cb(null, filename);
-  }
+  },
 });
 
 const upload7 = multer({ storage: productStorage });
@@ -9643,12 +11578,12 @@ const upload7 = multer({ storage: productStorage });
 
 //       // Prepare query for inserting or updating products (excluding image URLs for now)
 //       const productsQuery = `
-//       INSERT INTO oneclick_products (product_id, name, category, price, description) 
-//       VALUES ? 
-//       ON DUPLICATE KEY UPDATE 
-//         name = VALUES(name), 
-//         category = VALUES(category), 
-//         price = VALUES(price), 
+//       INSERT INTO oneclick_products (product_id, name, category, price, description)
+//       VALUES ?
+//       ON DUPLICATE KEY UPDATE
+//         name = VALUES(name),
+//         category = VALUES(category),
+//         price = VALUES(price),
 //         description = VALUES(description)
 //       `;
 
@@ -9662,7 +11597,6 @@ const upload7 = multer({ storage: productStorage });
 //       ]);
 
 //     console.log("productsValues", productsValues)
-
 
 //       // Insert or update product information
 //       db.query(productsQuery, [productsValues], (err) => {
@@ -9687,7 +11621,7 @@ const upload7 = multer({ storage: productStorage });
 
 //         // Now handle inserting images into `product_images` table
 //         const productImagesQuery = `
-//         INSERT INTO oneclick_product_images (product_id, image_url) 
+//         INSERT INTO oneclick_product_images (product_id, image_url)
 //         VALUES ?
 //         `;
 
@@ -9731,7 +11665,6 @@ const upload7 = multer({ storage: productStorage });
 //   });
 // });
 
-
 // app.post('/backend/place-order', upload7.array('image'), (req, res) => {
 //   const { user_id, total_amount, payment_method, status, shipping_address, address_id, cartItems } = req.body;
 
@@ -9770,7 +11703,7 @@ const upload7 = multer({ storage: productStorage });
 //       }
 
 //       const productImagesQuery = `
-//         INSERT INTO oneclick_product_images (product_id, image_url) 
+//         INSERT INTO oneclick_product_images (product_id, image_url)
 //         VALUES ?
 //       `;
 
@@ -9839,7 +11772,7 @@ const upload7 = multer({ storage: productStorage });
 //     // Insert the order items into 'oneclick_order_items' table using the new field names
 //     const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
 //     const orderItemsValues = items.map(item => [
-//       unique_id, 
+//       unique_id,
 //       item.prod_id,               // Use 'prod_id' for product ID
 //       item.quantity,         // Use 'prod_quantity' for quantity
 //       item.prod_price * item.quantity  // Use 'prod_price' for price (multiplied by quantity)
@@ -9853,7 +11786,7 @@ const upload7 = multer({ storage: productStorage });
 
 //       // Insert product images into 'oneclick_product_images' table using 'prod_image'
 //       const productImagesQuery = `
-//         INSERT INTO oneclick_product_images (product_id, image_url) 
+//         INSERT INTO oneclick_product_images (product_id, image_url)
 //         VALUES ?
 //       `;
 
@@ -9891,23 +11824,42 @@ const upload7 = multer({ storage: productStorage });
 //   });
 // });
 
-
-app.post('/backend/place-order', upload7.array('image'), (req, res) => {
-  const { user_id, total_amount, payment_method, status, shipping_address, address_id, cartItems } = req.body;
+app.post("/backend/place-order", upload7.array("image"), (req, res) => {
+  const {
+    user_id,
+    total_amount,
+    payment_method,
+    status,
+    shipping_address,
+    address_id,
+    cartItems,
+  } = req.body;
   const files = req.files || [];
-  console.log('Uploaded Files:', files);
+  console.log("Uploaded Files:", files);
 
   let items;
   try {
     items = Array.isArray(cartItems) ? cartItems : JSON.parse(cartItems);
   } catch (e) {
-    console.error('Error parsing cartItems:', e);
-    return res.status(400).json({ message: 'Invalid cart items format' });
+    console.error("Error parsing cartItems:", e);
+    return res.status(400).json({ message: "Invalid cart items format" });
   }
 
-  if (!user_id || !total_amount || !address_id || !items || items.length === 0) {
-    console.error('Invalid data provided:', { user_id, total_amount, shipping_address, address_id, items });
-    return res.status(400).json({ message: 'Invalid data' });
+  if (
+    !user_id ||
+    !total_amount ||
+    !address_id ||
+    !items ||
+    items.length === 0
+  ) {
+    console.error("Invalid data provided:", {
+      user_id,
+      total_amount,
+      shipping_address,
+      address_id,
+      items,
+    });
+    return res.status(400).json({ message: "Invalid data" });
   }
 
   const unique_id = generateUniqueId();
@@ -9916,17 +11868,32 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
   let affectedTables = [];
 
   // Insert the order into the 'oneclick_orders' table
-  const orderQuery = 'INSERT INTO oneclick_orders (payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))';
-  db.query(orderQuery, [payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, 'Order Placed'], (err) => {
-    if (err) {
-      console.error('Error inserting order:', err);
-      return res.status(500).json({ message: 'Error inserting order', error: err.message });
-    }
+  const orderQuery =
+    "INSERT INTO oneclick_orders (payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))";
+  db.query(
+    orderQuery,
+    [
+      payment_method,
+      unique_id,
+      user_id,
+      total_amount,
+      shipping_address,
+      address_id,
+      status,
+      "Order Placed",
+    ],
+    (err) => {
+      if (err) {
+        console.error("Error inserting order:", err);
+        return res
+          .status(500)
+          .json({ message: "Error inserting order", error: err.message });
+      }
 
-    affectedTables.push('oneclick_orders'); // Log affected table
+      affectedTables.push("oneclick_orders"); // Log affected table
 
-    // Insert or update products into 'oneclick_products'
-    const productsQuery = `
+      // Insert or update products into 'oneclick_products'
+      const productsQuery = `
       INSERT INTO oneclick_products (product_id, name, category, price, description) 
       VALUES ? 
       ON DUPLICATE KEY UPDATE 
@@ -9935,86 +11902,111 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
         price = VALUES(price), 
         description = VALUES(description)
     `;
-    const productsValues = items.map(item => [
-      item.prod_id,
-      item.prod_name,
-      item.prod_category,
-      item.prod_price,
-      item.prod_description
-    ]);
-
-    db.query(productsQuery, [productsValues], (err) => {
-      if (err) {
-        console.error('Error inserting or updating products:', err);
-        return res.status(500).json({ message: 'Error inserting or updating products', error: err.message });
-      }
-
-      affectedTables.push('oneclick_products'); // Log affected table
-
-      // Insert order items into 'oneclick_order_items'
-      const orderItemsQuery = 'INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?';
-      const orderItemsValues = items.map(item => [
-        unique_id,
-        item.prod_id, 
-        item.quantity, 
-        item.prod_price * item.quantity
+      const productsValues = items.map((item) => [
+        item.prod_id,
+        item.prod_name,
+        item.prod_category,
+        item.prod_price,
+        item.prod_description,
       ]);
 
-      db.query(orderItemsQuery, [orderItemsValues], (err) => {
+      db.query(productsQuery, [productsValues], (err) => {
         if (err) {
-          console.error('Error inserting order items:', err);
-          return res.status(500).json({ message: 'Error inserting order items', error: err.message });
+          console.error("Error inserting or updating products:", err);
+          return res
+            .status(500)
+            .json({
+              message: "Error inserting or updating products",
+              error: err.message,
+            });
         }
 
-        affectedTables.push('oneclick_order_items'); // Log affected table
+        affectedTables.push("oneclick_products"); // Log affected table
 
-        // Insert product images into 'oneclick_product_images'
-        const productImagesQuery = 'INSERT INTO oneclick_product_images (product_id, image_url) VALUES ?';
-        const imagesValues = [];
-        items.forEach(item => {
-          const filesForProduct = files.filter(file => file.originalname === item.prod_img);
-          if (filesForProduct.length > 0) {
-            filesForProduct.forEach(file => {
-              imagesValues.push([item.prod_id, file.filename]);
-            });
-          } else if (item.prod_img) {
-            const imageUrls = Array.isArray(item.prod_img) ? item.prod_img : [item.prod_img];
-            imageUrls.forEach(url => {
-              imagesValues.push([item.prod_id, url]);
-            });
+        // Insert order items into 'oneclick_order_items'
+        const orderItemsQuery =
+          "INSERT INTO oneclick_order_items (order_id, product_id, quantity, price) VALUES ?";
+        const orderItemsValues = items.map((item) => [
+          unique_id,
+          item.prod_id,
+          item.quantity,
+          item.prod_price * item.quantity,
+        ]);
+
+        db.query(orderItemsQuery, [orderItemsValues], (err) => {
+          if (err) {
+            console.error("Error inserting order items:", err);
+            return res
+              .status(500)
+              .json({
+                message: "Error inserting order items",
+                error: err.message,
+              });
           }
-        });
 
-        if (imagesValues.length > 0) {
-          db.query(productImagesQuery, [imagesValues], (err) => {
-            if (err) {
-              console.error('Error inserting product images:', err);
-              return res.status(500).json({ message: 'Error inserting product images', error: err.message });
+          affectedTables.push("oneclick_order_items"); // Log affected table
+
+          // Insert product images into 'oneclick_product_images'
+          const productImagesQuery =
+            "INSERT INTO oneclick_product_images (product_id, image_url) VALUES ?";
+          const imagesValues = [];
+          items.forEach((item) => {
+            const filesForProduct = files.filter(
+              (file) => file.originalname === item.prod_img
+            );
+            if (filesForProduct.length > 0) {
+              filesForProduct.forEach((file) => {
+                imagesValues.push([item.prod_id, file.filename]);
+              });
+            } else if (item.prod_img) {
+              const imageUrls = Array.isArray(item.prod_img)
+                ? item.prod_img
+                : [item.prod_img];
+              imageUrls.forEach((url) => {
+                imagesValues.push([item.prod_id, url]);
+              });
             }
+          });
 
-            affectedTables.push('oneclick_product_images'); // Log affected table
+          if (imagesValues.length > 0) {
+            db.query(productImagesQuery, [imagesValues], (err) => {
+              if (err) {
+                console.error("Error inserting product images:", err);
+                return res
+                  .status(500)
+                  .json({
+                    message: "Error inserting product images",
+                    error: err.message,
+                  });
+              }
 
-            // Log the affected tables
-            console.log('Affected Tables:');
-            affectedTables.forEach(table => {
+              affectedTables.push("oneclick_product_images"); // Log affected table
+
+              // Log the affected tables
+              console.log("Affected Tables:");
+              affectedTables.forEach((table) => {
+                console.log(`Table: ${table}`);
+              });
+
+              return res
+                .status(200)
+                .json({ message: "Order placed successfully", unique_id });
+            });
+          } else {
+            console.log("No images to insert.");
+            console.log("Affected Tables:");
+            affectedTables.forEach((table) => {
               console.log(`Table: ${table}`);
             });
-
-            return res.status(200).json({ message: 'Order placed successfully', unique_id });
-          });
-        } else {
-          console.log('No images to insert.');
-          console.log('Affected Tables:');
-          affectedTables.forEach(table => {
-            console.log(`Table: ${table}`);
-          });
-          return res.status(200).json({ message: 'Order placed successfully', unique_id });
-        }
+            return res
+              .status(200)
+              .json({ message: "Order placed successfully", unique_id });
+          }
+        });
       });
-    });
-  });
+    }
+  );
 });
-
 
 // app.post('/backend/clear-cart', (req, res) => {
 //   const { email } = req.body;
@@ -10042,73 +12034,83 @@ app.post('/backend/place-order', upload7.array('image'), (req, res) => {
 //   );
 // });
 
-app.post('/backend/clear-cart', (req, res) => {
+app.post("/backend/clear-cart", (req, res) => {
   const { email, cartItems } = req.body;
 
   console.log("Received clear-cart request for:", email);
   console.log("Cart items to remove:", cartItems);
 
   if (!email || !Array.isArray(cartItems)) {
-    console.error("Invalid request: Missing email or cartItems is not an array");
-    return res.status(400).json({ error: 'Email and cartItems are required' });
+    console.error(
+      "Invalid request: Missing email or cartItems is not an array"
+    );
+    return res.status(400).json({ error: "Email and cartItems are required" });
   }
 
   // Fetch the current cart
-  db.query('SELECT addtocart FROM oneclick_users WHERE email = ?', [email], (err, result) => {
-    if (err) {
-      console.error('Error fetching cart:', err);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-
-    if (result.length === 0) {
-      // console.warn("User not found:", email);
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    let currentCart = [];
-    try {
-      currentCart = JSON.parse(result[0].addtocart);
-      console.log("Current Cart from DB:", currentCart);
-    } catch (e) {
-      console.error("Error parsing addtocart:", e);
-      return res.status(500).json({ error: 'Corrupted cart data' });
-    }
-
-    // Create a Set of items to remove (ensure consistent string format)
-    const itemsToRemove = new Set(cartItems.map(item => `${item.id}-${item.quantity}`));
-    console.log("Items to remove (Set):", itemsToRemove);
-
-    // Filter out the items that need to be removed
-    const updatedCart = currentCart.filter(cartItem => {
-      const shouldRemove = itemsToRemove.has(cartItem);
-      console.log(`Checking cartItem: ${cartItem} - Remove: ${shouldRemove}`);
-      return !shouldRemove;
-    });
-
-    console.log("Updated Cart after removal:", updatedCart);
-
-    // Update the database with the modified cart
-    db.query(
-      'UPDATE oneclick_users SET addtocart = ? WHERE email = ?',
-      [JSON.stringify(updatedCart), email],
-      (updateErr) => {
-        if (updateErr) {
-          console.error('Error updating cart:', updateErr);
-          return res.status(500).json({ error: 'Failed to update cart' });
-        }
-
-        console.log("Cart updated successfully for user:", email);
-        res.json({ message: 'Selected cart items removed successfully', updatedCart });
+  db.query(
+    "SELECT addtocart FROM oneclick_users WHERE email = ?",
+    [email],
+    (err, result) => {
+      if (err) {
+        console.error("Error fetching cart:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
-    );
-  });
-});
 
+      if (result.length === 0) {
+        // console.warn("User not found:", email);
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let currentCart = [];
+      try {
+        currentCart = JSON.parse(result[0].addtocart);
+        console.log("Current Cart from DB:", currentCart);
+      } catch (e) {
+        console.error("Error parsing addtocart:", e);
+        return res.status(500).json({ error: "Corrupted cart data" });
+      }
+
+      // Create a Set of items to remove (ensure consistent string format)
+      const itemsToRemove = new Set(
+        cartItems.map((item) => `${item.id}-${item.quantity}`)
+      );
+      console.log("Items to remove (Set):", itemsToRemove);
+
+      // Filter out the items that need to be removed
+      const updatedCart = currentCart.filter((cartItem) => {
+        const shouldRemove = itemsToRemove.has(cartItem);
+        console.log(`Checking cartItem: ${cartItem} - Remove: ${shouldRemove}`);
+        return !shouldRemove;
+      });
+
+      console.log("Updated Cart after removal:", updatedCart);
+
+      // Update the database with the modified cart
+      db.query(
+        "UPDATE oneclick_users SET addtocart = ? WHERE email = ?",
+        [JSON.stringify(updatedCart), email],
+        (updateErr) => {
+          if (updateErr) {
+            console.error("Error updating cart:", updateErr);
+            return res.status(500).json({ error: "Failed to update cart" });
+          }
+
+          console.log("Cart updated successfully for user:", email);
+          res.json({
+            message: "Selected cart items removed successfully",
+            updatedCart,
+          });
+        }
+      );
+    }
+  );
+});
 
 //////////////////////////
 
-app.get('/backend/fetchorders', (req, res) => {
-  console.log('Received request to fetch orders');
+app.get("/backend/fetchorders", (req, res) => {
+  console.log("Received request to fetch orders");
 
   // Fetch all orders with related items and product details
   const queryOrders = `
@@ -10128,15 +12130,29 @@ app.get('/backend/fetchorders', (req, res) => {
 
   db.query(queryOrders, (err, results) => {
     if (err) {
-      console.error('Error fetching orders:', err);
-      return res.status(500).json({ message: 'Error fetching orders' });
+      console.error("Error fetching orders:", err);
+      return res.status(500).json({ message: "Error fetching orders" });
     }
 
-    console.log('Orders fetched:', results);
+    console.log("Orders fetched:", results);
 
     // Group results by order_id to format them properly
     const orders = results.reduce((acc, row) => {
-      const { order_id, user_id, total_amount, shipping_address, order_date, status, payment_method, unique_id, order_item_id, product_name, quantity, price, product_description } = row;
+      const {
+        order_id,
+        user_id,
+        total_amount,
+        shipping_address,
+        order_date,
+        status,
+        payment_method,
+        unique_id,
+        order_item_id,
+        product_name,
+        quantity,
+        price,
+        product_description,
+      } = row;
 
       // Check if order already exists
       if (!acc[order_id]) {
@@ -10149,7 +12165,7 @@ app.get('/backend/fetchorders', (req, res) => {
           status,
           payment_method,
           unique_id,
-          items: []
+          items: [],
         };
       }
 
@@ -10160,7 +12176,7 @@ app.get('/backend/fetchorders', (req, res) => {
           product_name,
           quantity,
           price,
-          product_description
+          product_description,
         });
       }
 
@@ -10170,7 +12186,7 @@ app.get('/backend/fetchorders', (req, res) => {
     const enrichedOrders = Object.values(orders);
 
     // Collect all unique user_ids from orders
-    const userIds = [...new Set(enrichedOrders.map(order => order.user_id))];
+    const userIds = [...new Set(enrichedOrders.map((order) => order.user_id))];
     // console.log('Unique user IDs:', userIds);
 
     if (userIds.length === 0) {
@@ -10180,13 +12196,14 @@ app.get('/backend/fetchorders', (req, res) => {
     }
 
     // Prepare query to fetch names from users table
-    const queryUsers = 'SELECT user_id, username FROM oneclick_users WHERE user_id IN (?)';
+    const queryUsers =
+      "SELECT user_id, username FROM oneclick_users WHERE user_id IN (?)";
     // console.log('Query to fetch user names:', queryUsers);
 
     db.query(queryUsers, [userIds], (err, users) => {
       if (err) {
-        console.error('Error fetching users:', err);
-        return res.status(500).json({ message: 'Error fetching users' });
+        console.error("Error fetching users:", err);
+        return res.status(500).json({ message: "Error fetching users" });
       }
 
       // console.log('Users fetched:', users);
@@ -10199,9 +12216,9 @@ app.get('/backend/fetchorders', (req, res) => {
       // console.log('User ID to name map:', userMap);
 
       // Add customerName to orders based on user_id
-      const finalOrders = enrichedOrders.map(order => ({
+      const finalOrders = enrichedOrders.map((order) => ({
         ...order,
-        customerName: userMap[order.user_id] || 'Unknown' // Default to 'Unknown' if name is not found
+        customerName: userMap[order.user_id] || "Unknown", // Default to 'Unknown' if name is not found
       }));
 
       // console.log('Final enriched orders:', finalOrders);
@@ -10211,30 +12228,27 @@ app.get('/backend/fetchorders', (req, res) => {
   });
 });
 
-
-app.delete('/backend/deleteOrder/:orderId', (req, res) => {
+app.delete("/backend/deleteOrder/:orderId", (req, res) => {
   const { orderId } = req.params;
-  
+
   // Query to delete the order from the database
   const sql = `DELETE FROM oneclick_orders WHERE unique_id = ?`;
-  
+
   db.query(sql, [orderId], (err, result) => {
     if (err) {
-      return res.status(500).json({ error: 'Error deleting order' });
+      return res.status(500).json({ error: "Error deleting order" });
     }
-    res.json({ message: 'Order deleted successfully' });
+    res.json({ message: "Order deleted successfully" });
   });
 });
 
-
-
 // Fetch Orders Data
-app.get('/backend/fetchordersdashboard', (req, res) => {
-  const query = 'SELECT * FROM oneclick_orders'; // Adjust your query as needed
+app.get("/backend/fetchordersdashboard", (req, res) => {
+  const query = "SELECT * FROM oneclick_orders"; // Adjust your query as needed
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching orders:', err);
-      res.status(500).send('Error fetching orders');
+      console.error("Error fetching orders:", err);
+      res.status(500).send("Error fetching orders");
       return;
     }
     res.json(results);
@@ -10242,7 +12256,7 @@ app.get('/backend/fetchordersdashboard', (req, res) => {
 });
 
 // Fetch Product Categories for Pie Chart
-app.get('/backend/fetchcategories', (req, res) => {
+app.get("/backend/fetchcategories", (req, res) => {
   const query = `
     SELECT 
       category, 
@@ -10250,19 +12264,18 @@ app.get('/backend/fetchcategories', (req, res) => {
     FROM oneclick_product_category 
     GROUP BY category;
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching product categories:', err);
-      res.status(500).send('Error fetching product categories');
+      console.error("Error fetching product categories:", err);
+      res.status(500).send("Error fetching product categories");
       return;
     }
     res.json(results);
   });
 });
 
-
-app.get('/backend/fetchproductcategories', (req, res) => {
+app.get("/backend/fetchproductcategories", (req, res) => {
   const query = `
     SELECT 
       category, 
@@ -10272,8 +12285,8 @@ app.get('/backend/fetchproductcategories', (req, res) => {
   `;
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching product categories:', err);
-      res.status(500).send('Error fetching product categories');
+      console.error("Error fetching product categories:", err);
+      res.status(500).send("Error fetching product categories");
       return;
     }
     res.json(results);
@@ -10282,7 +12295,7 @@ app.get('/backend/fetchproductcategories', (req, res) => {
 ///////////reportspage////////////////
 // Sales Report API
 // Sales Report API
-app.get('/backend/api/salesreport', (req, res) => {
+app.get("/backend/api/salesreport", (req, res) => {
   console.log("Received request for Sales Report");
 
   const query = `
@@ -10304,17 +12317,17 @@ app.get('/backend/api/salesreport', (req, res) => {
 
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching sales report:', err);
-      res.status(500).send('Error fetching sales report');
+      console.error("Error fetching sales report:", err);
+      res.status(500).send("Error fetching sales report");
     } else {
-      console.log('Sales Report Results:', results);
+      console.log("Sales Report Results:", results);
       res.json(results);
     }
   });
 });
 
 // Orders Report API
-app.get('/backend/api/ordersreport', (req, res) => {
+app.get("/backend/api/ordersreport", (req, res) => {
   const query = `
     SELECT 
       o.*, 
@@ -10328,17 +12341,16 @@ app.get('/backend/api/ordersreport', (req, res) => {
   `;
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching orders report:', err);
-      res.status(500).send('Error fetching orders report');
+      console.error("Error fetching orders report:", err);
+      res.status(500).send("Error fetching orders report");
     } else {
       res.json(results);
     }
   });
 });
 
-
 // Customers Report API
-app.get('/backend/api/customersreport', (req, res) => {
+app.get("/backend/api/customersreport", (req, res) => {
   const query = `
     SELECT 
       u.username AS user_name, 
@@ -10353,59 +12365,57 @@ app.get('/backend/api/customersreport', (req, res) => {
   `;
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching customers report:', err);
-      res.status(500).send('Error fetching customers report');
+      console.error("Error fetching customers report:", err);
+      res.status(500).send("Error fetching customers report");
     } else {
       res.json(results);
     }
   });
 });
 
-app.delete('/backend/api/salesreport/:id', (req, res) => {
+app.delete("/backend/api/salesreport/:id", (req, res) => {
   const productId = req.params.id;
   const query = `DELETE FROM oneclick_products WHERE product_id = ?`;
 
   db.query(query, [productId], (err, result) => {
     if (err) {
-      console.error('Error deleting sales report:', err);
-      res.status(500).json({ message: 'Error deleting sales report' });
+      console.error("Error deleting sales report:", err);
+      res.status(500).json({ message: "Error deleting sales report" });
     } else {
-      res.status(200).json({ message: 'Sales report deleted successfully' });
+      res.status(200).json({ message: "Sales report deleted successfully" });
     }
   });
 });
 
-app.delete('/backend/api/ordersreport/:id', (req, res) => {
+app.delete("/backend/api/ordersreport/:id", (req, res) => {
   const orderId = req.params.id;
   const query = `DELETE FROM oneclick_orders WHERE order_id = ?`;
 
   db.query(query, [orderId], (err, result) => {
     if (err) {
-      console.error('Error deleting order report:', err);
-      res.status(500).json({ message: 'Error deleting order report' });
+      console.error("Error deleting order report:", err);
+      res.status(500).json({ message: "Error deleting order report" });
     } else {
-      res.status(200).json({ message: 'Order report deleted successfully' });
+      res.status(200).json({ message: "Order report deleted successfully" });
     }
   });
 });
 
-
-app.delete('/backend/api/customersreport/:id', (req, res) => {
+app.delete("/backend/api/customersreport/:id", (req, res) => {
   const userId = req.params.id;
   const query = `DELETE FROM oneclick_users WHERE user_id = ?`;
 
   db.query(query, [userId], (err, result) => {
     if (err) {
-      console.error('Error deleting customer report:', err);
-      res.status(500).json({ message: 'Error deleting customer report' });
+      console.error("Error deleting customer report:", err);
+      res.status(500).json({ message: "Error deleting customer report" });
     } else {
-      res.status(200).json({ message: 'Customer report deleted successfully' });
+      res.status(200).json({ message: "Customer report deleted successfully" });
     }
   });
 });
 
-
-app.get('/backend/api/users', (req, res) => {
+app.get("/backend/api/users", (req, res) => {
   const query = `
     SELECT 
       u.user_id,
@@ -10429,32 +12439,30 @@ app.get('/backend/api/users', (req, res) => {
 
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching users:', err);
-      res.status(500).send('Error fetching users');
+      console.error("Error fetching users:", err);
+      res.status(500).send("Error fetching users");
     } else {
       res.json(results);
     }
   });
 });
 
-app.delete('/backend/api/deleteuser/:id', (req, res) => {
+app.delete("/backend/api/deleteuser/:id", (req, res) => {
   const { id } = req.params;
-  const query = 'DELETE FROM oneclick_users WHERE id = ?';
+  const query = "DELETE FROM oneclick_users WHERE id = ?";
   db.query(query, [id], (err, result) => {
     if (err) {
-      console.error('Error deleting career entry:', err);
-      return res.status(500).json({ message: 'Failed to delete career entry' });
+      console.error("Error deleting career entry:", err);
+      return res.status(500).json({ message: "Failed to delete career entry" });
     }
 
     if (result.affectedRows > 0) {
-      res.status(200).json({ message: 'Career entry deleted successfully' });
+      res.status(200).json({ message: "Career entry deleted successfully" });
     } else {
-      res.status(404).json({ message: 'Career entry not found' });
+      res.status(404).json({ message: "Career entry not found" });
     }
   });
 });
-
-
 
 // app.get("/backend/api/fetchusers", (req, res) => {
 //   const sql = "SELECT * FROM oneclick_useraddress";
@@ -10470,46 +12478,129 @@ app.delete('/backend/api/deleteuser/:id', (req, res) => {
 //   });
 // });
 
-
 app.get("/backend/my-orders/:userId", (req, res) => {
   const userId = req.params.userId;
 
+  // Query to get orders
   const ordersQuery = `SELECT * FROM oneclick_orders WHERE user_id = ? ORDER BY order_id DESC`;
 
   db.query(ordersQuery, [userId], (error, orders) => {
-    if (error) {
+    if (error)
       return res.status(500).json({ message: "Error fetching orders" });
-    }
-    if (orders.length === 0) {
+    if (orders.length === 0)
       return res.status(404).json({ message: "No orders found for this user" });
-    }
 
-    const orderIds = orders.map(order => order.unique_id);
+    const orderIds = orders.map((order) => order.unique_id);
 
-    if (orderIds.length === 0) {
-      return res.status(200).json({ orders: [] });
-    }
+    if (!orderIds.length) return res.status(200).json({ orders: [] });
 
+    // Query to get product details for the orders
     const productsQuery = `
-      SELECT oi.order_id, oi.product_id, oi.quantity, 
-             c.prod_name, c.prod_features, c.prod_price, c.prod_img, c.status, 
-             c.category, c.prod_id, c.actual_price, c.offer_label, 
-             c.productStatus, c.coupon_value, c.subtitle, c.deliverycharge, 
-             c.effectiveprice, c.additional_accessories, c.offer_start_time, 
-             c.offer_end_time, c.offer_price
+      SELECT oi.order_id, oi.product_id, oi.quantity, c.prod_name, c.prod_features, c.prod_price, c.prod_img, c.status, 
+             c.category, c.prod_id, c.actual_price, c.offer_label, c.productStatus, c.coupon_value, c.subtitle, 
+             c.deliverycharge, c.effectiveprice, c.additional_accessories, c.offer_start_time, c.offer_end_time, c.offer_price
       FROM oneclick_order_items oi
       JOIN oneclick_product_category c ON oi.product_id = c.prod_id
       WHERE oi.order_id IN (?)
     `;
 
     db.query(productsQuery, [orderIds], (err, products) => {
-      if (err) {
-        return res.status(500).json({ message: "Error fetching products", error: err.message });
+      if (err)
+        return res
+          .status(500)
+          .json({ message: "Error fetching products", error: err.message });
+
+      // Group products by order_id
+      const productsByOrder = products.reduce((acc, product) => {
+        if (!acc[product.order_id]) acc[product.order_id] = [];
+        acc[product.order_id].push({
+          product_id: product.product_id,
+          name: product.prod_name,
+          features: product.prod_features,
+          price: product.prod_price,
+          image: product.prod_img,
+          status: product.status,
+          category: product.category,
+          quantity: product.quantity,
+          total_price: product.quantity * product.prod_price,
+        });
+        return acc;
+      }, {});
+
+      // Merge products with the respective orders
+      const formattedOrders = orders.map((order) => ({
+        ...order,
+        products: productsByOrder[order.unique_id] || [],
+      }));
+
+      return res.status(200).json({ orders: formattedOrders });
+    });
+  });
+});
+
+app.get("/backend/api/my-orders/:userId", (req, res) => {
+  const userId = req.params.userId;
+  console.log("Fetching orders for user:", userId);
+
+  // 1. Fetch orders for the given user
+  const ordersQuery = `
+    SELECT *
+    FROM oneclick_orders
+    WHERE user_id = ?
+    ORDER BY order_id DESC
+  `;
+
+  db.query(ordersQuery, [userId], (orderError, orders) => {
+    if (orderError) {
+      console.error("Error fetching orders:", orderError);
+      return res
+        .status(500)
+        .json({ message: "Error fetching orders", error: orderError.message });
+    }
+
+    if (!orders || orders.length === 0) {
+      console.log("No orders found for user:", userId);
+      return res.status(200).json({ orders: [] });
+    }
+
+    // 2. Extract order identifiers (assumed to be in order.unique_id)
+    const orderIds = orders.map((order) => order.unique_id);
+    // Build a comma-separated list of placeholders for the IN clause
+    const placeholders = orderIds.map(() => "?").join(",");
+
+    // 3. Fetch product details for the orders
+    const productsQuery = `
+      SELECT 
+        oi.order_id, 
+        oi.product_id, 
+        oi.quantity, 
+        c.prod_name, 
+        c.prod_features, 
+        c.prod_price, 
+        c.prod_img, 
+        c.status, 
+        c.category
+      FROM oneclick_order_items oi
+      JOIN oneclick_product_category c ON oi.product_id = c.prod_id
+      WHERE oi.order_id IN (${placeholders})
+    `;
+
+    console.log("Fetching products for order IDs:", orderIds);
+
+    db.query(productsQuery, orderIds, (prodError, products) => {
+      if (prodError) {
+        console.error("Error fetching products:", prodError);
+        return res
+          .status(500)
+          .json({
+            message: "Error fetching products",
+            error: prodError.message,
+          });
       }
 
-      // Group products by order_id and include all relevant product and category details
+      // Group products by order_id
       const productsByOrder = {};
-      products.forEach(product => {
+      products.forEach((product) => {
         if (!productsByOrder[product.order_id]) {
           productsByOrder[product.order_id] = [];
         }
@@ -10521,56 +12612,214 @@ app.get("/backend/my-orders/:userId", (req, res) => {
           image: product.prod_img,
           status: product.status,
           category: product.category,
-          prod_id: product.prod_id,
-          actual_price: product.actual_price,
-          offer_label: product.offer_label,
-          product_status: product.productStatus,
-          coupon_value: product.coupon_value,
-          subtitle: product.subtitle,
-          delivery_charge: product.deliverycharge,
-          effective_price: product.effectiveprice,
-          additional_accessories: product.additional_accessories,
-          offer_start_time: product.offer_start_time,
-          offer_end_time: product.offer_end_time,
-          offer_price: product.offer_price,
           quantity: product.quantity,
-          total_price: product.quantity * product.prod_price // Assuming you want to calculate the total price for each product
+          total_price: product.quantity * product.prod_price,
         });
       });
 
-      // Attach products to respective orders
-      const formattedOrders = orders.map(order => ({
+      // Merge products with their respective orders
+      const formattedOrders = orders.map((order) => ({
         ...order,
-        products: productsByOrder[order.unique_id] || []
+        products: productsByOrder[order.unique_id] || [],
       }));
 
-      return res.status(200).json({ orders: formattedOrders });
+      res.status(200).json({ orders: formattedOrders });
+    });
+  });
+});
+
+///////////buy later/////////////
+app.post("/backend/api/store-buy-later", (req, res) => {
+  const { productIds, userId } = req.body;
+
+  console.log("🟢 Received request to store buy later items:", req.body);
+
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    console.error("🟡 Validation Error: Invalid productIds provided", productIds);
+    return res.status(400).json({
+      error: "Invalid productIds provided. It should be a non-empty array.",
+    });
+  }
+
+  if (!userId) {
+    console.error("🟡 Validation Error: Missing userId in request");
+    return res.status(400).json({ error: "Missing userId. Unable to store buy later items." });
+  }
+
+  // Step 1: Get existing buy_later & addtocart values
+  const getUserQuery = "SELECT buy_later, addtocart FROM oneclick_users WHERE user_id = ?";
+
+  db.query(getUserQuery, [userId], (err, results) => {
+    if (err) {
+      console.error("🔴 Database error while fetching user data:", err);
+      return res.status(500).json({ error: "Database error", details: err });
+    }
+
+    if (results.length === 0) {
+      console.warn("🟡 User not found in database.");
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let existingBuyLaterItems = [];
+    let existingCartItems = [];
+
+    if (results[0].buy_later) {
+      try {
+        existingBuyLaterItems = JSON.parse(results[0].buy_later);
+      } catch (parseError) {
+        console.error("🔴 JSON Parse Error: Invalid buy_later data", parseError);
+        return res.status(500).json({ error: "Invalid buy_later format" });
+      }
+    }
+
+    if (results[0].addtocart) {
+      try {
+        existingCartItems = JSON.parse(results[0].addtocart);
+      } catch (parseError) {
+        console.error("🔴 JSON Parse Error: Invalid addtocart data", parseError);
+        return res.status(500).json({ error: "Invalid addtocart format" });
+      }
+    }
+
+    console.log("🟡 Existing Buy Later Items:", existingBuyLaterItems);
+    console.log("🟡 Existing Cart Items:", existingCartItems);
+
+    // Step 2: Append new product IDs to existing buy_later list
+    const updatedBuyLaterList = [...new Set([...existingBuyLaterItems, ...productIds])];
+
+    // Step 3: Remove matching product IDs from addtocart
+    const updatedCartItems = existingCartItems.filter((cartItem) => {
+      const cartProductId = parseInt(cartItem.split("-")[0], 10);
+      return !productIds.includes(cartProductId);
+    });
+
+    console.log("🟢 Updated Buy Later List:", updatedBuyLaterList);
+    console.log("🟢 Updated Cart Items After Removal:", updatedCartItems);
+
+    // Step 4: Update database
+    const updateQuery = "UPDATE oneclick_users SET buy_later = ?, addtocart = ? WHERE user_id = ?";
+    db.query(
+      updateQuery,
+      [JSON.stringify(updatedBuyLaterList), JSON.stringify(updatedCartItems), userId],
+      (updateErr, updateResults) => {
+        if (updateErr) {
+          console.error("🔴 Database error while updating fields:", updateErr);
+          return res.status(500).json({ error: "Database error", details: updateErr });
+        }
+
+        console.log(`🟢 Database Update Success: Affected Rows: ${updateResults.affectedRows}`);
+        res.json({
+          message: "Items successfully added to Buy Later and removed from cart.",
+          buyLater: updatedBuyLaterList,
+          updatedCart: updatedCartItems,
+        });
+      }
+    );
+  });
+});
+
+
+app.post("/backend/api/remove-buy-later", (req, res) => {
+  const { productId, userId } = req.body;
+
+  console.log("🟢 Received request to remove buy later item:", req.body);
+
+  if (!productId || !userId) {
+    console.error("🟡 Validation Error: Missing productId or userId");
+    return res.status(400).json({ error: "Missing productId or userId." });
+  }
+
+  // Step 1: Get existing buy_later list
+  const getUserQuery = "SELECT buy_later FROM oneclick_users WHERE user_id = ?";
+
+  db.query(getUserQuery, [userId], (err, results) => {
+    if (err) {
+      console.error("🔴 Database error while fetching buy_later:", err);
+      return res.status(500).json({ error: "Database error", details: err });
+    }
+
+    if (results.length === 0 || !results[0].buy_later) {
+      console.warn("🟡 No buy later items found.");
+      return res.json({ message: "No items found in Buy Later." });
+    }
+
+    let existingBuyLaterItems = JSON.parse(results[0].buy_later);
+    console.log("🟡 Existing Buy Later Items:", existingBuyLaterItems);
+
+    // Step 2: Remove the selected product ID
+    const updatedBuyLaterItems = existingBuyLaterItems.filter(id => id !== productId);
+    console.log("🟢 Updated Buy Later List:", updatedBuyLaterItems);
+
+    // Step 3: Update database
+    const updateQuery = "UPDATE oneclick_users SET buy_later = ? WHERE user_id = ?";
+    db.query(updateQuery, [JSON.stringify(updatedBuyLaterItems), userId], (updateErr, updateResults) => {
+      if (updateErr) {
+        console.error("🔴 Database error while updating buy_later:", updateErr);
+        return res.status(500).json({ error: "Database error", details: updateErr });
+      }
+
+      console.log(`🟢 Database Update Success: Affected Rows: ${updateResults.affectedRows}`);
+      res.json({
+        message: "Item successfully removed from Buy Later.",
+        buyLater: updatedBuyLaterItems,
+      });
     });
   });
 });
 
 
+app.get("/backend/api/get-buy-later/:userId", (req, res) => {
+  const { userId } = req.params;
 
-app.get("/backend/api/my-orders/:userId", (req, res) => {
-  const userId = req.params.userId;
+  console.log(`Fetching buy later items for user: ${userId}`);
 
-  // Query the orders table based on the userId
-  const ordersQuery = `SELECT * FROM oneclick_orders WHERE user_id = ? ORDER BY order_id DESC`;
-  
-  db.query(ordersQuery, [userId], (error, results) => {
-    if (error) {
-      return res.status(500).json({ message: "Error fetching orders" });
+  // Step 1: Get the stored buy_later product IDs
+  const query = "SELECT buy_later FROM oneclick_users WHERE user_id = ?";
+
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("Database error while fetching buy_later:", err);
+      return res.status(500).json({ error: "Database error" });
     }
-    if (results.length > 0) {
-      return res.status(200).json(results);
-    } else {
-      return res.status(404).json({ message: "No orders found for this user" });
+
+    if (results.length === 0 || !results[0].buy_later) {
+      console.log("No buy later items found.");
+      return res.json({ buyLater: [] });
     }
+
+    let buyLaterItems = JSON.parse(results[0].buy_later);
+    console.log("Fetched buy later product IDs:", buyLaterItems);
+
+    if (buyLaterItems.length === 0) {
+      return res.json({ buyLater: [] });
+    }
+
+    // Reverse the order to show the last added item first
+    buyLaterItems = buyLaterItems.reverse();
+
+    // Step 2: Fetch product details from oneclick_product_category
+    const placeholders = buyLaterItems.map(() => "?").join(","); // Create ?,?,? for SQL query
+    const productQuery = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
+
+    db.query(productQuery, buyLaterItems, (err, productResults) => {
+      if (err) {
+        console.error("Database error while fetching product details:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      console.log("Fetched buy later product details:", productResults);
+      
+      // Reorder productResults to match the reversed buyLaterItems order
+      const orderedProducts = buyLaterItems.map(id => 
+        productResults.find(product => product.id === id)
+      ).filter(product => product); // Remove undefined entries
+
+      res.json({ buyLater: orderedProducts });
+    });
   });
 });
 
-
-app.get('/backend/getProductByOrderId/:orderId', (req, res) => {
+app.get("/backend/getProductByOrderId/:orderId", (req, res) => {
   const { orderId } = req.params;
   console.log("Fetching Product IDs for Order ID:", orderId);
 
@@ -10585,22 +12834,27 @@ app.get('/backend/getProductByOrderId/:orderId', (req, res) => {
   db.query(query, [orderId], (err, result) => {
     if (err) {
       console.error("Error fetching product IDs by order ID:", err);
-      return res.status(500).json({ error: 'Failed to fetch product IDs' });
+      return res.status(500).json({ error: "Failed to fetch product IDs" });
     } else {
       console.log("Product IDs fetched:", result);
 
       if (result.length === 0) {
         console.warn("No product IDs found for order ID:", orderId);
-        return res.status(404).json({ message: 'No products found for this order' });
+        return res
+          .status(404)
+          .json({ message: "No products found for this order" });
       }
 
       // Extract product IDs and quantities from the result
-      const productIdsWithQuantities = result.map(row => ({
+      const productIdsWithQuantities = result.map((row) => ({
         prod_id: row.product_id,
         quantity: row.quantity,
       }));
 
-      console.log("Extracted Product IDs and Quantities:", productIdsWithQuantities);
+      console.log(
+        "Extracted Product IDs and Quantities:",
+        productIdsWithQuantities
+      );
 
       // Fetch product details for these IDs
       getProductDetails(productIdsWithQuantities, res);
@@ -10610,7 +12864,7 @@ app.get('/backend/getProductByOrderId/:orderId', (req, res) => {
 
 function getProductDetails(productIdsWithQuantities, res) {
   // Create placeholders for the query
-  const placeholders = productIdsWithQuantities.map(() => '?').join(', ');
+  const placeholders = productIdsWithQuantities.map(() => "?").join(", ");
 
   const sql = `
     SELECT prod_id, prod_name, prod_features, prod_price, prod_img, category 
@@ -10618,29 +12872,37 @@ function getProductDetails(productIdsWithQuantities, res) {
     WHERE prod_id IN (${placeholders})
   `;
 
-  db.query(sql, productIdsWithQuantities.map(p => p.prod_id), (err, result) => {
-    if (err) {
-      console.error('Error fetching product details:', err);
-      return res.status(500).json({ error: 'Failed to fetch product details' });
+  db.query(
+    sql,
+    productIdsWithQuantities.map((p) => p.prod_id),
+    (err, result) => {
+      if (err) {
+        console.error("Error fetching product details:", err);
+        return res
+          .status(500)
+          .json({ error: "Failed to fetch product details" });
+      }
+
+      if (result.length === 0) {
+        console.log("No products found for given IDs");
+        return res.status(404).json({ error: "Products not found" });
+      }
+
+      // Combine the product details with their respective quantities
+      const combinedResults = result.map((product) => {
+        const foundProduct = productIdsWithQuantities.find(
+          (p) => p.prod_id === product.prod_id
+        );
+        return {
+          ...product,
+          quantity: foundProduct ? foundProduct.quantity : 0, // Add quantity to each product detail
+        };
+      });
+
+      console.log("Combined Product Details fetched:", combinedResults);
+      res.json(combinedResults); // Return all product details as an array with quantities
     }
-
-    if (result.length === 0) {
-      console.log("No products found for given IDs");
-      return res.status(404).json({ error: 'Products not found' });
-    }
-
-    // Combine the product details with their respective quantities
-    const combinedResults = result.map(product => {
-      const foundProduct = productIdsWithQuantities.find(p => p.prod_id === product.prod_id);
-      return {
-        ...product,
-        quantity: foundProduct ? foundProduct.quantity : 0, // Add quantity to each product detail
-      };
-    });
-
-    console.log("Combined Product Details fetched:", combinedResults);
-    res.json(combinedResults);  // Return all product details as an array with quantities
-  });
+  );
 }
 
 // app.get('/backend/getProductDetails', (req, res) => {
@@ -10717,11 +12979,11 @@ function getProductDetails(productIdsWithQuantities, res) {
 //   try {
 //     // Assuming you have a database connection instance named db
 //     const productQuery = `
-//       SELECT p.*, c.prod_price 
+//       SELECT p.*, c.prod_price
 //       FROM oneclick_products AS p
 //       JOIN oneclick_product_category AS c ON p.category_id = c.id
 //       WHERE p.id = ?`;
-    
+
 //     const [productDetails] = await db.query(productQuery, [product_id]);
 
 //     if (!productDetails) {
@@ -10740,8 +13002,8 @@ function getProductDetails(productIdsWithQuantities, res) {
 //   console.log("Fetching Product Details with Product ID:", product_id);
 
 //   const sql = `
-//     SELECT prod_name, prod_features, prod_price, prod_img, category 
-//     FROM oneclick_product_category 
+//     SELECT prod_name, prod_features, prod_price, prod_img, category
+//     FROM oneclick_product_category
 //     WHERE prod_id = ?`;
 
 //   db.query(sql, [product_id], (err, result) => {
@@ -10759,16 +13021,20 @@ function getProductDetails(productIdsWithQuantities, res) {
 //     res.json(result[0]);
 //   });
 // });
-app.put('/backend/api/update-status', (req, res) => {
+app.put("/backend/api/update-status", (req, res) => {
   const { orderId, deliveryStatus, deliveryDate } = req.body; // Include deliveryDate
 
   // Log the incoming request details
-  console.log(`Received request to update status: orderId=${orderId}, deliveryStatus=${deliveryStatus}, deliveryDate=${deliveryDate}`);
+  console.log(
+    `Received request to update status: orderId=${orderId}, deliveryStatus=${deliveryStatus}, deliveryDate=${deliveryDate}`
+  );
 
   // Validate orderId and deliveryStatus before proceeding
   if (!orderId || !deliveryStatus) {
-    console.log('Invalid request data:', req.body);
-    return res.status(400).json({ message: 'Order ID and delivery status are required' });
+    console.log("Invalid request data:", req.body);
+    return res
+      .status(400)
+      .json({ message: "Order ID and delivery status are required" });
   }
 
   // SQL query to update the delivery status and delivery date
@@ -10777,44 +13043,48 @@ app.put('/backend/api/update-status', (req, res) => {
   // Execute the SQL query
   db.query(sql, [deliveryStatus, deliveryDate, orderId], (error, results) => {
     if (error) {
-      console.error('Error updating delivery status:', error); // Log the error
-      return res.status(500).json({ message: 'Error updating delivery status' });
+      console.error("Error updating delivery status:", error); // Log the error
+      return res
+        .status(500)
+        .json({ message: "Error updating delivery status" });
     }
 
     // Check if any row was affected
     if (results.affectedRows === 0) {
       console.log(`No order found with orderId: ${orderId}`); // Log when no order is found
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    console.log(`Delivery status and date updated successfully for orderId: ${orderId}`); // Log successful update
-    return res.json({ message: 'Delivery status and date updated successfully' });
+    console.log(
+      `Delivery status and date updated successfully for orderId: ${orderId}`
+    ); // Log successful update
+    return res.json({
+      message: "Delivery status and date updated successfully",
+    });
   });
 });
 
-
-
 // Endpoint to get order status along with delivery date
-app.get('/backend/api/get-order-status', (req, res) => {
+app.get("/backend/api/get-order-status", (req, res) => {
   const { orderId } = req.query; // Get orderId from the request query
 
   // SQL query to get delivery status, unique_id, and delivery_date from the oneclick_orders table
-  const query = 'SELECT unique_id, payment_method, delivery_status, delivery_date, order_date FROM oneclick_orders WHERE unique_id = ?';
+  const query =
+    "SELECT unique_id, payment_method, delivery_status, delivery_date, order_date FROM oneclick_orders WHERE unique_id = ?";
 
   db.query(query, [orderId], (error, results) => {
     if (error) {
-      console.error('Error fetching order status:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+      console.error("Error fetching order status:", error);
+      return res.status(500).json({ message: "Internal server error" });
     }
-    
+
     if (results.length > 0) {
       return res.status(200).json(results[0]); // Send the first result as the response
     } else {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
   });
 });
-
 
 //////////////////////
 // Route to get product details by ID, including features
@@ -10868,22 +13138,20 @@ app.get("/backend/products/:id", (req, res) => {
   });
 });
 
-
 //////////////////////////////////////
 
-
 // Assuming 'db' is your MySQL connection object
-app.get('/backend/products/related/:category', (req, res) => {
+app.get("/backend/products/related/:category", (req, res) => {
   const category = req.params.category;
 
   console.log(`Fetching related products for category: ${category}`);
 
-  const query = 'SELECT * FROM oneclick_product_category WHERE category = ?';
+  const query = "SELECT * FROM oneclick_product_category WHERE category = ?";
 
   db.query(query, [category], (err, results) => {
     if (err) {
       console.error(`Error fetching related products: ${err.message}`);
-      return res.status(500).json({ error: 'Error fetching related products' });
+      return res.status(500).json({ error: "Error fetching related products" });
     }
 
     // console.log(`Related products fetched successfully: `, results);
@@ -10894,15 +13162,15 @@ app.get('/backend/products/related/:category', (req, res) => {
 //////////////////////////////////////////////////////////
 
 // Assuming 'db' is your MySQL connection object
-app.get('/backend/products2/related/:category', (req, res) => {
+app.get("/backend/products2/related/:category", (req, res) => {
   const category = req.params.category;
 
   // Define a mapping for main categories and their related subcategories
   const categoryMap = {
-    Computers: 'ComputerAccessories',
-    CCTV: 'CCTVAccessories',
-    Mobiles: 'MobileAccessories',
-    Printers: 'PrinterAccessories'
+    Computers: "ComputerAccessories",
+    CCTV: "CCTVAccessories",
+    Mobiles: "MobileAccessories",
+    Printers: "PrinterAccessories",
   };
 
   // Fetch the related category or use the default category
@@ -10910,12 +13178,12 @@ app.get('/backend/products2/related/:category', (req, res) => {
 
   // console.log(`Fetching related products for category: ${relatedCategory}`);
 
-  const query = 'SELECT * FROM oneclick_product_category WHERE category = ?';
+  const query = "SELECT * FROM oneclick_product_category WHERE category = ?";
 
   db.query(query, [relatedCategory], (err, results) => {
     if (err) {
       console.error(`Error fetching related products: ${err.message}`);
-      return res.status(500).json({ error: 'Error fetching related products' });
+      return res.status(500).json({ error: "Error fetching related products" });
     }
 
     // console.log(`Related products fetched successfully for category ${relatedCategory}: `, results);
@@ -10924,17 +13192,17 @@ app.get('/backend/products2/related/:category', (req, res) => {
 });
 
 // Assuming 'db' is your MySQL connection object
-app.get('/backend/products/relatedaccessories/:category', (req, res) => {
+app.get("/backend/products/relatedaccessories/:category", (req, res) => {
   const category = req.params.category;
 
   console.log(`Fetching related products for category: ${category}`);
 
   // Map of categories to their corresponding accessory categories
   const categoryMapping = {
-    Computers: 'ComputerAccessories',
-    CCTV: 'CCTVAccessories',
-    Mobile: 'MobileAccessories',
-    Printers: 'PrinterAccessories'
+    Computers: "ComputerAccessories",
+    CCTV: "CCTVAccessories",
+    Mobile: "MobileAccessories",
+    Printers: "PrinterAccessories",
   };
 
   // Determine the accessory category to fetch
@@ -10942,13 +13210,13 @@ app.get('/backend/products/relatedaccessories/:category', (req, res) => {
 
   // If there is no corresponding accessory category, just fetch the regular products
   const query = accessoryCategory
-    ? 'SELECT * FROM oneclick_product_category WHERE category = ?'
-    : 'SELECT * FROM oneclick_product_category WHERE category = ?'; // Update to fetch the right category products
+    ? "SELECT * FROM oneclick_product_category WHERE category = ?"
+    : "SELECT * FROM oneclick_product_category WHERE category = ?"; // Update to fetch the right category products
 
   db.query(query, [accessoryCategory || category], (err, results) => {
     if (err) {
       console.error(`Error fetching related products: ${err.message}`);
-      return res.status(500).json({ error: 'Error fetching related products' });
+      return res.status(500).json({ error: "Error fetching related products" });
     }
 
     console.log(`Related products fetched successfully: `, results);
@@ -10956,15 +13224,12 @@ app.get('/backend/products/relatedaccessories/:category', (req, res) => {
   });
 });
 
-
-
-
 // // Fetch coupon details
 // app.get('/backend/api/coupon/:prod_id', (req, res) => {
 //   const prodId = req.params.prod_id;
 
 //   const query = `SELECT coupon, coupon_expiry_date FROM oneclick_product_category WHERE prod_id = ?`;
-  
+
 //   db.query(query, [prodId], (err, results) => {
 //       if (err) {
 //           return res.status(500).json({ error: 'Database query failed.' });
@@ -10974,12 +13239,14 @@ app.get('/backend/products/relatedaccessories/:category', (req, res) => {
 // });
 
 // Validate coupon code
-app.post('/backend/api/apply-coupon', (req, res) => {
+app.post("/backend/api/apply-coupon", (req, res) => {
   const { couponCode, product_ids } = req.body;
   console.log("Received data:", req.body);
 
   const normalizedCouponCode = couponCode.toUpperCase();
-  const productIdsArray = Array.isArray(product_ids) ? product_ids : [product_ids];
+  const productIdsArray = Array.isArray(product_ids)
+    ? product_ids
+    : [product_ids];
 
   // Query table 1: oneclick_coupons
   const queryCoupons = `
@@ -10987,35 +13254,66 @@ app.post('/backend/api/apply-coupon', (req, res) => {
     FROM oneclick_coupons 
     WHERE product_id IN (?) AND LOWER(coupon_code) = LOWER(?)`;
 
-  db.query(queryCoupons, [productIdsArray, normalizedCouponCode], (err, results) => {
-    if (err) return console.error('DB error:', err), res.status(500).json({ error: 'Database query failed.' });
+  db.query(
+    queryCoupons,
+    [productIdsArray, normalizedCouponCode],
+    (err, results) => {
+      if (err)
+        return (
+          console.error("DB error:", err),
+          res.status(500).json({ error: "Database query failed." })
+        );
 
-    console.log('Coupons table results:', results);
+      console.log("Coupons table results:", results);
 
-    if (results.length > 0) {
-      const validCoupons = results.filter(coupon => new Date(coupon.expiry_date) >= new Date());
-      if (validCoupons.length === 0) return res.status(400).json({ error: 'Coupon has expired.' });
+      if (results.length > 0) {
+        const validCoupons = results.filter(
+          (coupon) => new Date(coupon.expiry_date) >= new Date()
+        );
+        if (validCoupons.length === 0)
+          return res.status(400).json({ error: "Coupon has expired." });
 
-      const totalDiscount = validCoupons.reduce((sum, coupon) => sum + parseInt(coupon.discount_value, 10), 0);
-      return res.json({ success: true, message: 'Coupon applied successfully!', discount2: totalDiscount, min_purchase_limit: 0 });
+        const totalDiscount = validCoupons.reduce(
+          (sum, coupon) => sum + parseInt(coupon.discount_value, 10),
+          0
+        );
+        return res.json({
+          success: true,
+          message: "Coupon applied successfully!",
+          discount2: totalDiscount,
+          min_purchase_limit: 0,
+        });
+      }
+
+      // Query table 2: oneclick_common_coupon
+      const queryCommonCoupon = `SELECT min_purchase_limit, value FROM oneclick_common_coupon WHERE LOWER(name) = LOWER(?)`;
+      db.query(
+        queryCommonCoupon,
+        [normalizedCouponCode],
+        (err, commonCouponResults) => {
+          if (err)
+            return (
+              console.error("DB error:", err),
+              res.status(500).json({ error: "Database query failed." })
+            );
+
+          console.log("Common coupons table results:", commonCouponResults);
+
+          if (commonCouponResults.length === 0)
+            return res.status(400).json({ error: "Invalid coupon code." });
+
+          const { min_purchase_limit, value } = commonCouponResults[0];
+          return res.json({
+            success: true,
+            message: "Coupon applied successfully!",
+            discount1: value,
+            min_purchase_limit,
+          });
+        }
+      );
     }
-
-    // Query table 2: oneclick_common_coupon
-    const queryCommonCoupon = `SELECT min_purchase_limit, value FROM oneclick_common_coupon WHERE LOWER(name) = LOWER(?)`;
-    db.query(queryCommonCoupon, [normalizedCouponCode], (err, commonCouponResults) => {
-      if (err) return console.error('DB error:', err), res.status(500).json({ error: 'Database query failed.' });
-
-      console.log('Common coupons table results:', commonCouponResults);
-
-      if (commonCouponResults.length === 0) return res.status(400).json({ error: 'Invalid coupon code.' });
-
-      const { min_purchase_limit, value } = commonCouponResults[0];
-      return res.json({ success: true, message: 'Coupon applied successfully!', discount1: value, min_purchase_limit });
-    });
-  });
+  );
 });
-
-
 
 //////////////////////////////////
 // Assuming 'db' is your MySQL connection object
@@ -11034,8 +13332,8 @@ app.post('/backend/api/apply-coupon', (req, res) => {
 //   }
 
 //   const query = `
-//     SELECT * 
-//     FROM oneclick_product_category 
+//     SELECT *
+//     FROM oneclick_product_category
 //     WHERE category = ?
 //   `;
 
@@ -11076,7 +13374,9 @@ app.get("/backend/products/accessories/:productId", (req, res) => {
       if (additionalAccessories && additionalAccessories.length > 0) {
         res.json({ additional_accessories: additionalAccessories });
       } else {
-        res.status(404).send("No additional accessories found for the given product ID");
+        res
+          .status(404)
+          .send("No additional accessories found for the given product ID");
       }
     } else {
       res.status(404).send("No product found for the given ID");
@@ -11096,8 +13396,8 @@ app.get("/backend/products/accessory-details/:id", (req, res) => {
     WHERE id = ?
   `;
   // const sql = `
-  //   SELECT id, prod_name, prod_price, prod_img, category, effectiveprice 
-  //   FROM oneclick_product_category 
+  //   SELECT id, prod_name, prod_price, prod_img, category, effectiveprice
+  //   FROM oneclick_product_category
   //   WHERE id = ?
   // `;
 
@@ -11113,7 +13413,10 @@ app.get("/backend/products/accessory-details/:id", (req, res) => {
       console.log("Fetched accessory details:", result[0]);
 
       // Ensure prod_img is returned as a proper JSON array if it's a stringified JSON
-      if (typeof result[0].prod_img === "string" && result[0].prod_img.startsWith("blob_")) {
+      if (
+        typeof result[0].prod_img === "string" &&
+        result[0].prod_img.startsWith("blob_")
+      ) {
         result[0].prod_img = [result[0].prod_img]; // Treat as a single image in an array
       }
 
@@ -11126,19 +13429,17 @@ app.get("/backend/products/accessory-details/:id", (req, res) => {
   });
 });
 
-
-
-
-
 /////////////////coupons /////////
 
 // API Endpoint to Add Multiple Coupons
-app.post('/backend/multiplecoupons', (req, res) => {
+app.post("/backend/multiplecoupons", (req, res) => {
   const { coupons } = req.body; // Expecting an array of coupons
 
   // Validate input
   if (!Array.isArray(coupons) || coupons.length === 0) {
-    return res.status(400).json({ message: 'Invalid input data. Expecting an array of coupons.' });
+    return res
+      .status(400)
+      .json({ message: "Invalid input data. Expecting an array of coupons." });
   }
 
   // Prepare values for SQL query
@@ -11147,8 +13448,18 @@ app.post('/backend/multiplecoupons', (req, res) => {
     const { product_id, coupon_code, discount_value, expiry_date } = coupon;
 
     // Check for required fields
-    if (!product_id || !coupon_code || typeof discount_value !== 'number' || !expiry_date) {
-      return res.status(400).json({ message: 'Invalid coupon data. Each coupon must include product_id, coupon_code, discount_value, and expiry_date.' });
+    if (
+      !product_id ||
+      !coupon_code ||
+      typeof discount_value !== "number" ||
+      !expiry_date
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Invalid coupon data. Each coupon must include product_id, coupon_code, discount_value, and expiry_date.",
+        });
     }
 
     values.push([product_id, coupon_code, discount_value, expiry_date]);
@@ -11160,162 +13471,181 @@ app.post('/backend/multiplecoupons', (req, res) => {
   // Execute the query
   db.query(sql, [values], (err, result) => {
     if (err) {
-      console.error('Error inserting coupons:', err);
-      return res.status(500).json({ message: 'Error inserting coupons' });
+      console.error("Error inserting coupons:", err);
+      return res.status(500).json({ message: "Error inserting coupons" });
     }
-    res.status(200).json({ message: 'Coupons added successfully', affectedRows: result.affectedRows });
+    res
+      .status(200)
+      .json({
+        message: "Coupons added successfully",
+        affectedRows: result.affectedRows,
+      });
   });
 });
 
-
-
 // API Endpoint to Get Coupons by Product ID
-app.get('/backend/coupons/:productId', (req, res) => {
+app.get("/backend/coupons/:productId", (req, res) => {
   const productId = req.params.productId;
-  
+
   // Log the incoming request
   console.log(`Received request for coupons with product ID: ${productId}`);
 
-  const sql = 'SELECT coupon_id, coupon_code, discount_value, expiry_date FROM oneclick_coupons WHERE product_id = ? ORDER BY coupon_id DESC';
+  const sql =
+    "SELECT coupon_id, coupon_code, discount_value, expiry_date FROM oneclick_coupons WHERE product_id = ? ORDER BY coupon_id DESC";
   db.query(sql, [productId], (err, results) => {
     if (err) {
-      console.error('Error fetching coupons:', err);
-      return res.status(500).json({ message: 'Error fetching coupons' });
+      console.error("Error fetching coupons:", err);
+      return res.status(500).json({ message: "Error fetching coupons" });
     }
 
     // Log the results fetched
-    console.log(`Fetched ${results.length} coupons for product ID: ${productId}`);
+    console.log(
+      `Fetched ${results.length} coupons for product ID: ${productId}`
+    );
     res.status(200).json({ coupons: results });
   });
 });
 
-
-
 // Update Coupon Route
-app.put('/backend/edit/coupons/:id', (req, res) => {
+app.put("/backend/edit/coupons/:id", (req, res) => {
   const { id } = req.params; // Coupon ID from URL
   const { coupon_code, expiry_date, couponValue } = req.body; // Get data from request body
 
   // SQL query to update coupon
-  const query = 'UPDATE oneclick_coupons SET discount_value = ?, coupon_code = ?, expiry_date = ? WHERE coupon_id = ?';
+  const query =
+    "UPDATE oneclick_coupons SET discount_value = ?, coupon_code = ?, expiry_date = ? WHERE coupon_id = ?";
   const values = [couponValue, coupon_code, expiry_date, id];
 
   db.query(query, values, (error, results) => {
     if (error) {
-      console.error('Error updating coupon:', error);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ error: 'Coupon not found' });
+      console.error("Error updating coupon:", error);
+      return res.status(500).json({ error: "Database error" });
     }
 
-    res.json({ message: 'Coupon updated successfully' });
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: "Coupon not found" });
+    }
+
+    res.json({ message: "Coupon updated successfully" });
   });
 });
 
 // Delete Coupon Route
-app.delete('/backend/deletecoupons/:id', (req, res) => {
+app.delete("/backend/deletecoupons/:id", (req, res) => {
   const { id } = req.params; // Coupon ID from URL
 
   // SQL query to delete coupon
-  const query = 'DELETE FROM oneclick_coupons WHERE coupon_id = ?';
+  const query = "DELETE FROM oneclick_coupons WHERE coupon_id = ?";
 
   db.query(query, [id], (error, results) => {
     if (error) {
-      console.error('Error deleting coupon:', error);
-      return res.status(500).json({ error: 'Database error' });
+      console.error("Error deleting coupon:", error);
+      return res.status(500).json({ error: "Database error" });
     }
 
     if (results.affectedRows === 0) {
-      return res.status(404).json({ error: 'Coupon not found' });
+      return res.status(404).json({ error: "Coupon not found" });
     }
 
-    res.json({ message: 'Coupon deleted successfully' });
+    res.json({ message: "Coupon deleted successfully" });
   });
 });
 
 //////////////////////////////////////
 // Fetch all notifications ordered by created_at
-app.get('/backend/notifications', (req, res) => {
-  db.query('SELECT * FROM oneclick_notifications ORDER BY created_at DESC', (err, results) => {
-    if (err) {
-      console.error('Error fetching notifications:', err);
-      return res.status(500).json({ message: 'Error fetching notifications' });
+app.get("/backend/notifications", (req, res) => {
+  db.query(
+    "SELECT * FROM oneclick_notifications ORDER BY created_at DESC",
+    (err, results) => {
+      if (err) {
+        console.error("Error fetching notifications:", err);
+        return res
+          .status(500)
+          .json({ message: "Error fetching notifications" });
+      }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 // Mark notification as read
-app.patch('/backend/notifications/:id/read', (req, res) => {
+app.patch("/backend/notifications/:id/read", (req, res) => {
   const { id } = req.params;
-  db.query('UPDATE oneclick_notifications SET is_read = TRUE WHERE id = ?', [id], (err) => {
-    if (err) {
-      console.error('Error marking notification as read:', err);
-      return res.status(500).json({ message: 'Error updating notification' });
-    }
-    res.sendStatus(200);
-  });
-});
-
-// Delete notifications older than 15 days
-// Delete notifications older than 15 days
-app.delete('/backend/notifications/delete-old', (req, res) => {
-  const fifteenDaysAgo = new Date();
-  fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-
   db.query(
-    'DELETE FROM oneclick_notifications WHERE created_at < ?',
-    [fifteenDaysAgo],
+    "UPDATE oneclick_notifications SET is_read = TRUE WHERE id = ?",
+    [id],
     (err) => {
       if (err) {
-        console.error('Error deleting old notifications:', err);
-        return res.status(500).json({ message: 'Error deleting old notifications' });
+        console.error("Error marking notification as read:", err);
+        return res.status(500).json({ message: "Error updating notification" });
       }
       res.sendStatus(200);
     }
   );
 });
 
+// Delete notifications older than 15 days
+// Delete notifications older than 15 days
+app.delete("/backend/notifications/delete-old", (req, res) => {
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+  db.query(
+    "DELETE FROM oneclick_notifications WHERE created_at < ?",
+    [fifteenDaysAgo],
+    (err) => {
+      if (err) {
+        console.error("Error deleting old notifications:", err);
+        return res
+          .status(500)
+          .json({ message: "Error deleting old notifications" });
+      }
+      res.sendStatus(200);
+    }
+  );
+});
 
 // Mark all notifications as read
-app.patch('/backend/notifications/mark-all-read', (req, res) => {
+app.patch("/backend/notifications/mark-all-read", (req, res) => {
   // Query to update all notifications as read (set `is_read` to TRUE)
-  db.query('UPDATE oneclick_notifications SET is_read = 1', (err, results) => {
+  db.query("UPDATE oneclick_notifications SET is_read = 1", (err, results) => {
     if (err) {
-      console.error('Error marking all notifications as read:', err);
-      return res.status(500).json({ message: 'Error updating notifications' });
+      console.error("Error marking all notifications as read:", err);
+      return res.status(500).json({ message: "Error updating notifications" });
     }
     res.sendStatus(200); // Successfully marked all notifications as read
   });
 });
 ////////common coupon code//////////
 
-
 // Get all coupons
 app.get("/backend/api/fetchcoupons", (req, res) => {
   console.log("Fetching all coupons...");
-  
+
   // Query to fetch coupons
-  db.query("SELECT * FROM oneclick_common_coupon ORDER BY id DESC LIMIT 1", (err, results) => {
-    if (err) {
-      console.error("Error fetching coupons:", err);
-      return res.status(500).json({ error: "Failed to fetch coupons", details: err });
-    }
+  db.query(
+    "SELECT * FROM oneclick_common_coupon ORDER BY id DESC LIMIT 1",
+    (err, results) => {
+      if (err) {
+        console.error("Error fetching coupons:", err);
+        return res
+          .status(500)
+          .json({ error: "Failed to fetch coupons", details: err });
+      }
 
-    // Log the fetched results
-    console.log("Fetched coupons successfully:", results);
+      // Log the fetched results
+      console.log("Fetched coupons successfully:", results);
 
-    if (results.length > 0) {
-      // Send the coupon data as a JSON response
-      res.json(results);
-    } else {
-      // Handle case where no coupons are found
-      console.log("No coupons found in database.");
-      res.status(404).json({ error: "No coupons found" });
+      if (results.length > 0) {
+        // Send the coupon data as a JSON response
+        res.json(results);
+      } else {
+        // Handle case where no coupons are found
+        console.log("No coupons found in database.");
+        res.status(404).json({ error: "No coupons found" });
+      }
     }
-  });
+  );
 });
 
 // Add a new coupon
@@ -11382,10 +13712,11 @@ app.get("/backend/api/fetchstaff", (req, res) => {
 // Add a new staff
 app.post("/backend/api/addstaff", (req, res) => {
   const { staffname, username, password, status } = req.body;
-  const query = "INSERT INTO oneclick_staff (staffname, username, password, status) VALUES (?, ?, ?, ?)";
+  const query =
+    "INSERT INTO oneclick_staff (staffname, username, password, status) VALUES (?, ?, ?, ?)";
   db.query(query, [staffname, username, password, status], (err, results) => {
     if (err) throw err;
-    res.json({ id: results.insertId, staffname,  username, password, status });
+    res.json({ id: results.insertId, staffname, username, password, status });
   });
 });
 
@@ -11399,18 +13730,25 @@ app.put("/backend/api/updatestaff/:id", (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(query, [staffname, username, password, status, staffId], (err, results) => {
-    if (err) {
-      console.error("Error updating staff:", err);
-      return res.status(500).json({ message: "Failed to update staff." });
-    }
+  db.query(
+    query,
+    [staffname, username, password, status, staffId],
+    (err, results) => {
+      if (err) {
+        console.error("Error updating staff:", err);
+        return res.status(500).json({ message: "Failed to update staff." });
+      }
 
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ message: "Staff not found" });
-    }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: "Staff not found" });
+      }
 
-    res.json({ message: "Staff updated successfully", staff: { id: staffId, staffname, username, password, status } });
-  });
+      res.json({
+        message: "Staff updated successfully",
+        staff: { id: staffId, staffname, username, password, status },
+      });
+    }
+  );
 });
 
 // Delete a staff
@@ -11453,34 +13791,46 @@ app.get("/backend/getcomputeraccessories", (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+  db.query(
+    fetchAdditionalAccessoriesSQL,
+    [productId],
+    (err, additionalAccessoriesResult) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ error: "Error fetching additional accessories." });
+      }
 
-    const additionalAccessories = additionalAccessoriesResult.length ? additionalAccessoriesResult[0].additional_accessories : null;
+      const additionalAccessories = additionalAccessoriesResult.length
+        ? additionalAccessoriesResult[0].additional_accessories
+        : null;
 
-    const fetchCategoryAccessoriesSQL = `
+      const fetchCategoryAccessoriesSQL = `
       SELECT * 
       FROM oneclick_product_category 
       WHERE category = 'ComputerAccessories'
     `;
 
-    db.query(fetchCategoryAccessoriesSQL, (err, categoryAccessoriesResult) => {
-      if (err) {
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+      db.query(
+        fetchCategoryAccessoriesSQL,
+        (err, categoryAccessoriesResult) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ error: "Error fetching accessories for category." });
+          }
 
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult
-      };
+          const result = {
+            additionalAccessories,
+            categoryAccessories: categoryAccessoriesResult,
+          };
 
-      res.status(200).json(result);
-    });
-  });
+          res.status(200).json(result);
+        }
+      );
+    }
+  );
 });
-
 
 app.get("/backend/getmobileaccessories", (req, res) => {
   const { productId } = req.query;
@@ -11495,34 +13845,46 @@ app.get("/backend/getmobileaccessories", (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+  db.query(
+    fetchAdditionalAccessoriesSQL,
+    [productId],
+    (err, additionalAccessoriesResult) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ error: "Error fetching additional accessories." });
+      }
 
-    const additionalAccessories = additionalAccessoriesResult.length ? additionalAccessoriesResult[0].additional_accessories : null;
+      const additionalAccessories = additionalAccessoriesResult.length
+        ? additionalAccessoriesResult[0].additional_accessories
+        : null;
 
-    const fetchCategoryAccessoriesSQL = `
+      const fetchCategoryAccessoriesSQL = `
       SELECT * 
       FROM oneclick_product_category 
       WHERE category = 'MobileAccessories'
     `;
 
-    db.query(fetchCategoryAccessoriesSQL, (err, categoryAccessoriesResult) => {
-      if (err) {
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+      db.query(
+        fetchCategoryAccessoriesSQL,
+        (err, categoryAccessoriesResult) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ error: "Error fetching accessories for category." });
+          }
 
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult
-      };
+          const result = {
+            additionalAccessories,
+            categoryAccessories: categoryAccessoriesResult,
+          };
 
-      res.status(200).json(result);
-    });
-  });
+          res.status(200).json(result);
+        }
+      );
+    }
+  );
 });
-
 
 app.get("/backend/getcctvaccessories", (req, res) => {
   const { productId } = req.query;
@@ -11537,32 +13899,45 @@ app.get("/backend/getcctvaccessories", (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+  db.query(
+    fetchAdditionalAccessoriesSQL,
+    [productId],
+    (err, additionalAccessoriesResult) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ error: "Error fetching additional accessories." });
+      }
 
-    const additionalAccessories = additionalAccessoriesResult.length ? additionalAccessoriesResult[0].additional_accessories : null;
+      const additionalAccessories = additionalAccessoriesResult.length
+        ? additionalAccessoriesResult[0].additional_accessories
+        : null;
 
-    const fetchCategoryAccessoriesSQL = `
+      const fetchCategoryAccessoriesSQL = `
       SELECT * 
       FROM oneclick_product_category 
       WHERE category = 'CCTVAccessories'
     `;
 
-    db.query(fetchCategoryAccessoriesSQL, (err, categoryAccessoriesResult) => {
-      if (err) {
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+      db.query(
+        fetchCategoryAccessoriesSQL,
+        (err, categoryAccessoriesResult) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ error: "Error fetching accessories for category." });
+          }
 
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult
-      };
+          const result = {
+            additionalAccessories,
+            categoryAccessories: categoryAccessoriesResult,
+          };
 
-      res.status(200).json(result);
-    });
-  });
+          res.status(200).json(result);
+        }
+      );
+    }
+  );
 });
 
 app.get("/backend/getprinteraccessories", (req, res) => {
@@ -11578,34 +13953,46 @@ app.get("/backend/getprinteraccessories", (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(fetchAdditionalAccessoriesSQL, [productId], (err, additionalAccessoriesResult) => {
-    if (err) {
-      return res.status(500).json({ error: "Error fetching additional accessories." });
-    }
+  db.query(
+    fetchAdditionalAccessoriesSQL,
+    [productId],
+    (err, additionalAccessoriesResult) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ error: "Error fetching additional accessories." });
+      }
 
-    const additionalAccessories = additionalAccessoriesResult.length ? additionalAccessoriesResult[0].additional_accessories : null;
+      const additionalAccessories = additionalAccessoriesResult.length
+        ? additionalAccessoriesResult[0].additional_accessories
+        : null;
 
-    const fetchCategoryAccessoriesSQL = `
+      const fetchCategoryAccessoriesSQL = `
       SELECT * 
       FROM oneclick_product_category 
       WHERE category = 'PrinterAccessories'
     `;
 
-    db.query(fetchCategoryAccessoriesSQL, (err, categoryAccessoriesResult) => {
-      if (err) {
-        return res.status(500).json({ error: "Error fetching accessories for category." });
-      }
+      db.query(
+        fetchCategoryAccessoriesSQL,
+        (err, categoryAccessoriesResult) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ error: "Error fetching accessories for category." });
+          }
 
-      const result = {
-        additionalAccessories,
-        categoryAccessories: categoryAccessoriesResult
-      };
+          const result = {
+            additionalAccessories,
+            categoryAccessories: categoryAccessoriesResult,
+          };
 
-      res.status(200).json(result);
-    });
-  });
+          res.status(200).json(result);
+        }
+      );
+    }
+  );
 });
-
 
 app.post("/backend/addfrequentlybuy", (req, res) => {
   const { id, accessoryIds } = req.body;
@@ -11618,37 +14005,42 @@ app.post("/backend/addfrequentlybuy", (req, res) => {
   });
 });
 
-
-
 /////////////offerprice///////////////
 // POST: Create a new offer
 // POST: Add a new offer
-app.post('/backend/api/products/addoffer', (req, res) => {
+app.post("/backend/api/products/addoffer", (req, res) => {
   const { productId, offer_start_time, offer_end_time, offer_price } = req.body;
-  
+
   console.log("Received request to add offer:", req.body); // Log received data
-  
+
   const sql = `
     INSERT INTO oneclick_product_category (id, offer_start_time, offer_end_time, offer_price)
     VALUES (?, ?, ?, ?)
   `;
-  
-  db.query(sql, [productId, offer_start_time, offer_end_time, offer_price], (err, result) => {
-    if (err) {
-      console.error("Error creating offer:", err); // Log error
-      return res.status(500).json({ error: "Error creating offer" });
+
+  db.query(
+    sql,
+    [productId, offer_start_time, offer_end_time, offer_price],
+    (err, result) => {
+      if (err) {
+        console.error("Error creating offer:", err); // Log error
+        return res.status(500).json({ error: "Error creating offer" });
+      }
+      console.log("Offer created successfully for productId:", productId); // Log success
+      res.status(200).json({ message: "Offer created successfully" });
     }
-    console.log("Offer created successfully for productId:", productId); // Log success
-    res.status(200).json({ message: "Offer created successfully" });
-  });
+  );
 });
 
 // PUT: Update an existing offer
-app.put('/backend/api/products/updateoffer/:id', (req, res) => {
+app.put("/backend/api/products/updateoffer/:id", (req, res) => {
   const { offer_start_time, offer_end_time, offer_price } = req.body;
   const { id } = req.params;
 
-  console.log(`Received request to update offer for productId: ${id}`, req.body); // Log received data
+  console.log(
+    `Received request to update offer for productId: ${id}`,
+    req.body
+  ); // Log received data
 
   const sql = `
     UPDATE oneclick_product_category
@@ -11656,22 +14048,26 @@ app.put('/backend/api/products/updateoffer/:id', (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(sql, [offer_start_time, offer_end_time, offer_price, id], (err, result) => {
-    if (err) {
-      console.error(`Error updating offer for productId: ${id}`, err); // Log error
-      return res.status(500).json({ error: "Error updating offer" });
+  db.query(
+    sql,
+    [offer_start_time, offer_end_time, offer_price, id],
+    (err, result) => {
+      if (err) {
+        console.error(`Error updating offer for productId: ${id}`, err); // Log error
+        return res.status(500).json({ error: "Error updating offer" });
+      }
+      console.log(`Offer updated successfully for productId: ${id}`); // Log success
+      res.status(200).json({ message: "Offer updated successfully" });
     }
-    console.log(`Offer updated successfully for productId: ${id}`); // Log success
-    res.status(200).json({ message: "Offer updated successfully" });
-  });
+  );
 });
 
 // DELETE: Delete an offer
-app.delete('/backend/api/products/deleteoffer/:id', (req, res) => {
+app.delete("/backend/api/products/deleteoffer/:id", (req, res) => {
   const { id } = req.params;
 
   console.log(`Received request to delete offer for productId: ${id}`); // Log received productId
-  
+
   const sql = `
     DELETE FROM oneclick_product_category WHERE id = ?
   `;
@@ -11687,7 +14083,7 @@ app.delete('/backend/api/products/deleteoffer/:id', (req, res) => {
 });
 
 // GET: Get offer details for a product
-app.get('/backend/api/products/fetchoffer/:id', (req, res) => {
+app.get("/backend/api/products/fetchoffer/:id", (req, res) => {
   const { id } = req.params;
 
   console.log(`Received request to fetch offer for productId: ${id}`);
@@ -11716,9 +14112,7 @@ app.get('/backend/api/products/fetchoffer/:id', (req, res) => {
 
 ///////////copyproduct//////////////
 
-
-
-app.post('/backend/api/copy-product/:id', async (req, res) => {
+app.post("/backend/api/copy-product/:id", async (req, res) => {
   const productId = req.params.id;
 
   try {
@@ -11728,8 +14122,8 @@ app.post('/backend/api/copy-product/:id', async (req, res) => {
     const getProductQuery = `SELECT * FROM oneclick_product_category WHERE id = ?`;
     db.query(getProductQuery, [productId], (err, productResult) => {
       if (err || productResult.length === 0) {
-        console.error('Error fetching original product:', err);
-        return res.status(500).json({ message: 'Error fetching product' });
+        console.error("Error fetching original product:", err);
+        return res.status(500).json({ message: "Error fetching product" });
       }
 
       const originalProduct = productResult[0];
@@ -11743,78 +14137,99 @@ app.post('/backend/api/copy-product/:id', async (req, res) => {
         WHERE id = ?
       `;
 
-      db.query(copyProductQuery, [newProdId, productId], (copyErr, copyResult) => {
-        if (copyErr) {
-          console.error('Error copying product:', copyErr);
-          return res.status(500).json({ message: 'Server error while copying product' });
-        }
+      db.query(
+        copyProductQuery,
+        [newProdId, productId],
+        (copyErr, copyResult) => {
+          if (copyErr) {
+            console.error("Error copying product:", copyErr);
+            return res
+              .status(500)
+              .json({ message: "Server error while copying product" });
+          }
 
-        // Step 3: Check if category is Mobiles or Computers
-        if (originalProduct.category === 'Mobiles' || originalProduct.category === 'Computers') {
-          const fetchFeaturesQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
+          // Step 3: Check if category is Mobiles or Computers
+          if (
+            originalProduct.category === "Mobiles" ||
+            originalProduct.category === "Computers"
+          ) {
+            const fetchFeaturesQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id = ?`;
 
-          db.query(fetchFeaturesQuery, [originalProduct.prod_id], (featureErr, featureResult) => {
-            if (featureErr) {
-              console.error('Error fetching features:', featureErr);
-              return res.status(500).json({ message: 'Error fetching features' });
-            }
+            db.query(
+              fetchFeaturesQuery,
+              [originalProduct.prod_id],
+              (featureErr, featureResult) => {
+                if (featureErr) {
+                  console.error("Error fetching features:", featureErr);
+                  return res
+                    .status(500)
+                    .json({ message: "Error fetching features" });
+                }
 
-            if (featureResult.length > 0) {
-              // Step 4: Insert features for the new product (handling all fields)
-              const features = featureResult[0]; // Assuming one feature set per product
+                if (featureResult.length > 0) {
+                  // Step 4: Insert features for the new product (handling all fields)
+                  const features = featureResult[0]; // Assuming one feature set per product
 
-              const insertFeaturesQuery = `
+                  const insertFeaturesQuery = `
                 INSERT INTO oneclick_mobile_features 
                 (prod_id, memory, storage, processor, camera, display, battery, os, network, others) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               `;
 
-              db.query(insertFeaturesQuery, [
-                newProdId, 
-                features.memory, 
-                features.storage, 
-                features.processor, 
-                features.camera, 
-                features.display, 
-                features.battery, 
-                features.os, 
-                features.network, 
-                features.others
-              ], (insertErr) => {
-                if (insertErr) {
-                  console.error('Error inserting features:', insertErr);
-                  return res.status(500).json({ message: 'Error copying features' });
-                }
+                  db.query(
+                    insertFeaturesQuery,
+                    [
+                      newProdId,
+                      features.memory,
+                      features.storage,
+                      features.processor,
+                      features.camera,
+                      features.display,
+                      features.battery,
+                      features.os,
+                      features.network,
+                      features.others,
+                    ],
+                    (insertErr) => {
+                      if (insertErr) {
+                        console.error("Error inserting features:", insertErr);
+                        return res
+                          .status(500)
+                          .json({ message: "Error copying features" });
+                      }
 
-                // Step 5: Success response with new product ID
-                return res.status(200).json({
-                  message: 'Product and features copied successfully',
-                  newProductId: copyResult.insertId,
-                });
-              });
-            } else {
-              // No features found, but product copied successfully
-              return res.status(200).json({
-                message: 'Product copied successfully (no features to copy)',
-                newProductId: copyResult.insertId,
-              });
-            }
-          });
-        } else {
-          // Category is not Mobiles or Computers
-          return res.status(200).json({
-            message: 'Product copied successfully',
-            newProductId: copyResult.insertId,
-          });
+                      // Step 5: Success response with new product ID
+                      return res.status(200).json({
+                        message: "Product and features copied successfully",
+                        newProductId: copyResult.insertId,
+                      });
+                    }
+                  );
+                } else {
+                  // No features found, but product copied successfully
+                  return res.status(200).json({
+                    message:
+                      "Product copied successfully (no features to copy)",
+                    newProductId: copyResult.insertId,
+                  });
+                }
+              }
+            );
+          } else {
+            // Category is not Mobiles or Computers
+            return res.status(200).json({
+              message: "Product copied successfully",
+              newProductId: copyResult.insertId,
+            });
+          }
         }
-      });
+      );
     });
   } catch (error) {
-    console.error('Server error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Server error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
-
 
 app.get("/backend/pending-payment", (req, res) => {
   const sql = "SELECT total_amount FROM oneclick_orders WHERE status != 'Paid'";
@@ -11828,7 +14243,6 @@ app.get("/backend/pending-payment", (req, res) => {
     res.status(200).json(results); // Return all pending payments data
   });
 });
-
 
 ////////////Cancel process/////////
 
@@ -11850,14 +14264,16 @@ app.post("/backend/cancelOrder", (req, res) => {
   db.query(query, [orderId], (error, result) => {
     if (error) {
       console.error("Database error while cancelling order:", error);
-      return res.status(500).json({ error: "Internal server error." }); // ✅ Response is returned immediately
+      return res.status(500).json({ error: "Internal server error." }); //  Response is returned immediately
     }
 
     if (result.affectedRows > 0) {
-      return res.json({ message: "Order successfully cancelled." }); // ✅ Return added to prevent multiple responses
-    } 
-    
-    return res.status(404).json({ error: "Order not found or already cancelled." }); // ✅ Return added
+      return res.json({ message: "Order successfully cancelled." }); //  Return added to prevent multiple responses
+    }
+
+    return res
+      .status(404)
+      .json({ error: "Order not found or already cancelled." }); //  Return added
   });
 });
 
@@ -11865,10 +14281,10 @@ app.post("/backend/cancelOrder", (req, res) => {
 
 // app.post("/api/add-product", (req, res) => {
 //   const { name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features } = req.body;
-  
-//   const sql = `INSERT INTO oneclick_products (name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features) 
+
+//   const sql = `INSERT INTO oneclick_products (name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features)
 //                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  
+
 //   db.query(sql, [name, image, mrp_price, selling_price, offer_label, subtitle, delivery_charge, category, features], (err, result) => {
 //     if (err) return res.status(500).json({ message: "Database Error", error: err });
 //     res.json({ message: "Product added successfully" });
@@ -11900,12 +14316,10 @@ app.post("/backend/api/update-order-status", (req, res) => {
   });
 });
 
-
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Something went wrong." });
 });
-
 
 ////////////////////////////////////
 app.get("/backend/", (req, res) => {
@@ -11916,4 +14330,3 @@ app.get("/backend/", (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
-
