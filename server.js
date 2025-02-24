@@ -2179,7 +2179,7 @@ app.get("/backend/api/products", (req, res) => {
         const limit = categoryLimits[category]; // Get the limit for the current category
         const query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
 
-        console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
+        // console.log(`Fetching ${limit} products for category: ${category}`); // Log category and limit
 
         db.query(query, [category, limit], (err, results) => {
           if (err) {
@@ -2513,6 +2513,7 @@ app.get("/backend/fetchcomputers", (req, res) => {
       p.category, 
       p.prod_price, 
       p.actual_price, 
+      p.offer_price, 
       p.prod_img, 
       p.status,
       p.productStatus,
@@ -3323,7 +3324,8 @@ app.get("/backend/fetchmobiles", (req, res) => {
       p.id, 
       p.category, 
       p.prod_price, 
-      p.actual_price, 
+      p.actual_price,
+      p.offer_price, 
       p.prod_img, 
       p.status,
       p.productStatus,
