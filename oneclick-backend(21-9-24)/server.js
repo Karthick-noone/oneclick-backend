@@ -126,9 +126,13 @@ const resumeStorage = multer.diskStorage({
     cb(null, dir); // Directory to save resumes
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`); // Generate a unique file name
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp // Generate a unique file name
   }
 });
 
@@ -774,9 +778,13 @@ const computersStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -902,9 +910,13 @@ const mobilesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1024,9 +1036,13 @@ const cctvStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1148,9 +1164,13 @@ const tvStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1271,9 +1291,13 @@ const headphonesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1394,9 +1418,13 @@ const speakersStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1516,9 +1544,13 @@ const watchStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1645,9 +1677,13 @@ const printersStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1766,9 +1802,13 @@ const mobileaccessoriesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -1889,9 +1929,13 @@ const computeraccessoriesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -2010,9 +2054,13 @@ const edithomepageStorageMultiple = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -2028,9 +2076,13 @@ const edithomepageStorageSingle = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -2340,9 +2392,13 @@ const doubleadpageStorageMultiple = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 
@@ -2358,9 +2414,13 @@ const doubleadpageStorageSingle = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   }
 });
 

@@ -320,9 +320,13 @@ const resumeStorage = multer.diskStorage({
     cb(null, dir); // Directory to save resumes
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`); // Generate a unique file name
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp // Generate a unique file name
   },
 });
 
@@ -2274,9 +2278,13 @@ const computersStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -3062,7 +3070,6 @@ app.delete("/backend/deletecomputers/:id", (req, res) => {
 
 ////////////////mobiles////////////////////////////
 
-// Set up multer for file uploads in the `/cctv` endpoint
 const mobilesStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Ensure the uploads/mobiles directory exists
@@ -3075,11 +3082,16 @@ const mobilesStorage = multer.diskStorage({
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
 const mobilesUpload = multer({ storage: mobilesStorage });
+
 
 app.post(
   "/backend/uploadmobilesimages",
@@ -3895,9 +3907,13 @@ const cctvStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -4319,9 +4335,13 @@ const secondhandproductsStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -4748,9 +4768,13 @@ const tvStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -5153,9 +5177,13 @@ const headphonesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -5580,9 +5608,13 @@ const speakersStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -5996,9 +6028,13 @@ const watchStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -6416,9 +6452,13 @@ const printersStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -6832,9 +6872,13 @@ const mobileaccessoriesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -7258,9 +7302,13 @@ const printeraccessoriesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -7682,9 +7730,13 @@ const cctvaccessoriesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -8107,9 +8159,13 @@ const computeraccessoriesStorage = multer.diskStorage({
     cb(null, dir); // Directory to save the images
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -9879,9 +9935,13 @@ const offerspageStorageMultiple = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -9899,9 +9959,13 @@ const offerspageStorageSingle = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -10149,9 +10213,13 @@ const mobileofferspageStorageMultiple = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -10169,9 +10237,13 @@ const mobileofferspageStorageSingle = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -10419,9 +10491,13 @@ const cctvofferspageStorageMultiple = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -10439,9 +10515,13 @@ const cctvofferspageStorageSingle = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+   const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${Date.now()}${ext}`);
+
+    // Remove spaces and special characters from filename
+    const sanitizedFileName = name.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    cb(null, `${sanitizedFileName}${ext}`); // Store image without timestamp
   },
 });
 
@@ -12555,22 +12635,28 @@ app.get("/backend/api/my-orders/:userId", (req, res) => {
   db.query(ordersQuery, [userId], (orderError, orders) => {
     if (orderError) {
       console.error("Error fetching orders:", orderError);
-      return res
-        .status(500)
-        .json({ message: "Error fetching orders", error: orderError.message });
+      return res.status(500).json({ 
+        message: "Error fetching orders", 
+        error: orderError.message 
+      });
     }
+
+    console.log(`Orders retrieved for user ${userId}:`, orders);
 
     if (!orders || orders.length === 0) {
       console.log("No orders found for user:", userId);
       return res.status(200).json({ orders: [] });
     }
 
-    // 2. Extract order identifiers (assumed to be in order.unique_id)
-    const orderIds = orders.map((order) => order.unique_id);
-    // Build a comma-separated list of placeholders for the IN clause
-    const placeholders = orderIds.map(() => "?").join(",");
+    // 2. Extract order unique identifiers (using unique_id)
+    const orderUniqueIds = orders.map((order) => order.unique_id);
+    console.log("Extracted order unique IDs:", orderUniqueIds);
 
-    // 3. Fetch product details for the orders
+    // Build a comma-separated list of placeholders for the IN clause
+    const placeholders = orderUniqueIds.map(() => "?").join(",");
+    console.log("Placeholders for product query:", placeholders);
+
+    // 3. Fetch product details for the orders using the unique_id
     const productsQuery = `
       SELECT 
         oi.order_id, 
@@ -12587,20 +12673,25 @@ app.get("/backend/api/my-orders/:userId", (req, res) => {
       WHERE oi.order_id IN (${placeholders})
     `;
 
-    console.log("Fetching products for order IDs:", orderIds);
+    console.log("Fetching products for order unique IDs:", orderUniqueIds);
+    console.log("Products query:", productsQuery);
 
-    db.query(productsQuery, orderIds, (prodError, products) => {
+    db.query(productsQuery, orderUniqueIds, (prodError, products) => {
       if (prodError) {
         console.error("Error fetching products:", prodError);
-        return res
-          .status(500)
-          .json({
-            message: "Error fetching products",
-            error: prodError.message,
-          });
+        return res.status(500).json({ 
+          message: "Error fetching products", 
+          error: prodError.message 
+        });
       }
 
-      // Group products by order_id
+      console.log("Products retrieved:", products);
+
+      if (!products || products.length === 0) {
+        console.warn("No products found for order unique IDs:", orderUniqueIds);
+      }
+
+      // Group products by order_id (which is now the unique_id)
       const productsByOrder = {};
       products.forEach((product) => {
         if (!productsByOrder[product.order_id]) {
@@ -12618,17 +12709,21 @@ app.get("/backend/api/my-orders/:userId", (req, res) => {
           total_price: product.quantity * product.prod_price,
         });
       });
+      console.log("Grouped products by order (unique_id):", productsByOrder);
 
-      // Merge products with their respective orders
+      // Merge products with their respective orders using unique_id as key
       const formattedOrders = orders.map((order) => ({
         ...order,
         products: productsByOrder[order.unique_id] || [],
       }));
+      console.log("Formatted orders with products:", formattedOrders);
 
       res.status(200).json({ orders: formattedOrders });
     });
   });
 });
+
+
 
 ///////////buy later/////////////
 app.post("/backend/api/store-buy-later", (req, res) => {
