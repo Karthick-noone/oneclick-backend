@@ -10254,7 +10254,22 @@ const mobileofferspageUploadSingle = multer({
 // Route to fetch all products
 app.get("/backend/fetchmobileofferspage", (req, res) => {
   const sql =
-    'SELECT * FROM oneclick_offerspage WHERE category="mobiles" ORDER BY id DESC ';
+    'SELECT * FROM oneclick_offerspage WHERE category="mobiles" ORDER BY id DESC LIMIT 2 ';
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ message: "Failed to fetch product" });
+    }
+
+    res.json(results);
+  });
+});
+
+
+// Route to fetch all products
+app.get("/backend/fetchproductdetailsofferspage", (req, res) => {
+  const sql =
+    'SELECT * FROM oneclick_offerspage WHERE category="product_details" ORDER BY id DESC LIMIT 2 ';
   db.query(sql, (err, results) => {
     if (err) {
       console.error("Error fetching product:", err);
@@ -10267,7 +10282,7 @@ app.get("/backend/fetchmobileofferspage", (req, res) => {
 
 // Endpoint to add a new product with multiple images
 app.post(
-  "/backend/mobileofferspage",
+  "/backend/add-productdetails-offerspage-banner",
   mobileofferspageUploadMultiple,
   (req, res) => {
     // console.log('Received files:', req.files);
@@ -10281,7 +10296,7 @@ app.post(
       "INSERT INTO oneclick_offerspage (offer, brand_name, title, description, category, image) VALUES (?, ?, ?, ?, ?, ?)";
     db.query(
       sql,
-      [offer, brand_name, title, description, "mobiles", images.join(",")],
+      [offer, brand_name, title, description, "product_details", images.join(",")],
       (err, result) => {
         if (err) {
           console.error("Error inserting into database:", err);
@@ -11236,57 +11251,58 @@ app.post("/backend/api/change-password", (req, res) => {
 // });
 // API endpoint for fetching product suggestions
 app.get("/backend/api/suggestions", (req, res) => {
-  const query = req.query.query.toLowerCase();
-
-  // Log the incoming search query
+  // Convert the incoming query to lowercase
+  let query = req.query.query.toLowerCase();
   console.log(`Search query received: "${query}"`);
 
-  // SQL query to prioritize main categories over accessories
+  // Normalize the query by removing spaces
+  const normalizedQuery = query.replace(/\s+/g, '');
+  console.log(`Normalized search query: "${normalizedQuery}"`);
+
+  // Build a SQL query that concatenates prod_name and prod_features,
+  // converts them to lowercase, and removes spaces so the search becomes uniform.
   const sql = `
     SELECT category 
     FROM oneclick_product_category 
-    WHERE prod_name LIKE ? OR prod_features LIKE ?
+    WHERE REPLACE(LOWER(CONCAT_WS('', prod_name, prod_features)), ' ', '') LIKE ?
     ORDER BY 
       CASE 
-        WHEN category IN ('Computers', 'Mobiles', 'CCTV', 'Printers') THEN 1  -- Highest priority for main categories
-        WHEN category IN ('ComputerAccessories', 'MobileAccessories') THEN 2  -- Lower priority for accessories
+        WHEN category IN ('Computers', 'Mobiles', 'CCTV', 'Printers') THEN 1
+        WHEN category IN ('ComputerAccessories', 'MobileAccessories') THEN 2
         ELSE 3
       END,
       CASE 
-        WHEN prod_name LIKE ? THEN 1  -- Give priority to prod_name matches
-        WHEN prod_features LIKE ? THEN 2 -- Lower priority to prod_features matches
+        WHEN REPLACE(LOWER(prod_name), ' ', '') LIKE ? THEN 1
+        WHEN REPLACE(LOWER(prod_features), ' ', '') LIKE ? THEN 2
         ELSE 3
       END
   `;
 
-  // Use wildcard search
-  const searchTerm = `%${query}%`;
+  // Use the normalized query wrapped in wildcards
+  const searchTerm = `%${normalizedQuery}%`;
 
-  // Execute the query
   db.query(
     sql,
-    [searchTerm, searchTerm, searchTerm, searchTerm],
+    [searchTerm, searchTerm, searchTerm],
     (error, results) => {
       if (error) {
         console.error("Error executing query:", error);
         return res.status(500).json({ message: "Internal server error" });
       }
 
-      // Log the results from the database
-      console.log(`Query results:`, results);
+      console.log("Query results:", results);
 
       if (results.length > 0) {
-        // If products are found, send the first product's category
         console.log(`Product found. Category: "${results[0].category}"`);
         res.json({ category: results[0].category });
       } else {
-        // If no products are found, send a not found message
         console.warn(`No products found for query: "${query}"`);
         res.status(404).json({ message: "Product not found" });
       }
     }
   );
 });
+
 
 ////////////useraddress/////////////////////
 
@@ -12620,6 +12636,9 @@ app.get("/backend/my-orders/:userId", (req, res) => {
   });
 });
 
+// Fetch orders with product details
+// Fetch user orders with products
+
 app.get("/backend/api/my-orders/:userId", (req, res) => {
   const userId = req.params.userId;
   console.log("Fetching orders for user:", userId);
@@ -12964,7 +12983,7 @@ function getProductDetails(productIdsWithQuantities, res) {
   const placeholders = productIdsWithQuantities.map(() => "?").join(", ");
 
   const sql = `
-    SELECT prod_id, prod_name, prod_features, prod_price, prod_img, category 
+    SELECT * 
     FROM oneclick_product_category 
     WHERE prod_id IN (${placeholders})
   `;
@@ -13185,8 +13204,10 @@ app.get("/backend/api/get-order-status", (req, res) => {
 
 //////////////////////
 // Route to get product details by ID, including features
-app.get("/backend/products/:id", (req, res) => {
+app.get("/backend/products/:id", (req, res) => {  
   const { id } = req.params; // Extract the ID from the request parameters
+
+  console.log("id",id)
 
   // Query to fetch product details and features by product ID
   const query = `
@@ -13234,6 +13255,27 @@ app.get("/backend/products/:id", (req, res) => {
     res.json(results[0]);
   });
 });
+
+app.get("/backend/recently-viewed-products/:id", (req, res) => {
+  const id = req.params.id;
+  console.log("Requested Product ID:", id);
+
+  const query = "SELECT * FROM oneclick_product_category WHERE id = ?";
+
+  db.query(query, [id], (err, results) => {
+    if (err) {  
+      console.error("Error executing query:", err);
+      return res.status(500).json({ error: "Database query error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json(results); // Return only the first result (since IDs are unique)
+  });
+});
+
 
 //////////////////////////////////////
 
