@@ -22,7 +22,7 @@ const keywordMapping = {
   TV: ["tv", "television", "led tv", "smart tv", "oled tv", "qled tv", "4k tv", "android tv", "plasma tv", "lcd tv"],
   CCTVAccessories: ["cctv cable", "cctv accessories", "cctv accessory", "cctv adapter", "cctv power supply", "cctv connector", "cctv mounting bracket", "cctv lens", "cctv hard drive", "dvr", "nvr"],
   PrinterAccessories: ["printer cartridge", "printer accessories", "printer accessory", "printers accessories", "printers accessory", "ink cartridge", "toner", "printer cable", "printer paper", "laser toner", "ink refill", "printer stand"],
-  SecondHandProducts: ["secondhand", "second-hand", "used", "pre-owned", "refurbished","refurbish", "renewed", "old", "reused", "resale", "second hand mobiles", "second hand laptops", "used electronics"]
+  SecondHandProducts: ["secondhand", "second-hand", "used", "pre-owned", "refurbished", "refurbish", "renewed", "old", "reused", "resale", "second hand mobiles", "second hand laptops", "used electronics"]
 };
 
 exports.getSuggestions = (req, res) => {
@@ -50,7 +50,13 @@ exports.getSuggestions = (req, res) => {
   model.searchSuggestions(searchTerm, (error, results) => {
     if (error) return res.status(500).json({ message: "Internal server error" });
     if (results.length > 0) {
-      const suggestions = results.map(r => r.prod_name || r.category);
+      // console.log("Fetched suggestions:", results); //  Log the full data
+
+      const suggestions = results.map((r) => ({
+        prod_name: r.prod_name,
+        category: r.category,
+        prod_img: r.prod_img || null,
+      }));
       return res.json({ suggestions });
     } else {
       return res.status(404).json({ message: "No suggestions found" });

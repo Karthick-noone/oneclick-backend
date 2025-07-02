@@ -34,6 +34,7 @@ exports.addmobileaccessoriesProduct = (req, res) => {
       productStatus,
       price,
       actual_price,
+      effectiveprice,
       label,
       deliverycharge,
       subtitle,
@@ -50,6 +51,7 @@ exports.addmobileaccessoriesProduct = (req, res) => {
       subtitle,
       label,
       actual_price,
+      effectiveprice,
       category,  // Category is now hardcoded as 'mobileaccessories'
       prod_id: generateProductId(), // Implement this function
       prod_name: name,
@@ -92,6 +94,7 @@ exports.updatemobileaccessoriesProduct = (req, res) => {
       price,
       status,
       actual_price,
+      effectiveprice,
     } = req.body;
   
     const images = req.files.map((file) => file.filename);
@@ -101,6 +104,7 @@ exports.updatemobileaccessoriesProduct = (req, res) => {
       subtitle,
       deliverycharge,
       actual_price,
+      effectiveprice,
       label,
       name,
       features,

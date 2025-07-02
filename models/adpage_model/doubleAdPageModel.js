@@ -31,15 +31,19 @@ exports.findById = (id) => {
   });
 };
 
-exports.update = (fields, values, id) => {
+exports.update = (fields, values) => {
   return new Promise((resolve, reject) => {
-    const query = `UPDATE oneclick_doubleadpage SET ${fields} WHERE id = ?`;
-    db.query(query, [...values, id], (err) => {
+    const query = `UPDATE oneclick_doubleadpage SET ${fields.join(", ")} WHERE id = ?`;
+    db.query(query, values, (err, result) => {
       if (err) reject(err);
-      else resolve();
+      else resolve(result);
     });
   });
 };
+exports.getImageById = (id, callback) => {
+  db.query("SELECT image FROM oneclick_doubleadpage WHERE id = ?", [id], callback);
+};
+
 
 exports.delete = (id) => {
   return new Promise((resolve, reject) => {

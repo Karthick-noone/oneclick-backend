@@ -7,5 +7,7 @@ router.get("/getmobileaccessories", accessoriesController.getAccessoriesByCatego
 router.get("/getcctvaccessories", accessoriesController.getAccessoriesByCategory("CCTVAccessories"));
 router.get("/getprinteraccessories", accessoriesController.getAccessoriesByCategory("PrinterAccessories"));
 router.post("/addfrequentlybuy", accessoriesController.addFrequentlyBuyAccessories);
+router.get("/api/accessorycount/:productId", accessoriesController.getAccessoryCount);
+
 
 module.exports = router;

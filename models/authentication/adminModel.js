@@ -19,7 +19,8 @@ exports.verifyOldPassword = (oldPassword, callback) => {
   db.query(query, [oldPassword], callback);
 };
 
-exports.updatePassword = (oldPassword, newPassword, callback) => {
-  const query = "UPDATE oneclick_admin SET password = ? WHERE password = ?";
-  db.query(query, [newPassword, oldPassword], callback);
+// Note: Always update based on admin ID or email in production!
+exports.updatePassword = (newPassword, callback) => {
+  const query = "UPDATE oneclick_admin SET password = ? LIMIT 1";
+  db.query(query, [newPassword], callback);
 };

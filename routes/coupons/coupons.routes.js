@@ -32,5 +32,7 @@ router.put("/api/editcoupons/:id", controller.updateCommonCoupon);
 //make a copy of the product
 router.post("/api/copy-product/:id", controller.copyProduct);
 
+// Check if a product has a coupon
+router.get("/api/couponstatus/:productId", controller.checkProductCoupon);
 
 module.exports = router;

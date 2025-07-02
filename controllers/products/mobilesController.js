@@ -116,21 +116,39 @@ exports.updateMobile = (req, res) => {
   const data = req.body;
 
   checkProductExists(productId, (err, result) => {
-    if (err) return res.status(500).send({ message: "Check failed", error: err });
+    if (err) {
+      return res.status(500).json({ success: false, message: "Check failed", error: err });
+    }
 
     const handleFeatureUpdate = () => {
       checkFeaturesExists(productId, (err, featureRes) => {
-        if (err) return res.status(500).send("Feature check failed");
+        if (err) {
+          return res.status(500).json({ success: false, message: "Feature check failed", error: err });
+        }
 
         if (featureRes.length === 0) {
           insertMobileFeatures({ prod_id: productId, ...data }, (err) => {
-            if (err) return res.status(500).send("Insert features failed");
-            res.json({ message: "Product updated and features inserted." });
+            if (err) {
+              return res.status(500).json({ success: false, message: "Insert features failed", error: err });
+            }
+
+            return res.json({
+              success: true,
+              message: "Product updated and features inserted.",
+              updatedProduct: { prod_id: productId, ...data }
+            });
           });
         } else {
           updateFeatures(productId, data, (err) => {
-            if (err) return res.status(500).send("Update features failed");
-            res.json({ message: "Product and features updated." });
+            if (err) {
+              return res.status(500).json({ success: false, message: "Update features failed", error: err });
+            }
+
+            return res.json({
+              success: true,
+              message: "Product and features updated.",
+              updatedProduct: { prod_id: productId, ...data }
+            });
           });
         }
       });
@@ -138,17 +156,24 @@ exports.updateMobile = (req, res) => {
 
     if (result.length === 0) {
       insertProduct(productId, data, (err) => {
-        if (err) return res.status(500).send("Insert product failed");
+        if (err) {
+          return res.status(500).json({ success: false, message: "Insert product failed", error: err });
+        }
+
         handleFeatureUpdate();
       });
     } else {
       updateProduct(productId, data, (err) => {
-        if (err) return res.status(500).send("Update product failed");
+        if (err) {
+          return res.status(500).json({ success: false, message: "Update product failed", error: err });
+        }
+
         handleFeatureUpdate();
       });
     }
   });
 };
+
 
 exports.deleteMobile = (req, res) => {
   const productId = req.params.id;

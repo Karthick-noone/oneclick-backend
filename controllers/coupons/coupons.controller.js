@@ -195,6 +195,26 @@ exports.addNewCoupon = async (req, res) => {
   }
 };
 
+// Check if coupon exists for a product
+exports.checkProductCoupon = async (req, res) => {
+  const { productId } = req.params;
+
+  console.log(`[API] /api/couponstatus/${productId} called`);
+
+  try {
+    const result = await Coupon.hasCouponForProduct(productId);
+
+    console.log(`[SUCCESS] Coupon check result for product ID ${productId}:`, result);
+
+    res.json(result); // { hasCoupon: true/false, isExpired: true/false }
+  } catch (err) {
+    console.error(`[ERROR] Failed to check coupon for product ID ${productId}:`, err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
 exports.updateCommonCoupon = (req, res) => {
   const { id } = req.params;
   const { name, value, minPurchaseLimit } = req.body;

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path =require ('path')
 // 1. Add a product
 exports.addProduct = (productData, callback) => {
-  const sql = "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle, offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const sql = "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle, offer_label, actual_price, effectiveprice, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   db.query(sql, Object.values(productData), (err, result) => {
     if (err) {
       console.error("Error inserting product into database:", err);
@@ -54,7 +54,7 @@ exports.getOldImages = (productId, callback) => {
   exports.updateProductWithImages = (productId, data, callback) => {
     const sql = `
       UPDATE oneclick_product_category 
-      SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, 
+      SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, effectiveprice = ?,
           offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ?, 
           prod_img = ? 
       WHERE id = ?`;
@@ -64,6 +64,7 @@ exports.getOldImages = (productId, callback) => {
       data.subtitle,
       data.deliverycharge,
       data.actual_price,
+      data.effectiveprice,
       data.label,
       data.name,
       data.features,
@@ -79,7 +80,7 @@ exports.getOldImages = (productId, callback) => {
   exports.updateProductWithoutImages = (productId, data, callback) => {
     const sql = `
       UPDATE oneclick_product_category 
-      SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, 
+      SET productStatus = ?, subtitle = ?, deliverycharge = ?, actual_price = ?, effectiveprice = ?,
           offer_label = ?, prod_name = ?, prod_features = ?, prod_price = ?, status = ? 
       WHERE id = ?`;
   
@@ -88,6 +89,7 @@ exports.getOldImages = (productId, callback) => {
       data.subtitle,
       data.deliverycharge,
       data.actual_price,
+      data.effectiveprice,
       data.label,
       data.name,
       data.features,

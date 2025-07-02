@@ -63,25 +63,33 @@ const db = require("../../config/db");
     });
   };
 
-// Function to fetch the wishlist from the database
 const fetchWishlist = (email, username, callback) => {
-    const query = "SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?";
-    db.query(query, [email, username], (err, results) => {
-      if (err) return callback(err);
-      if (results.length === 0) return callback(new Error("User not found"));
+  const query = "SELECT wishlist FROM oneclick_users WHERE email = ? AND username = ?";
   
-      let wishlist = [];
-      try {
-        wishlist = JSON.parse(results[0].wishlist || "[]");
-      } catch (error) {
-        return callback(new Error("Failed to parse wishlist"));
-      }
-  
-      // Sort wishlist in descending order
-      wishlist = wishlist.sort((a, b) => b - a);
-      return callback(null, wishlist);
-    });
-  };
+  db.query(query, [email, username], (err, results) => {
+    if (err) {
+      console.error("DB error while fetching wishlist:", err);
+      return callback(err);
+    }
+
+    if (results.length === 0) {
+      // console.warn("User not found for wishlist fetch:", { email, username });
+      return callback(null, []); // Return empty wishlist
+    }
+
+    let wishlist = [];
+    try {
+      wishlist = JSON.parse(results[0].wishlist || "[]");
+    } catch (error) {
+      console.error("Failed to parse wishlist:", error);
+      return callback(new Error("Failed to parse wishlist"));
+    }
+
+    wishlist = wishlist.sort((a, b) => b - a);
+    return callback(null, wishlist);
+  });
+};
+
   
   // Function to fetch wishlist products with details and features
   const fetchWishlistWithFeatures = (email, username, wishlist, callback) => {

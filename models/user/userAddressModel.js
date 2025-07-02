@@ -75,7 +75,7 @@ const UserAddress = {
     db.query(query, [userId], callback);
   },
 
-  updateCurrentAddress: (userId, addressId, callback) => {
+   updateCurrentAddress: (userId, addressId, callback) => {
     db.beginTransaction((err) => {
       if (err) throw err;
 
@@ -108,6 +108,7 @@ const UserAddress = {
       });
     });
   }
+
 };
 
 module.exports = UserAddress;

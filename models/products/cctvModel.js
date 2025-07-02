@@ -234,3 +234,5 @@ exports.uploadCCTVImages = (req, res) => {
       callback(null, result.affectedRows);
     });
   };
+
+  

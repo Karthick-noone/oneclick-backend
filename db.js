@@ -5,7 +5,7 @@ const dbConfig = {
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'oneclick_empty',
+  database: 'oneclick',
 };
 
 // Create a MySQL connection

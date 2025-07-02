@@ -21,10 +21,10 @@ const OffersPage = {
     db.query(sql, [...data, id], callback);
   },
 
-  updateImageOnly: (id, image, callback) => {
-    const sql = `UPDATE oneclick_offerspage SET image = ? WHERE id = ?`;
-    db.query(sql, [image, id], callback);
-  },
+ updateImageOnly: (id, image, title, callback) => {
+  const sql = `UPDATE oneclick_offerspage SET image = ?, title = ? WHERE id = ?`;
+  db.query(sql, [image, title, id], callback);
+},
 
  
 deleteProduct: (id, callback) => {

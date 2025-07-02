@@ -38,7 +38,7 @@ exports.updateLoginBg = (req, res) => {
     LoginBackgroundModel.updateLoginBg(fields, values, id, (err) => {
       if (err) return res.status(500).json({ error: "Failed to update image" });
 
-      fs.unlink(path.join(__dirname, "../../uploads/loginbackground", oldImage), () => {});
+      fs.unlink(path.join(__dirname, "../../uploads/singleadpage", oldImage), () => {});
       res.json({ message: "Image updated successfully", updatedImage: newImage });
     });
   });
@@ -51,7 +51,7 @@ exports.deleteLoginBg = (req, res) => {
     if (err || results.length === 0) return res.status(404).json({ error: "Image not found" });
 
     const image = results[0].image;
-    fs.unlink(path.join(__dirname, "../../uploads/loginbackground", image), (err) => {
+    fs.unlink(path.join(__dirname, "../../uploads/singleadpage", image), (err) => {
       if (err) return res.status(500).json({ error: "Failed to delete image" });
 
       LoginBackgroundModel.deleteLoginBgById(id, (err) => {

@@ -1,159 +1,144 @@
 const CCTVOffersPage = require("../../models/offerspage_model/CCTVOffersPage");
 const fs = require("fs");
+const path = require("path");
 
-const getCctvOffers = async (req, res) => {
-  try {
-    const results = await CCTVOffersPage.getCctvOffersPage();
+exports.fetchAll = (req, res) => {
+  CCTVOffersPage.getAll("cctv", (err, results) => {
+    if (err) return res.status(500).json({ message: "Failed to fetch product" });
     res.json(results);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch products" });
-  }
+  });
 };
 
-const addCctvOffer = async (req, res) => {
-  try {
-    const { offer, brand_name, title, description } = req.body;
-    const images = req.files.map((file) => file.filename);
+exports.createWithMultipleImages = (req, res) => {
+  const { offer, brand_name, title, description } = req.body;
 
-    if (!title) {
-      return res.status(400).json({ error: "Title is missing!" });
-    }
+  const images = req.files.map((file) => {
+    const ext = path.extname(file.originalname);
+    const timestamp = Date.now();
+    const newName = `${title}_${timestamp}_${file.originalname}`;
+    const oldPath = file.path;
+    const newPath = path.join("uploads", "offerspage", newName);
 
-    await CCTVOffersPage.insertCctvOffer(
-      offer,
-      brand_name,
-      title,
-      description,
-      images
-    );
+    fs.renameSync(oldPath, newPath);
+    return newName;
+  });
+
+  const values = [offer, brand_name, title, description, "cctv", images.join(",")];
+
+  CCTVOffersPage.create(values, (err) => {
+    if (err) return res.status(500).send(err);
     res.send("Product added");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send(err);
-  }
+  });
 };
 
-const updateCctvOffer = async (req, res) => {
-  const productId = req.params.id;
+exports.updateWithSingleImage = (req, res) => {
   const { title, description, brand_name, offer } = req.body;
-  const newImage = req.file ? req.file.filename : null;
+  const id = req.params.id;
 
-  try {
-    if (newImage) {
-      // Delete old image
-      CCTVOffersPage.getImagesById(productId, (err, results) => {
-        if (!err && results.length > 0) {
-          const oldImages = results[0].image?.split(",") || [];
-          oldImages.forEach((img) => {
-            fs.unlink(`uploads/offerspage/${img}`, (err) => {
-              if (err) console.error("Failed to delete old image:", err);
-            });
-          });
+  if (req.file) {
+    const ext = path.extname(req.file.originalname);
+    const timestamp = Date.now();
+    const newFilename = `${title}_${timestamp}${ext}`;
+    const oldPath = req.file.path;
+    const newPath = path.join("uploads", "offerspage", newFilename);
+
+    fs.rename(oldPath, newPath, (err) => {
+      if (err) return res.status(500).send({ message: "Rename failed", err });
+
+      CCTVOffersPage.getImageById(id, (err, results) => {
+        if (err) return res.status(500).send(err);
+
+        const oldImage = results[0]?.image;
+        if (oldImage && oldImage !== newFilename) {
+          fs.unlink(`uploads/offerspage/${oldImage}`, () => {});
         }
-      });
-    }
 
-    await CCTVOffersPage.updateCctvOffer(
-      productId,
-      title,
-      description,
-      brand_name,
-      offer,
-      newImage
-    );
-    res.json({ message: "Product updated successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send(err);
+        const values = [title, description, brand_name, offer, newFilename];
+        CCTVOffersPage.update(id, values, (err, results) => {
+          if (err) return res.status(500).send(err);
+          res.json({ message: "Product updated successfully" });
+        });
+      });
+    });
+  } else {
+    const values = [title, description, brand_name, offer];
+    CCTVOffersPage.updateWithoutImage(id, values, (err, results) => {
+      if (err) return res.status(500).send(err);
+      res.json({ message: "Product updated successfully" });
+    });
   }
 };
 
-const deleteCctvOffer = async (req, res) => {
-  const productId = req.params.id;
+exports.updateImageOnly = (req, res) => {
+  const id = req.params.id;
+  const title = req.body.title;
+  const ext = path.extname(req.file.originalname);
+  const timestamp = Date.now();
+  const newFilename = `${title}_${timestamp}${ext}`;
 
-  try {
-    // Delete image files from disk
-    CCTVOffersPage.getImagesById(productId, (err, results) => {
-      if (!err && results.length > 0) {
-        const images = results[0].image?.split(",") || [];
-        images.forEach((img) => {
-          fs.unlink(`uploads/offerspage/${img}`, (err) => {
-            if (err) console.error("Failed to delete image:", err);
+  const oldPath = path.join("uploads", "offerspage", req.file.filename);
+  const newPath = path.join("uploads", "offerspage", newFilename);
+
+  fs.rename(oldPath, newPath, (err) => {
+    if (err) return res.status(500).send({ message: "Failed to rename file", error: err });
+
+    CCTVOffersPage.getImageById(id, (err, results) => {
+      if (err) return res.status(500).send(err);
+
+      const oldImages = results[0]?.image?.split(",") || [];
+
+      CCTVOffersPage.updateImageOnly(id, newFilename, title, (err, results) => {
+        if (err) return res.status(500).send(err);
+
+        oldImages.forEach((img) => {
+          fs.unlink(`uploads/offerspage/${img}`, (unlinkErr) => {
+            if (unlinkErr) console.error(`Failed to delete ${img}:`, unlinkErr);
           });
         });
-      }
-    });
 
-    await CCTVOffersPage.deleteCctvOffer(productId);
-    res.status(200).json({ message: "Product deleted successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to delete product" });
-  }
-};
-
-const updateImage = (req, res) => {
-  const productId = req.params.id;
-  const newImage = req.file ? req.file.filename : null;
-
-  if (!newImage) {
-    return res.status(400).json({ message: "No image uploaded" });
-  }
-
-  CCTVOffersPage.getImagesById(productId, (err, results) => {
-    if (err || results.length === 0) {
-      return res.status(500).send("Error fetching images");
-    }
-
-    const oldImages = results[0].image?.split(",") || [];
-
-    oldImages.forEach((img) => {
-      const filePath = `uploads/offerspage/${img}`;
-      fs.unlink(filePath, (err) => {
-        if (err) console.error(`Failed to delete ${img}:`, err);
+        res.json({ message: "Image updated with unique filename", image: newFilename });
       });
-    });
-
-    CCTVOffersPage.updateImagesById(productId, newImage, (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json({ updatedImages: newImage });
     });
   });
 };
 
-const deleteImage = (req, res) => {
-  const productId = req.params.id;
+exports.deleteImage = (req, res) => {
+  const id = req.params.id;
   const updatedImages = req.body.images ? req.body.images.split(",") : [];
 
-  CCTVOffersPage.getImagesById(productId, (err, results) => {
-    if (err || results.length === 0) {
-      return res.status(500).send("Failed to get current images");
+  CCTVOffersPage.getImageById(id, (err, results) => {
+    if (err) return res.status(500).send(err);
+
+    const currentImages = results[0]?.image?.split(",") || [];
+    if (currentImages.length !== updatedImages.length + 1) {
+      return res.status(400).json({ message: "Image count mismatch" });
     }
 
-    const currentImages = results[0].image?.split(",") || [];
-
-    // Detect deleted image
     const imageToDelete = currentImages.find((img) => !updatedImages.includes(img));
-
     if (imageToDelete) {
-      fs.unlink(`uploads/offerspage/${imageToDelete}`, (err) => {
-        if (err) console.error("Failed to delete image:", err);
-      });
+      fs.unlink(`uploads/offerspage/${imageToDelete}`, () => {});
     }
 
-    CCTVOffersPage.updateImagesById(productId, updatedImages.join(","), (err) => {
+    CCTVOffersPage.updateImageOnly(id, updatedImages.join(","), null, (err, result) => {
       if (err) return res.status(500).send(err);
       res.json({ message: "Image deleted and updated successfully" });
     });
   });
 };
 
-module.exports = {
-  getCctvOffers,
-  addCctvOffer,
-  updateCctvOffer,
-  deleteCctvOffer,
-  updateImage,
-  deleteImage
+exports.deleteProduct = (req, res) => {
+  const productId = req.params.id;
+
+  CCTVOffersPage.deleteProduct(productId, (err, result) => {
+    if (err) {
+      console.error("Error deleting product:", err);
+      return res.status(500).json({ message: "Failed to delete product" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    return res.status(200).json({ message: "Product deleted successfully" });
+  });
 };

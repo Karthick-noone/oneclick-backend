@@ -22,7 +22,7 @@ const Career = {
           const nextEligibleDate = new Date(
             previousStartDate.getTime() + threeMonthsInMilliseconds
           );
-          return callback(new Error(`You can re-apply after ${nextEligibleDate.toLocaleDateString()} (3 months from your previous application).`));
+return callback(null, { error: true, message: `You can re-apply after ${nextEligibleDate.toLocaleDateString()}` });
         }
       }
 

@@ -20,7 +20,6 @@ exports.getAccessoriesByCategory = (category) => async (req, res) => {
   }
 };
 
-
 exports.addFrequentlyBuyAccessories = async (req, res) => {
   const { id, accessoryIds } = req.body;
 
@@ -31,5 +30,20 @@ exports.addFrequentlyBuyAccessories = async (req, res) => {
     return res.send("Accessories updated successfully.");
   } catch (err) {
     return res.status(500).send("Error updating accessories.");
+  }
+};
+
+exports.getAccessoryCount = async (req, res) => {
+  const { productId } = req.params;
+
+  console.log(`[API] /api/accessorycount/${productId} called`);
+
+  try {
+    const result = await accessoriesModel.getAccessoryCount(productId);
+    console.log(`[SUCCESS] Accessory count for ${productId}: ${result.accessoryCount}`);
+    res.json(result);
+  } catch (error) {
+    console.error(`[ERROR] Failed to fetch accessory count for ${productId}:`, error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };

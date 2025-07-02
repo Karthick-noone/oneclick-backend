@@ -2,7 +2,7 @@ const RecentlyViewedModel = require("../../models/products/recentlyViewedProduct
 
 exports.getRecentlyViewedProduct = (req, res) => {
   const id = req.params.id;
-  console.log("Requested Product ID:", id);
+  // console.log("Requested Product ID:", id);
 
   RecentlyViewedModel.getProductById(id, (err, results) => {
     if (err) {

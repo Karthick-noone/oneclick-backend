@@ -27,21 +27,32 @@ exports.addImage = async (req, res) => {
   }
 };
 
-exports.updateImage = async (req, res) => {
+// Update image and/or category
+// Update image and/or category
+exports.updateImage = (req, res) => {
   const { id } = req.params;
   const { category } = req.body;
-  const newImage = req.file?.filename;
+  const newImage = req.file ? req.file.filename : null;
 
   if (!newImage && !category) {
     return res.status(400).json({ error: "Image or category is required" });
   }
 
-  try {
-    const old = await model.findById(id);
-    if (!old) return res.status(404).json({ error: "Image not found" });
+  model.getImageById(id, (selectErr, selectResult) => {
+    if (selectErr) {
+      console.error("Error fetching image:", selectErr);
+      return res.status(500).json({ error: "Failed to fetch current image" });
+    }
 
-    const fields = [];
-    const values = [];
+    if (selectResult.length === 0) {
+      return res.status(404).json({ error: "Image not found" });
+    }
+
+    const oldImage = selectResult[0].image;
+
+    // Prepare update
+    let fields = [];
+    let values = [];
 
     if (newImage) {
       fields.push("image = ?");
@@ -53,20 +64,32 @@ exports.updateImage = async (req, res) => {
       values.push(category);
     }
 
-    await model.update(fields.join(", "), values, id);
+    // Append id at the end for WHERE clause
+    values.push(id);
 
-    // Delete old image if new one is uploaded
-    if (newImage && old.image) {
-      const oldPath = path.resolve("uploads", "doubleadpage", old.image);
-      fs.unlink(oldPath, (err) => {
-        if (err) console.error("Failed to delete old image:", err);
+    model
+      .update(fields, values)
+      .then(() => {
+        // Delete old image
+        if (newImage && oldImage) {
+          const oldImagePath = path.join(__dirname, "../uploads/doubleadpage", oldImage);
+          fs.unlink(oldImagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("Error deleting old image:", unlinkErr);
+            }
+          });
+        }
+
+        res.json({
+          message: "Image and/or category updated successfully",
+          updatedImage: newImage || "unchanged",
+        });
+      })
+      .catch((err) => {
+        console.error("Update error:", err);
+        res.status(500).json({ error: "Failed to update record" });
       });
-    }
-
-    res.json({ message: "Updated successfully", updatedImage: newImage || old.image });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to update" });
-  }
+  });
 };
 
 exports.deleteImage = async (req, res) => {

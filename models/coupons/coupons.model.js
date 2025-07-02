@@ -1,40 +1,40 @@
 const db = require("../../config/db");
 
 const Coupon = {
-    findByCodeAndProductIds: (couponCode, productIds) => {
-        return new Promise((resolve, reject) => {
-          const normalizedCouponCode = couponCode;
-          const productIdsArray = Array.isArray(productIds)
-            ? productIds
-            : [productIds];
-    
-          const sql = `
+  findByCodeAndProductIds: (couponCode, productIds) => {
+    return new Promise((resolve, reject) => {
+      const normalizedCouponCode = couponCode;
+      const productIdsArray = Array.isArray(productIds)
+        ? productIds
+        : [productIds];
+
+      const sql = `
             SELECT coupon_id, coupon_code, expiry_date, discount_value 
             FROM oneclick_coupons 
             WHERE product_id IN (?) AND BINARY coupon_code = ?
           `;
-    
-          db.query(sql, [productIdsArray, normalizedCouponCode], (err, results) => {
-            if (err) return reject(err);
-            resolve(results);
-          });
-        });
-      },
-    
-      
-      findCommonCouponByCode: (couponCode) => {
-        return new Promise((resolve, reject) => {
-          const sql = `
+
+      db.query(sql, [productIdsArray, normalizedCouponCode], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
+
+
+  findCommonCouponByCode: (couponCode) => {
+    return new Promise((resolve, reject) => {
+      const sql = `
             SELECT min_purchase_limit, value 
             FROM oneclick_common_coupon 
             WHERE BINARY name = ?
           `;
-          db.query(sql, [couponCode], (err, results) => {
-            if (err) return reject(err);
-            resolve(results);
-          });
-        });
-      },
+      db.query(sql, [couponCode], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
 
   insertMany: (coupons) => {
     return new Promise((resolve, reject) => {
@@ -121,37 +121,79 @@ const Coupon = {
   },
 
   updateCommonCoupon: (id, name, value, minPurchaseLimit, callback) => {
-  const query = `
+    const query = `
     UPDATE oneclick_common_coupon 
     SET min_purchase_limit = ?, name = ?, value = ? 
     WHERE id = ?
   `;
-  db.query(query, [minPurchaseLimit, name, value, id], callback);
-},
+    db.query(query, [minPurchaseLimit, name, value, id], callback);
+  },
 
-deleteCommonCoupon: (id, callback) => {
-  const query = "DELETE FROM oneclick_common_coupon WHERE id = ?";
-  db.query(query, [id], callback);
-},
+  deleteCommonCoupon: (id, callback) => {
+    const query = "DELETE FROM oneclick_common_coupon WHERE id = ?";
+    db.query(query, [id], callback);
+  },
 
 
-getProductById: (id, callback) => {
-  const query = "SELECT * FROM oneclick_product_category WHERE id = ?";
-  db.query(query, [id], callback);
-},
+  getProductById: (id, callback) => {
+    const query = "SELECT * FROM oneclick_product_category WHERE id = ?";
+    db.query(query, [id], callback);
+  },
 
-insertCopiedProduct: (newProdId, newImageJson, id, callback) => {
-  const query = `
+  insertCopiedProduct: (newProdId, newImageJson, id, callback) => {
+    const query = `
     INSERT INTO oneclick_product_category 
     (prod_id, prod_name, category, subtitle, prod_features, actual_price, prod_price, deliverycharge, offer_label, prod_img, productStatus)
     SELECT ?, prod_name, category, subtitle, prod_features, actual_price, prod_price, deliverycharge, offer_label, ?, productStatus
     FROM oneclick_product_category 
     WHERE id = ?
   `;
-  db.query(query, [newProdId, newImageJson, id], callback);
-}
-};
+    db.query(query, [newProdId, newImageJson, id], callback);
+  },
 
+hasCouponForProduct: (productId) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT expiry_date 
+      FROM oneclick_coupons 
+      WHERE product_id = ? 
+      ORDER BY coupon_id DESC LIMIT 1
+    `;
+
+    db.query(query, [productId], (err, results) => {
+      if (err) return reject(err);
+
+      if (results.length === 0) {
+        console.log(`[CHECK] Product ${productId} | No coupon found.`);
+        return resolve({ hasCoupon: false, isExpired: null });
+      }
+
+      const expiryDate = new Date(results[0].expiry_date);
+      const today = new Date();
+
+      // ✅ Format in local time (not UTC)
+      const formatDateLocal = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const expiryOnly = formatDateLocal(expiryDate);
+      const todayOnly = formatDateLocal(today);
+
+      const isExpired = expiryOnly < todayOnly;
+
+      console.log(`[CHECK] Product ${productId} | Expiry: ${expiryOnly} | Today: ${todayOnly} | Expired: ${isExpired}`);
+
+      resolve({
+        hasCoupon: true,
+        isExpired
+      });
+    });
+  });
+},
+};
 
 module.exports = Coupon;
 

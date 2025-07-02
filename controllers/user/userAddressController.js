@@ -126,7 +126,10 @@ exports.updateCurrentAddress = (req, res) => {
       console.error("Error updating address:", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-    res.status(200).json({ message: "Address updated successfully" });
+    res.status(200).json({
+      message: "Address updated successfully",
+      affectedRows: results.affectedRows
+    });
   });
 };
 

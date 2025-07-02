@@ -38,18 +38,17 @@ exports.addImage = (req, res) => {
   });
 };
 
-// Update an image
+// Update image and/or category
 exports.updateImage = (req, res) => {
   const { id } = req.params;
   const { category } = req.body;
-  let newImage = req.file ? req.file.filename : null;
-  let updateFields = [];
-  let updateValues = [];
+  const newImage = req.file ? req.file.filename : null;
 
   if (!newImage && !category) {
     return res.status(400).json({ error: "Image or category is required" });
   }
 
+  // Fetch the current record to get old image
   EditHomePage.getImageById(id, (selectErr, selectResult) => {
     if (selectErr) {
       console.error("Error fetching image:", selectErr);
@@ -62,32 +61,33 @@ exports.updateImage = (req, res) => {
 
     const oldImage = selectResult[0].image;
 
+    // Build update fields and values
+    let fields = [];
+    let values = [];
+
     if (newImage) {
-      updateFields.push("image = ?");
-      updateValues.push(newImage);
+      fields.push("image = ?");
+      values.push(newImage);
     }
 
     if (category) {
-      updateFields.push("category = ?");
-      updateValues.push(category);
+      fields.push("category = ?");
+      values.push(category);
     }
 
-    updateValues.push(id);
+    // Append ID for WHERE clause
+    values.push(id);
 
-    const updateQuery = `UPDATE oneclick_edithomepage SET ${updateFields.join(", ")} WHERE id = ?`;
-
-    EditHomePage.updateImage(updateValues, (updateErr, updateResult) => {
+    // Send to model
+    EditHomePage.updateImage(fields, values, (updateErr, updateResult) => {
       if (updateErr) {
-        console.error("Error updating image or category:", updateErr);
-        return res.status(500).json({ error: "Failed to update image or category" });
+        console.error("Error updating record:", updateErr);
+        return res.status(500).json({ error: "Failed to update record" });
       }
 
-      if (newImage) {
-        const oldImagePath = path.join(
-          __dirname,
-          "../uploads/edithomepage",
-          oldImage
-        );
+      // Delete old image if replaced
+      if (newImage && oldImage) {
+        const oldImagePath = path.join(__dirname, "../uploads/edithomepage", oldImage);
         fs.unlink(oldImagePath, (unlinkErr) => {
           if (unlinkErr) {
             console.error("Error deleting old image:", unlinkErr);
@@ -97,11 +97,12 @@ exports.updateImage = (req, res) => {
 
       res.json({
         message: "Image and/or category updated successfully",
-        updatedImage: newImage,
+        updatedImage: newImage || "unchanged",
       });
     });
   });
 };
+
 
 exports.deleteImage = (req, res) => {
   const { id } = req.params;

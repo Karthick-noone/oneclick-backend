@@ -9,10 +9,10 @@ const EditHomePage = {
     const query = "INSERT INTO oneclick_edithomepage (image, category) VALUES (?, ?)";
     db.query(query, imageData, callback);
   },
-  updateImage: (imageData, callback) => {
-    const query = `UPDATE oneclick_edithomepage SET image = ?, category = ? WHERE id = ?`;
-    db.query(query, imageData, callback);
-  },
+updateImage: (fields, values, callback) => {
+  const query = `UPDATE oneclick_edithomepage SET ${fields.join(", ")} WHERE id = ?`;
+  db.query(query, values, callback);
+},
   deleteImage: (id, callback) => {
     const query = "DELETE FROM oneclick_edithomepage WHERE id = ?";
     db.query(query, [id], callback);

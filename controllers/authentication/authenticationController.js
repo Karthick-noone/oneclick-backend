@@ -141,16 +141,17 @@ exports.changePassword = (req, res) => {
       });
     }
 
-    adminModel.updatePassword(oldPassword, newPassword, (err) => {
+    // Proceed to update
+    adminModel.updatePassword(newPassword, (err) => {
       if (err) {
         console.error("Database update error:", err);
         return res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: "Failed to update password",
         });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: "Password updated successfully",
       });

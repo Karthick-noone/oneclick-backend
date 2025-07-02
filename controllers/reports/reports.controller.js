@@ -4,6 +4,7 @@ exports.getSalesReport = (req, res) => {
   model.getSalesReport((err, results) => {
     if (err) return res.status(500).send("Error fetching sales report");
     res.json(results);
+    // console.log("SalesReport", results)
   });
 };
 
@@ -18,6 +19,20 @@ exports.getCustomersReport = (req, res) => {
   model.getCustomersReport((err, results) => {
     if (err) return res.status(500).send("Error fetching customers report");
     res.json(results);
+  });
+};
+
+// Fetch order details for one customer
+exports.getCustomerOrdersByMobile = (req, res) => {
+  const { mobile } = req.params;
+
+
+  model.getCustomerOrdersByMobile(mobile, (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: "Failed to fetch customer orders" });
+    }
+
+    res.json(data);
   });
 };
 
@@ -46,18 +61,54 @@ exports.getUsers = (req, res) => {
   model.getUsers((err, results) => {
     if (err) return res.status(500).send("Error fetching users");
     res.json(results);
+    // console.log('useraddress', results)
   });
 };
 
 exports.deleteUser = (req, res) => {
-  model.deleteUser(req.params.id, (err, result) => {
-    if (err) return res.status(500).json({ message: "Failed to delete career entry" });
-    if (result.affectedRows > 0)
-      res.status(200).json({ message: "Career entry deleted successfully" });
-    else
-      res.status(404).json({ message: "Career entry not found" });
+  const id = req.params.id;
+  console.log(`Received request to delete user with ID: ${id}`);
+
+  // Step 1: Get user_id from oneclick_users using id
+  model.getUserIdById(id, (err, rows) => {
+    if (err) {
+      console.error("Error fetching user_id:", err);
+      return res.status(500).json({ message: "Failed to fetch user info" });
+    }
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userId = rows[0].user_id;
+
+    // Step 2: Delete related addresses using user_id
+    model.deleteUserAddresses(userId, (err, addressResult) => {
+      if (err) {
+        console.error(`Error deleting addresses for user_id ${userId}:`, err);
+        return res.status(500).json({ message: "Failed to delete user addresses" });
+      }
+
+      console.log(`Deleted ${addressResult.affectedRows} address(es) for user_id ${userId}`);
+
+      // Step 3: Delete user using id
+      model.deleteUser(id, (err, result) => {
+        if (err) {
+          console.error(`Error deleting user with ID ${id}:`, err);
+          return res.status(500).json({ message: "Failed to delete user" });
+        }
+
+        if (result.affectedRows > 0) {
+          res.status(200).json({ message: "User and related addresses deleted successfully" });
+        } else {
+          res.status(404).json({ message: "User not found" });
+        }
+      });
+    });
   });
 };
+
+
 
 
 exports.getPendingPayments = (req, res) => {
@@ -88,5 +139,28 @@ exports.getProductCategoryAmounts = (req, res) => {
       return res.status(500).json({ message: "Error fetching product category amounts" });
     }
     res.status(200).json(results); // Return product category total amount data
+  });
+};
+
+exports.getProductCountByCategory = (req, res) => {
+  model.getProductCountByCategory((err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching product count" });
+    res.status(200).json(results);
+    // console.log("Total-categories", results)
+  });
+};
+
+exports.getTotalProducts = (req, res) => {
+  model.getTotalProducts((err, result) => {
+    if (err) return res.status(500).json({ message: "Error fetching total products" });
+    res.status(200).json(result[0]); // return the count only
+  });
+};
+
+exports.getStaffCounts = (req, res) => {
+  model.getStaffCounts((err, result) => {
+    if (err) return res.status(500).json({ message: "Error fetching total staff" });
+    res.status(200).json(result[0]); // return the count only
+    // console.log("STaffs", result)
   });
 };

@@ -4,17 +4,21 @@ const path = require("path");
 
 const dir = "uploads/offerspage";
 
-if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+if (!fs.existsSync(dir)) {
+  fs.mkdirSync(dir, { recursive: true });
+}
 
-const storage = (multiple = false) =>
+const getStorage = () =>
   multer.diskStorage({
     destination: (req, file, cb) => cb(null, dir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname);
-      const name = path.basename(file.originalname, ext).replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      const name = path.basename(file.originalname, ext)
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "");
       cb(null, `${name}${ext}`);
     },
   });
 
-exports.uploadMultiple = multer({ storage: storage(true) }).array("images");
-exports.uploadSingle = multer({ storage: storage(false) }).single("image");
+exports.uploadMultiple = multer({ storage: getStorage() }).array("images");
+exports.uploadSingle = multer({ storage: getStorage() }).single("image");

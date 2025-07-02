@@ -13,44 +13,139 @@ exports.addProduct = (productData, callback) => {
   });
 };
 
+exports.addProductFeatures = (featuresData, callback) => {
+  const sql = `
+    INSERT INTO oneclick_mobile_features
+    (prod_id, productType, memory, storage, battery, display, network, os, processor, others, camera)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  const values = [
+    featuresData.prod_id,
+    featuresData.productType,
+    featuresData.memory,
+    featuresData.storage,
+    featuresData.battery,
+    featuresData.display,
+    featuresData.network,
+    featuresData.os,
+    featuresData.processor,
+    featuresData.others,
+    featuresData.camera,
+  ];
 
-// 2. Fetch all products
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Error inserting mobile features:", err);
+      return callback(err);
+    }
+    callback(null, "Features added");
+  });
+};
+
 exports.fetchAllProducts = (callback) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'secondhandproducts' ORDER BY id DESC";
+  const sql = `
+    SELECT pc.*, mf.memory,mf.camera, mf.storage, mf.battery, mf.display, mf.network, 
+           mf.os, mf.processor, mf.others, mf.productType
+    FROM oneclick_product_category pc
+    LEFT JOIN oneclick_mobile_features mf ON pc.prod_id = mf.prod_id
+    WHERE pc.category = 'secondhandproducts'
+    ORDER BY pc.id DESC
+  `;
+
   db.query(sql, (err, results) => {
     if (err) {
       console.error("Error fetching products:", err);
       return callback({ status: 500, message: "Failed to fetch products" });
     }
+
     const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img),
     }));
+    callback(null, products);
+//  console.log(products)
+
+  });
+};
+
+exports.fetchApprovedProducts = (callback) => {
+  const sql = `
+    SELECT pc.*, mf.memory, mf.camera, mf.storage, mf.battery, mf.display, mf.network, 
+           mf.os, mf.processor, mf.others, mf.productType
+    FROM oneclick_product_category pc
+    LEFT JOIN oneclick_mobile_features mf ON pc.prod_id = mf.prod_id
+    WHERE pc.category = 'secondhandproducts' AND pc.productStatus = 'approved'
+    ORDER BY pc.id DESC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error fetching approved products:", err);
+      return callback({ status: 500, message: "Failed to fetch approved products" });
+    }
+
+    const products = results.map((product) => ({
+      ...product,
+      prod_img: JSON.parse(product.prod_img),
+    }));
+
     callback(null, products);
   });
 };
 
-// 3. Fetch approved products
-exports.fetchApprovedProducts = (callback) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'secondhandproducts' AND productStatus = 'approved' ORDER BY id DESC";
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error("Error fetching products:", err);
-      return callback({ status: 500, message: "Failed to fetch products" });
-    }
-    const products = results.map((product) => ({
-      ...product,
-      prod_img: JSON.parse(product.prod_img),
-    }));
-    callback(null, products);
-  });
-};
 
 exports.getOldImages = (productId, callback) => {
     const sql = "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
     db.query(sql, [productId], callback);
   };
-  
+
+// Get prod_id from oneclick_product_category by internal product ID
+exports.getProdIdByInternalId = (id, callback) => {
+  const sql = "SELECT prod_id FROM oneclick_product_category WHERE id = ?";
+  db.query(sql, [id], (err, results) => {
+    if (err) return callback(err);
+    if (results.length === 0) return callback(new Error("Product not found"));
+    callback(null, results[0].prod_id);
+  });
+};
+
+exports.upsertProductFeatures = (data, callback) => {
+  const checkSql = "SELECT feature_id FROM oneclick_mobile_features WHERE prod_id = ?";
+  db.query(checkSql, [data.prod_id], (err, results) => {
+    if (err) return callback(err);
+
+    const values = [
+      data.memory,
+      data.storage,
+      data.camera,
+      data.display,
+      data.battery,
+      data.os,
+      data.network,
+      data.processor,
+      data.others,
+      data.productType,
+      data.prod_id,
+    ];
+
+    if (results.length > 0) {
+      // UPDATE
+      const updateSql = `
+        UPDATE oneclick_mobile_features 
+        SET memory = ?, storage = ?, camera = ?, display = ?, battery = ?, os = ?, network = ?, processor = ?, others = ?, productType = ? 
+        WHERE prod_id = ?`;
+      db.query(updateSql, values, callback);
+    } else {
+      // INSERT
+      const insertSql = `
+        INSERT INTO oneclick_mobile_features 
+        (memory, storage, camera, display, battery, os, network, processor, others, productType, prod_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      db.query(insertSql, values, callback);
+    }
+  });
+};
+
   exports.updateProductWithImages = (productId, data, callback) => {
     const sql = `
       UPDATE oneclick_product_category 
@@ -178,27 +273,46 @@ exports.deleteProductImage = (productId, imageIndex, callback) => {
       });
     });
   };
-// 7. Delete a product
-exports.deleteProduct = (productId, callback) => {
-  const fetchImageQuery = "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
-  db.query(fetchImageQuery, [productId], (err, results) => {
-    if (err) return callback({ status: 500, message: "Failed to fetch product image" });
-    const image = results[0] && results[0].prod_img;
-    if (image) {
-      const imagePath = `uploads/secondhandproducts/${image}`;
-      fs.unlink(imagePath, (err) => {
-        if (err) {
-          console.error("Failed to delete image:", err);
-        }
+
+  exports.deleteProduct = (productId, callback) => {
+  const fetchProductQuery = "SELECT prod_img, prod_id FROM oneclick_product_category WHERE id = ?";
+
+  db.query(fetchProductQuery, [productId], (err, results) => {
+    if (err) return callback({ status: 500, message: "Failed to fetch product details" });
+
+    const product = results[0];
+    if (!product) return callback({ status: 404, message: "Product not found" });
+
+    const { prod_img, prod_id } = product;
+
+    // Delete image(s) if found
+    try {
+      const images = JSON.parse(prod_img);
+      images.forEach((img) => {
+        const imagePath = `uploads/secondhandproducts/${img}`;
+        fs.unlink(imagePath, (err) => {
+          if (err) console.error("Failed to delete image:", err);
+        });
       });
+    } catch (e) {
+      console.error("Image parsing or deletion error:", e);
     }
-    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
-    db.query(deleteQuery, [productId], (err) => {
-      if (err) return callback({ status: 500, message: "Failed to delete product" });
-      callback(null, "Product deleted successfully");
+
+    // Delete product features first
+    const deleteFeaturesQuery = "DELETE FROM oneclick_mobile_features WHERE prod_id = ?";
+    db.query(deleteFeaturesQuery, [prod_id], (err) => {
+      if (err) return callback({ status: 500, message: "Failed to delete product features" });
+
+      // Now delete the product itself
+      const deleteProductQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
+      db.query(deleteProductQuery, [productId], (err) => {
+        if (err) return callback({ status: 500, message: "Failed to delete product" });
+        callback(null, "Product and features deleted successfully");
+      });
     });
   });
 };
+
 
 
 exports.uploadsecondhandproductsImages = (req, res) => {

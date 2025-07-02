@@ -34,6 +34,7 @@ exports.addprinteraccessoriesProduct = (req, res) => {
       productStatus,
       price,
       actual_price,
+      effectiveprice,
       label,
       deliverycharge,
       subtitle,
@@ -50,6 +51,7 @@ exports.addprinteraccessoriesProduct = (req, res) => {
       subtitle,
       label,
       actual_price,
+      effectiveprice,
       category,  // Category is now hardcoded as 'printeraccessories'
       prod_id: generateProductId(), // Implement this function
       prod_name: name,
@@ -92,6 +94,7 @@ exports.updateprinteraccessoriesProduct = (req, res) => {
       price,
       status,
       actual_price,
+      effectiveprice,
     } = req.body;
   
     const images = req.files.map((file) => file.filename);
@@ -101,6 +104,7 @@ exports.updateprinteraccessoriesProduct = (req, res) => {
       subtitle,
       deliverycharge,
       actual_price,
+      effectiveprice,
       label,
       name,
       features,

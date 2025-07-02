@@ -28,7 +28,8 @@ const getProductDetailsById = (id, callback) => {
         f.battery, 
         f.os, 
         f.network, 
-        f.others
+        f.others,
+        f.productType
       FROM oneclick_product_category p
       LEFT JOIN oneclick_mobile_features f ON p.prod_id = f.prod_id
       WHERE p.id = ?

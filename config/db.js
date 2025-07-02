@@ -1,43 +1,38 @@
+// db.js
 const mysql = require('mysql');
 
-// MySQL connection configuration
 const dbConfig = {
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'oneclick_empty',
+  database: 'oneclick',
 };
 
-// Create a MySQL connection
-const db = mysql.createConnection(dbConfig);
+let db;
 
-// Connect to MySQL
-db.connect((err) => {
-  if (err) {
-    console.error('Error connecting to MySQL:', err);
-    return;
-  }
-  console.log('Connected to MySQL');
-});
+function handleDisconnect() {
+  db = mysql.createConnection(dbConfig);
 
-// Middleware to handle MySQL errors
-db.on('error', (err) => {
-  console.error('MySQL error:', err);
-  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-    // Reconnect if the connection is lost
-    db.connect((err) => {
-      if (err) {
-        console.error('Error reconnecting to MySQL:', err);
-      } else {
-        console.log('Reconnected to MySQL');
-      }
-    });
-  } else {
-    throw err;
-  }
-});
+  db.connect((err) => {
+    if (err) {
+      console.error('MySQL connection error:', err);
+      setTimeout(handleDisconnect, 2000); // retry after 2 sec
+    } else {
+      console.log('Connected to MySQL');
+    }
+  });
 
+  db.on('error', (err) => {
+    console.error('MySQL error:', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+      console.warn(' Reconnecting to MySQL...');
+      handleDisconnect(); // reconnect on connection loss
+    } else {
+      throw err; // unexpected error
+    }
+  });
+}
 
+handleDisconnect();
 
-// Export the connection
 module.exports = db;

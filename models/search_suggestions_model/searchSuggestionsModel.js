@@ -2,7 +2,7 @@ const db = require('../../config/db'); // Import the database connection
 
 exports.searchSuggestions = (searchTerm, callback) => {
   const sql = `
-    SELECT DISTINCT category, prod_name 
+    SELECT DISTINCT category, prod_name, prod_img 
     FROM oneclick_product_category
     WHERE 
       REPLACE(LOWER(CONCAT_WS('', prod_name, prod_features)), ' ', '') LIKE ?
