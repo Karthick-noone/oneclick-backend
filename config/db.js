@@ -24,7 +24,7 @@ function handleDisconnect() {
 
   db.on('error', (err) => {
     console.error('MySQL error:', err);
-    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    if (err.code === "PROTOCOL_CONNECTION_LOST" || err.fatal) {
       console.warn(' Reconnecting to MySQL...');
       handleDisconnect(); // reconnect on connection loss
     } else {

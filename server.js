@@ -78,6 +78,7 @@ const accessoriesRoutes = require("./routes/accessories/accessories.routes");
 const priceOfferRoutes = require("./routes/price_offer/price_offer.routes");
 const productBannerRoutes = require("./routes/offerspage_routes/productBannerRoutes");
 const otpRoutes = require("./routes/otp/otpRoutes");
+const productStatusRoutes = require("./routes/products/productStatus.routes");
 
 // Register Routes
 logToFile("Registering routes...", "ROUTES");
@@ -125,6 +126,7 @@ app.use("/backend", accessoriesRoutes);
 app.use("/backend", priceOfferRoutes);
 app.use("/backend", productBannerRoutes);
 app.use("/backend", otpRoutes);
+app.use("/backend", productStatusRoutes);
 
 logToFile("All routes registered successfully", "ROUTES");
 

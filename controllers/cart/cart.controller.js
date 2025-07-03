@@ -5,7 +5,7 @@ const {
   fetchUserCart,
 } = require("../../models/cart/cart.model");
 
-
+// Add to Cart
 const addToCart = (req, res) => {
   const { email, productId, quantity } = req.body;
 
@@ -13,39 +13,53 @@ const addToCart = (req, res) => {
     return res.status(400).json({ message: "Email, Product ID, and Quantity are required" });
   }
 
-  CartModel.getUserCart(email, (err, result) => {
-    if (err) {
-      console.error("Error fetching cart:", err);
-      return res.status(500).json({ message: "Error fetching cart data" });
-    }
-
-    if (!result || result.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    let currentCart = result[0].addtocart ? JSON.parse(result[0].addtocart) : [];
-    const productEntry = `${productId}-${quantity}`;
-    const existingIndex = currentCart.findIndex((item) => item.startsWith(`${productId}-`));
-
-    if (existingIndex !== -1) {
-      const [_, existingQty] = currentCart[existingIndex].split("-");
-      const updatedQty = parseInt(existingQty) + quantity;
-      currentCart[existingIndex] = `${productId}-${updatedQty}`;
-    } else {
-      currentCart.push(productEntry);
-    }
-
-    CartModel.updateUsersCart(email, currentCart, (updateErr) => {
-      if (updateErr) {
-        console.error("Error updating cart:", updateErr);
-        return res.status(500).json({ message: "Error updating cart" });
+  try {
+    CartModel.getUserCart(email, (err, result) => {
+      if (err) {
+        console.error("Error fetching cart:", err);
+        return res.status(500).json({ message: "Error fetching cart data" });
       }
 
-      return res.status(200).json({ message: "Product added to cart successfully" });
+      if (!result || result.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let currentCart = [];
+      try {
+        currentCart = result[0].addtocart ? JSON.parse(result[0].addtocart) : [];
+      } catch (e) {
+        console.error("Error parsing cart:", e);
+        currentCart = [];
+      }
+
+      const productEntry = `${productId}-${quantity}`;
+      const existingIndex = currentCart.findIndex((item) =>
+        typeof item === "string" && item.startsWith(`${productId}-`)
+      );
+
+      if (existingIndex !== -1) {
+        const [_, existingQty] = currentCart[existingIndex].split("-");
+        const updatedQty = parseInt(existingQty) + parseInt(quantity);
+        currentCart[existingIndex] = `${productId}-${updatedQty}`;
+      } else {
+        currentCart.push(productEntry);
+      }
+
+      CartModel.updateUsersCart(email, currentCart, (updateErr) => {
+        if (updateErr) {
+          console.error("Error updating cart:", updateErr);
+          return res.status(500).json({ message: "Error updating cart" });
+        }
+        return res.status(200).json({ message: "Product added to cart successfully" });
+      });
     });
-  });
+  } catch (fatalErr) {
+    console.error("Fatal Error in addToCart:", fatalErr);
+    return res.status(500).json({ message: "Something went wrong." });
+  }
 };
 
+// Get Cart Items
 const getCartItems = (req, res) => {
   const { email, username } = req.body;
 
@@ -53,72 +67,80 @@ const getCartItems = (req, res) => {
     return res.status(400).json({ error: "Email and username are required" });
   }
 
-  CartModel.getUserCartByEmailAndUsername(email, username, (err, results) => {
-    if (err) {
-      console.error("Error retrieving cart items:", err);
-      return res.status(500).json({ error: "Internal Server Error" });
-    }
-
-    if (!results || results.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    let cartItems = results[0].addtocart || "[]";
-
-    try {
-      cartItems = JSON.parse(cartItems);
-    } catch (e) {
-      console.error("Error parsing cart:", e);
-      cartItems = [];
-    }
-
-    if (cartItems.length === 0) {
-      return res.json({ products: [] });
-    }
-
-    const productIds = cartItems.map((item) => item.split("-")[0]);
-
-    CartModel.getProductsByIds(productIds, (err, productResults) => {
+  try {
+    CartModel.getUserCartByEmailAndUsername(email, username, (err, results) => {
       if (err) {
-        console.error("Error fetching product details:", err);
-        return res.status(500).json({ error: "Internal Server Error" });
+        console.error("Error retrieving cart items:", err);
+        return res.status(500).json({ error: "Error retrieving cart items" });
       }
 
-      const productsWithQuantity = productResults.map((product) => {
-        const cartItem = cartItems.find((item) =>
-          item.startsWith(`${product.id}-`)
-        );
-        const quantity = cartItem ? parseInt(cartItem.split("-")[1]) : 0;
-
-        return { ...product, quantity };
-      });
-
-      const featureProdIds = productsWithQuantity
-        .filter((product) => ["Mobiles", "Computers"].includes(product.category))
-        .map((product) => product.prod_id);
-
-      if (featureProdIds.length === 0) {
-        return res.json({ products: productsWithQuantity });
+      if (!results || results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
       }
 
-      CartModel.getFeaturesByProdIds(featureProdIds, (err, featureResults) => {
+      let cartItems = [];
+      try {
+        cartItems = results[0].addtocart ? JSON.parse(results[0].addtocart) : [];
+      } catch (e) {
+        console.error("Error parsing cart:", e);
+        cartItems = [];
+      }
+
+      if (cartItems.length === 0) {
+        return res.json({ products: [] });
+      }
+
+      const productIds = cartItems
+        .map((item) => {
+          if (typeof item !== "string") return null;
+          return item.includes("-") ? item.split("-")[0] : null;
+        })
+        .filter(Boolean);
+
+      CartModel.getProductsByIds(productIds, (err, productResults) => {
         if (err) {
-          console.error("Error fetching features:", err);
-          return res.status(500).json({ error: "Internal Server Error" });
+          console.error("Error fetching product details:", err);
+          return res.status(500).json({ error: "Error fetching product details" });
         }
 
-        const enrichedProducts = productsWithQuantity.map((product) => {
-          const features = featureResults.find(
-            (f) => f.prod_id === product.prod_id
+        const productsWithQuantity = productResults.map((product) => {
+          const cartItem = cartItems.find((item) =>
+            typeof item === "string" && item.startsWith(`${product.id}-`)
           );
-          return features ? { ...product, ...features } : product;
+          const quantity = cartItem ? parseInt(cartItem.split("-")[1]) : 0;
+
+          return { ...product, quantity };
         });
 
-        res.json({ products: enrichedProducts });
+        const featureProdIds = productsWithQuantity
+          .filter((product) => ["Mobiles", "Computers"].includes(product.category))
+          .map((product) => product.prod_id);
+
+        if (featureProdIds.length === 0) {
+          return res.json({ products: productsWithQuantity });
+        }
+
+        CartModel.getFeaturesByProdIds(featureProdIds, (err, featureResults) => {
+          if (err) {
+            console.error("Error fetching features:", err);
+            return res.status(500).json({ error: "Error fetching product features" });
+          }
+
+          const enrichedProducts = productsWithQuantity.map((product) => {
+            const features = featureResults.find((f) => f.prod_id === product.prod_id);
+            return features ? { ...product, ...features } : product;
+          });
+
+          res.json({ products: enrichedProducts });
+        });
       });
     });
-  });
+  } catch (fatalErr) {
+    console.error("Fatal Error in getCartItems:", fatalErr);
+    return res.status(500).json({ error: "Something went wrong." });
+  }
 };
+
 
 const getCartQuantitySum = (req, res) => {
   const { email, username } = req.body;
