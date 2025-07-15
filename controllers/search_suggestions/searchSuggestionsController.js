@@ -74,7 +74,7 @@ exports.getSuggestedCategory = (req, res) => {
 
   const normalizedQuery = query.replace(/\s+/g, '');
 
-  // 🔍 STEP 1: Direct match with category name
+  //  STEP 1: Direct match with category name
   for (const category of Object.keys(keywordMapping)) {
     if (
       category.toLowerCase().replace(/\s+/g, '') === normalizedQuery ||
@@ -84,7 +84,7 @@ exports.getSuggestedCategory = (req, res) => {
     }
   }
 
-  // 🔍 STEP 2: Match with keywords list
+  //  STEP 2: Match with keywords list
   for (const [category, keywords] of Object.entries(keywordMapping)) {
     const matchFound = keywords.some(keyword => {
       const normalizedKeyword = keyword.toLowerCase().replace(/\s+/g, '');
@@ -96,7 +96,7 @@ exports.getSuggestedCategory = (req, res) => {
     }
   }
 
-  // 🔍 STEP 3: Fallback: check for "accessory" keywords
+  //  STEP 3: Fallback: check for "accessory" keywords
   if (query.includes("accessory")) {
     for (const [category, keywords] of Object.entries(keywordMapping)) {
       if (category.endsWith("Accessories")) {
@@ -111,7 +111,7 @@ exports.getSuggestedCategory = (req, res) => {
     }
   }
 
-  // 🔍 STEP 4: Fallback to DB
+  //  STEP 4: Fallback to DB
   const searchTerm = `%${normalizedQuery}%`;
   model.searchCategoryOnly(searchTerm, (error, results) => {
     if (error) return res.status(500).json({ message: "Internal server error" });
@@ -119,6 +119,47 @@ exports.getSuggestedCategory = (req, res) => {
       return res.json({ category: results[0].category });
     } else {
       return res.status(404).json({ message: "No category found" });
+    }
+  });
+};
+
+
+exports.fetchProductDetails = (req, res) => {
+  const { prodName } = req.body;
+
+  if (!prodName) {
+    return res.status(400).json({ error: "Product name is required" });
+  }
+
+  model.getProductByName(prodName, (err, product) => {
+    if (err) {
+      console.error("Error fetching product:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const category = product.category.toLowerCase();
+
+    // If category is Mobiles/Computers/SecondHandProducts
+    if (
+      category === "mobiles" ||
+      category === "computers" ||
+      category === "secondhandproducts"
+    ) {
+      model.getProductWithFeatures(product.prod_id, (err, combinedResults) => {
+        if (err) {
+          console.error("Error fetching product with features:", err);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+
+        res.status(200).json(combinedResults); // Send flat array
+      });
+    } else {
+      // For other categories, send as array
+      res.status(200).json([product]);
     }
   });
 };

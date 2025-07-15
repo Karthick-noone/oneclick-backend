@@ -36,14 +36,14 @@ exports.addFrequentlyBuyAccessories = async (req, res) => {
 exports.getAccessoryCount = async (req, res) => {
   const { productId } = req.params;
 
-  console.log(`[API] /api/accessorycount/${productId} called`);
+  // console.log(`[API] /api/accessorycount/${productId} called`);
 
   try {
     const result = await accessoriesModel.getAccessoryCount(productId);
-    console.log(`[SUCCESS] Accessory count for ${productId}: ${result.accessoryCount}`);
+    // console.log(`[SUCCESS] Accessory count for ${productId}: ${result.accessoryCount}`);
     res.json(result);
   } catch (error) {
-    console.error(`[ERROR] Failed to fetch accessory count for ${productId}:`, error);
+    // console.error(`[ERROR] Failed to fetch accessory count for ${productId}:`, error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };

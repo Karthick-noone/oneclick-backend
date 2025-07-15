@@ -180,28 +180,48 @@ exports.deleteProductImage = (productId, imageIndex, callback) => {
     });
   });
 };
-// 7. Delete a product
 exports.deleteProduct = (productId, callback) => {
   const fetchImageQuery = "SELECT prod_img FROM oneclick_product_category WHERE id = ?";
   db.query(fetchImageQuery, [productId], (err, results) => {
     if (err) return callback({ status: 500, message: "Failed to fetch product image" });
     const image = results[0] && results[0].prod_img;
-    if (image) {
-      const imagePath = `uploads/cctvaccessories/${image}`;
-      fs.unlink(imagePath, (err) => {
-        if (err) {
-          console.error("Failed to delete image:", err);
-        }
+
+    // 1. Remove productId from users' addtocart field if exists
+    const fetchUsersQuery = "SELECT id, addtocart FROM oneclick_users WHERE JSON_CONTAINS(addtocart, JSON_QUOTE(?))";
+    const productIdPattern = productId + "-"; // e.g., "181-"
+
+    db.query(fetchUsersQuery, [`${productIdPattern}1`], (err, userResults) => {
+      if (err) return callback({ status: 500, message: "Failed to check user carts" });
+
+      if (userResults.length > 0) {
+        userResults.forEach((user) => {
+          let cart = JSON.parse(user.addtocart || "[]");
+          // Remove items matching productId
+          cart = cart.filter((item) => !item.startsWith(productIdPattern));
+          const updateCartQuery = "UPDATE oneclick_users SET addtocart = ? WHERE id = ?";
+          db.query(updateCartQuery, [JSON.stringify(cart), user.id], (err) => {
+            if (err) console.error(`Failed to update cart for user ${user.id}:`, err);
+          });
+        });
+      }
+
+      // 2. Delete product image from server
+      if (image) {
+        const imagePath = `uploads/cctvaccessories/${image}`;
+        fs.unlink(imagePath, (err) => {
+          if (err) console.error("Failed to delete image:", err);
+        });
+      }
+
+      // 3. Delete product from oneclick_product_category
+      const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
+      db.query(deleteQuery, [productId], (err) => {
+        if (err) return callback({ status: 500, message: "Failed to delete product" });
+        callback(null, "Product deleted successfully");
       });
-    }
-    const deleteQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
-    db.query(deleteQuery, [productId], (err) => {
-      if (err) return callback({ status: 500, message: "Failed to delete product" });
-      callback(null, "Product deleted successfully");
     });
   });
 };
-
 
 exports.uploadcctvaccessoriesImages = (req, res) => {
   if (!req.files || req.files.length === 0) {

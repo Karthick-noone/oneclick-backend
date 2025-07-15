@@ -274,7 +274,7 @@ exports.deleteProductImage = (productId, imageIndex, callback) => {
     });
   };
 
-  exports.deleteProduct = (productId, callback) => {
+exports.deleteProduct = (productId, callback) => {
   const fetchProductQuery = "SELECT prod_img, prod_id FROM oneclick_product_category WHERE id = ?";
 
   db.query(fetchProductQuery, [productId], (err, results) => {
@@ -285,33 +285,65 @@ exports.deleteProductImage = (productId, imageIndex, callback) => {
 
     const { prod_img, prod_id } = product;
 
-    // Delete image(s) if found
-    try {
-      const images = JSON.parse(prod_img);
-      images.forEach((img) => {
-        const imagePath = `uploads/secondhandproducts/${img}`;
-        fs.unlink(imagePath, (err) => {
-          if (err) console.error("Failed to delete image:", err);
+    // 1 Remove productId from users' addtocart field if exists
+    const fetchUsersQuery = "SELECT id, addtocart FROM oneclick_users WHERE JSON_SEARCH(addtocart, 'one', ?) IS NOT NULL";
+    const productIdPattern = `${productId}-`; // e.g., "181-"
+
+    db.query(fetchUsersQuery, [productIdPattern + '%'], (err, userResults) => {
+      if (err) {
+        console.error("Error fetching user carts:", err);
+        // Don't block deletion if this step fails
+      }
+
+      if (userResults && userResults.length > 0) {
+        userResults.forEach((user) => {
+          let cart = [];
+          try {
+            cart = JSON.parse(user.addtocart || "[]");
+          } catch (e) {
+            console.error(`Invalid addtocart JSON for user ${user.id}:`, e);
+          }
+          // Remove items matching productId
+          const updatedCart = cart.filter(item => !item.startsWith(productIdPattern));
+
+          const updateCartQuery = "UPDATE oneclick_users SET addtocart = ? WHERE id = ?";
+          db.query(updateCartQuery, [JSON.stringify(updatedCart), user.id], (err) => {
+            if (err) {
+              console.error(`Failed to update cart for user ${user.id}:`, err);
+            }
+          });
         });
-      });
-    } catch (e) {
-      console.error("Image parsing or deletion error:", e);
-    }
+      }
 
-    // Delete product features first
-    const deleteFeaturesQuery = "DELETE FROM oneclick_mobile_features WHERE prod_id = ?";
-    db.query(deleteFeaturesQuery, [prod_id], (err) => {
-      if (err) return callback({ status: 500, message: "Failed to delete product features" });
+      // 2 Delete image(s) if found
+      try {
+        const images = JSON.parse(prod_img);
+        images.forEach((img) => {
+          const imagePath = `uploads/secondhandproducts/${img}`;
+          fs.unlink(imagePath, (err) => {
+            if (err) console.error("Failed to delete image:", err);
+          });
+        });
+      } catch (e) {
+        console.error("Image parsing or deletion error:", e);
+      }
 
-      // Now delete the product itself
-      const deleteProductQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
-      db.query(deleteProductQuery, [productId], (err) => {
-        if (err) return callback({ status: 500, message: "Failed to delete product" });
-        callback(null, "Product and features deleted successfully");
+      // 3 Delete product features first
+      const deleteFeaturesQuery = "DELETE FROM oneclick_mobile_features WHERE prod_id = ?";
+      db.query(deleteFeaturesQuery, [prod_id], (err) => {
+        if (err) return callback({ status: 500, message: "Failed to delete product features" });
+
+        // 4 Now delete the product itself
+        const deleteProductQuery = "DELETE FROM oneclick_product_category WHERE id = ?";
+        db.query(deleteProductQuery, [productId], (err) => {
+          if (err) return callback({ status: 500, message: "Failed to delete product" });
+          callback(null, "Product and features deleted successfully");
+        });
       });
     });
   });
 };
+
 
 
 

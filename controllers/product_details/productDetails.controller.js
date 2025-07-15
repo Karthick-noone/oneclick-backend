@@ -58,7 +58,7 @@ const getAdditionalAccessories = (req, res) => {
     if (result.length > 0) {
       const additionalAccessories = result[0].additional_accessories;
       if (additionalAccessories && additionalAccessories.length > 0) {
-        console.log("additionalAccessories", additionalAccessories);
+        // console.log("additionalAccessories", additionalAccessories);
         return res.json({ additional_accessories: additionalAccessories });
       } else {
         return res.status(404).send("No additional accessories found for the given product ID");

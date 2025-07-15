@@ -5,4 +5,6 @@ const ProductStatusController = require("../../controllers/products/productStatu
 // POST /backend/product-status/update
 router.post("/product-status/update", ProductStatusController.updateProductStatus);
 
+router.post("/api/products/status", ProductStatusController.updateStatus);
+
 module.exports = router;

@@ -44,9 +44,13 @@ const storeBuyLater = (req, res) => {
 
     const updatedBuyLaterList = [...new Set([...existingBuyLaterItems, ...productIds])];
     const updatedCartItems = existingCartItems.filter((cartItem) => {
+      if (typeof cartItem !== "string" || !cartItem.includes("-")) {
+        return true; // Keep it if it doesn't match the expected format
+      }
       const cartProductId = parseInt(cartItem.split("-")[0], 10);
       return !productIds.includes(cartProductId);
     });
+
 
     BuyLaterModel.updateUserCartData(userId, updatedBuyLaterList, updatedCartItems, (updateErr, updateResults) => {
       if (updateErr) {
@@ -135,7 +139,7 @@ const getBuyLaterItems = (req, res) => {
       }
 
       // Reorder productResults to match the reversed buyLaterItems order
-      const orderedProducts = buyLaterItems.map(id => 
+      const orderedProducts = buyLaterItems.map(id =>
         productResults.find(product => product.id === id)
       ).filter(product => product); // Remove undefined entries
 

@@ -23,7 +23,8 @@
     "nodemon": "^3.1.10",
     "openai": "^5.8.1",
     "razorpay": "^2.9.4",
-    "react-chartjs-2": "^5.2.0"
+    "react-chartjs-2": "^5.2.0",
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "nock": "^13.5.6"

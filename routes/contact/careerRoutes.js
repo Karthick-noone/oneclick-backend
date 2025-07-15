@@ -26,22 +26,33 @@ const resumeStorage = multer.diskStorage({
 const resumeUpload = multer({
   storage: resumeStorage,
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /pdf|doc|docx/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
+  const allowedTypes = /pdf|doc|docx/;
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
 
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only .pdf, .doc, and .docx files are allowed."));
-    }
-  },
+  if (extname) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only .pdf, .doc, and .docx files are allowed."));
+  }
+}
 });
 
 // Route to submit a career application
-router.post('/submit-careers-form', resumeUpload.single("resume"), careerController.submitApplication);
+router.post(
+  '/submit-careers-form',
+  (req, res, next) => {
+    resumeUpload.single("resume")(req, res, (err) => {
+      if (err) {
+        console.error("[MULTER ERROR]:", err.message);
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  },
+  careerController.submitApplication
+);
 
 // Route to fetch applications
 router.get('/api/careers', careerController.fetchApplications);

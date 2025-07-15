@@ -180,7 +180,7 @@ process.on("SIGTERM", () => {
 
 // Start Server
 app.listen(port, () => {
-  const msg = `🚀 Server running on port ${port}`;
+  const msg = `Server running on port ${port}`;
   console.log(msg);
   logToFile(msg, "STARTUP");
 });

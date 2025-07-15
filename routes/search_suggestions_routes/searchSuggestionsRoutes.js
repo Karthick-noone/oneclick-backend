@@ -8,4 +8,7 @@ router.get('/suggestions', searchSuggestionsController.getSuggestions);
 // App API route for search suggestions
 router.get('/api/suggestions', searchSuggestionsController.getSuggestedCategory);
 
+router.post("/fetch-specific-product", searchSuggestionsController.fetchProductDetails);
+
+
 module.exports = router;

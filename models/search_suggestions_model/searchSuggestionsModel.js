@@ -31,3 +31,46 @@ exports.searchCategoryOnly = (searchTerm, callback) => {
   `;
   db.query(sql, [searchTerm], callback);
 };
+
+exports.getProductByName = (prodName, callback) => {
+  const query = `
+    SELECT * FROM oneclick_product_category 
+    WHERE prod_name LIKE ? 
+    LIMIT 1
+  `;
+  db.query(query, [`%${prodName}%`], (err, results) => {
+    if (err) {
+      return callback(err, null);
+    }
+    callback(null, results[0]); // Single product
+  });
+};
+
+exports.getProductWithFeatures = (prodId, callback) => {
+  const query = `
+    SELECT 
+      p.*,
+      f.feature_id,
+      f.memory,
+      f.storage,
+      f.processor,
+      f.camera,
+      f.display,
+      f.battery,
+      f.os,
+      f.network,
+      f.others,
+      f.productType
+    FROM oneclick_product_category p
+    LEFT JOIN oneclick_mobile_features f
+    ON p.prod_id = f.prod_id
+    WHERE p.prod_id = ?
+  `;
+
+  db.query(query, [prodId], (err, results) => {
+    if (err) {
+      return callback(err, null);
+    }
+    callback(null, results); // Return flattened array
+  });
+};

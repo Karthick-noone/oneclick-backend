@@ -7,7 +7,7 @@ exports.getAllOrders = async (req, res) => {
     const orders = results.reduce((acc, row) => {
       const {
         order_id, user_id, total_amount, shipping_address,
-        order_date, status, payment_method, unique_id,
+        order_date, status, payment_method, payment_id, unique_id,
         order_item_id, product_name, quantity, price,
         invoice, product_description
       } = row;
@@ -15,7 +15,7 @@ exports.getAllOrders = async (req, res) => {
       if (!acc[order_id]) {
         acc[order_id] = {
           order_id, user_id, total_amount, shipping_address,
-          order_date, status, invoice, payment_method, unique_id,
+          order_date, status, invoice, payment_method, payment_id, unique_id,
           items: [],
         };
       }

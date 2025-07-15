@@ -4,8 +4,8 @@ module.exports = {
   insertOrder: (orderData, callback) => {
     const query = `
       INSERT INTO oneclick_orders 
-      (invoice, payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))
+      (invoice, payment_method, payment_id, unique_id, user_id, total_amount, shipping_address, address_id, status, delivery_status, delivery_date) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 DAY))
     `;
     db.query(query, orderData, callback);
   },

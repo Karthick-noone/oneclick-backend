@@ -199,12 +199,12 @@ exports.addNewCoupon = async (req, res) => {
 exports.checkProductCoupon = async (req, res) => {
   const { productId } = req.params;
 
-  console.log(`[API] /api/couponstatus/${productId} called`);
+  // console.log(`[API] /api/couponstatus/${productId} called`);
 
   try {
     const result = await Coupon.hasCouponForProduct(productId);
 
-    console.log(`[SUCCESS] Coupon check result for product ID ${productId}:`, result);
+    // console.log(`[SUCCESS] Coupon check result for product ID ${productId}:`, result);
 
     res.json(result); // { hasCoupon: true/false, isExpired: true/false }
   } catch (err) {

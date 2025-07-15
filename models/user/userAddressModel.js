@@ -75,39 +75,51 @@ const UserAddress = {
     db.query(query, [userId], callback);
   },
 
-   updateCurrentAddress: (userId, addressId, callback) => {
-    db.beginTransaction((err) => {
-      if (err) throw err;
+updateCurrentAddress: (userId, addressId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err); // error getting connection
+
+    connection.beginTransaction((err) => {
+      if (err) {
+        connection.release();
+        return callback(err);
+      }
 
       const resetSql = "UPDATE oneclick_useraddress SET current_address = FALSE WHERE user_id = ?";
-      db.query(resetSql, [userId], (error) => {
+      connection.query(resetSql, [userId], (error) => {
         if (error) {
-          return db.rollback(() => {
+          return connection.rollback(() => {
+            connection.release();
             return callback(error);
           });
         }
 
         const updateSql = "UPDATE oneclick_useraddress SET current_address = TRUE WHERE user_id = ? AND address_id = ?";
-        db.query(updateSql, [userId, addressId], (error, results) => {
+        connection.query(updateSql, [userId, addressId], (error, results) => {
           if (error) {
-            return db.rollback(() => {
+            return connection.rollback(() => {
+              connection.release();
               return callback(error);
             });
           }
 
-          db.commit((err) => {
+          connection.commit((err) => {
             if (err) {
-              return db.rollback(() => {
+              return connection.rollback(() => {
+                connection.release();
                 return callback(err);
               });
             }
 
+            connection.release(); // release back to pool
             callback(null, results);
           });
         });
       });
     });
-  }
+  });
+}
+
 
 };
 

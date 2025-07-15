@@ -47,37 +47,38 @@ const updateUserCart = (cart, email, callback) => {
 
 
 const removeItemFromCart = (email, itemId, quantity, callback) => {
-  const query = "SELECT addtocart FROM oneclick_users WHERE email = ?";
-  db.query(query, [email], (err, results) => {
+  const getCartQuery = "SELECT addtocart FROM oneclick_users WHERE email = ?";
+  db.query(getCartQuery, [email], (err, results) => {
     if (err) return callback(err);
-    if (results.length === 0) return callback(new Error("User not found"));
+    if (!results.length) return callback(new Error("User not found"));
 
-    let cartItems = [];
+    let cartItems;
     try {
-      cartItems = JSON.parse(results[0].addtocart || "[]");
-    } catch (error) {
-      return callback(new Error("Failed to parse cart items"));
+      cartItems = JSON.parse(results[0].addtocart || "[]"); // ["398-2", "390-1"]
+    } catch (parseErr) {
+      return callback(new Error("Invalid cart data"));
     }
 
-    const itemIndex = cartItems.findIndex((item) => item.startsWith(`${itemId}-`));
+    // Construct the string to match (e.g., "398-2")
+    const itemString = `${itemId}-${quantity}`;
 
-    if (itemIndex !== -1) {
-      let [existingItemId, existingQuantity] = cartItems[itemIndex].split("-").map(Number);
-      if (existingItemId === parseInt(itemId) && existingQuantity === parseInt(quantity)) {
-        cartItems.splice(itemIndex, 1);
-        const updateQuery = "UPDATE oneclick_users SET addtocart = ? WHERE email = ?";
-        db.query(updateQuery, [JSON.stringify(cartItems), email], (updateErr) => {
-          if (updateErr) return callback(updateErr);
-          return callback(null, "Item removed from cart successfully");
-        });
-      } else {
-        return callback(new Error("Quantity mismatch or item not found in the cart"));
-      }
-    } else {
-      return callback(new Error("Item not found in the cart"));
-    }
+    // Find index of item in the array
+    const index = cartItems.indexOf(itemString);
+
+    if (index === -1) return callback(new Error("Item not found in the cart"));
+
+    // Remove the item
+    cartItems.splice(index, 1);
+
+    const updateCartQuery = "UPDATE oneclick_users SET addtocart = ? WHERE email = ?";
+    db.query(updateCartQuery, [JSON.stringify(cartItems), email], (updateErr) => {
+      if (updateErr) return callback(updateErr);
+      return callback(null, "Item removed from cart successfully");
+    });
   });
 };
+
+
 
 
 const clearUserCart = (email, updatedCart, callback) => {

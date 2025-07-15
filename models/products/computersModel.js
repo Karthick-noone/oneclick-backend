@@ -149,7 +149,39 @@ exports.checkProductExists = (productId, cb) => {
     db.query(sql, [id], cb);
   };
   
-  exports.deleteProduct = (id, cb) => {
+exports.deleteProduct = (id, cb) => {
+  // 1 Remove productId from users' addtocart field if exists
+  const fetchUsersQuery = "SELECT id, addtocart FROM oneclick_users WHERE JSON_SEARCH(addtocart, 'one', ?) IS NOT NULL";
+  const productIdPattern = `${id}-`; // e.g., "181-"
+
+  db.query(fetchUsersQuery, [productIdPattern + '%'], (err, userResults) => {
+    if (err) {
+      console.error("Error fetching user carts:", err);
+      // Don't block deletion if this step fails
+    }
+
+    if (userResults && userResults.length > 0) {
+      userResults.forEach((user) => {
+        let cart = [];
+        try {
+          cart = JSON.parse(user.addtocart || "[]");
+        } catch (e) {
+          console.error(`Invalid addtocart JSON for user ${user.id}:`, e);
+        }
+        // Remove items matching productId
+        const updatedCart = cart.filter(item => !item.startsWith(productIdPattern));
+
+        const updateCartQuery = "UPDATE oneclick_users SET addtocart = ? WHERE id = ?";
+        db.query(updateCartQuery, [JSON.stringify(updatedCart), user.id], (err) => {
+          if (err) {
+            console.error(`Failed to update cart for user ${user.id}:`, err);
+          }
+        });
+      });
+    }
+
+    // 2 Proceed to delete product from oneclick_product_category
     const sql = "DELETE FROM oneclick_product_category WHERE id = ?";
     db.query(sql, [id], cb);
-  };
+  });
+};

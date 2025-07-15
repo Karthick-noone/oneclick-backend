@@ -54,6 +54,7 @@ const MostPopularProducts = {
     const categoryLimits = {
       Mobiles: 10,
       Computers: 10,
+      Secondhandproducts: 10,
       CCTV: 10,
       Printers: 10,
       ComputerAccessories: 2,
@@ -68,25 +69,62 @@ const MostPopularProducts = {
       (category) =>
         new Promise((resolve, reject) => {
           const limit = categoryLimits[category];
-          const query = `SELECT * FROM oneclick_product_category WHERE category = ? AND productStatus = 'approved' ORDER BY id DESC LIMIT ?`;
+          let query;
+
+          if (['Mobiles', 'Computers', 'Secondhandproducts'].includes(category)) {
+            query = `
+    SELECT 
+      p.*, 
+      m.memory AS memory,
+      m.storage AS storage,
+      m.processor AS processor,
+      m.camera AS camera,
+      m.display AS display,
+      m.battery AS battery,
+      m.os AS os,
+      m.network AS network,
+      m.others AS others
+    FROM oneclick_product_category p
+    LEFT JOIN oneclick_mobile_features m
+    ON p.prod_id = m.prod_id
+    WHERE p.category = ? AND p.productStatus = 'approved'
+    ORDER BY p.id DESC LIMIT ?`;
+          } else {
+            query = `
+    SELECT * FROM oneclick_product_category
+    WHERE category = ? AND productStatus = 'approved'
+    ORDER BY id DESC LIMIT ?`;
+          }
+
+
+          // console.log(`[FETCH_PRODUCTS] Running Query for ${category}:`, query);
 
           db.query(query, [category, limit], (err, results) => {
             if (err) {
+              console.error(`[FETCH_PRODUCTS] Error fetching ${category}:`, err);
               return reject(err);
             }
+
+            // console.log(
+            //   `[FETCH_PRODUCTS] Fetched ${results.length} items for category: ${category}`
+            // );
             resolve(results);
           });
         })
     );
 
     Promise.all(promises)
-      .then((results) => {
-        callback(null, results);
-      })
-      .catch((err) => {
-        callback(err);
-      });
-  }
+  .then((results) => {
+    const combined = results.flat().map(product => ({
+      ...product,
+      category: product.category, // Ensure category info stays
+    }));
+    callback(null, combined);
+  })
+  .catch((err) => callback(err));
+  },
+
 };
+
 
 module.exports = MostPopularProducts;

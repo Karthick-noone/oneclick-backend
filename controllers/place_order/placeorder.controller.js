@@ -24,6 +24,7 @@ const placeOrder = (req, res) => {
     user_id,
     total_amount,
     payment_method,
+    payment_id,
     status,
     shipping_address,
     address_id,
@@ -48,7 +49,7 @@ const placeOrder = (req, res) => {
   const affectedTables = [];
 
   insertOrder(
-    [invoice, payment_method, unique_id, user_id, total_amount, shipping_address, address_id, status, "Order Placed"],
+    [invoice, payment_method, payment_id, unique_id, user_id, total_amount, shipping_address, address_id, status, "Order Placed"],
     (err) => {
       if (err) return res.status(500).json({ message: "Error inserting order", error: err.message });
       affectedTables.push("oneclick_orders");
