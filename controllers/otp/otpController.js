@@ -17,7 +17,7 @@ exports.sendOtp = (req, res) => {
 
     if (!results.length) {
       console.log(`[SEND OTP] No user found with number: ${number}`);
-      return res.status(400).send("This number is not registered");
+      return res.status(404).send("This number is not registered");
     }
 
     const otp = generateOTP();

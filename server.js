@@ -3,11 +3,26 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
+// const { cacheMiddleware, clearCacheMiddleware } = require("./cache/cacheInstance"); //  New file
 
 const app = express();
 const port = process.env.PORT || 5001;
 
 const logFilePath = path.join(__dirname, "server.log");
+
+// === Process-level Error Logging (add at the top) ===
+process.on("unhandledRejection", (reason, promise) => {
+  const msg = `Unhandled Rejection at: ${promise}, reason: ${reason}`;
+  console.error(msg);
+  fs.appendFileSync(logFilePath, `[${new Date().toISOString()}] [UNHANDLED_REJECTION] ${msg}\n`);
+});
+
+process.on("uncaughtException", (err) => {
+  const msg = `Uncaught Exception: ${err.stack}`;
+  console.error(msg);
+  fs.appendFileSync(logFilePath, `[${new Date().toISOString()}] [UNCAUGHT_EXCEPTION] ${msg}\n`);
+  process.exit(1); // optional: restart server
+});
 
 function logToFile(message, type = "INFO") {
   const timestamp = new Date().toISOString();
@@ -33,6 +48,38 @@ logToFile("Serving static files at /backend/uploads", "STATIC");
 
 // Route Imports
 logToFile("Importing routes...", "INIT");
+
+
+try {
+  const { cacheMiddleware, clearCacheMiddleware } = require("./cache/cacheInstance");
+
+  // Wrap cache middlewares in try-catch
+  app.use((req, res, next) => {
+    try {
+      clearCacheMiddleware(req, res, next);
+    } catch (err) {
+      logToFile(`Error in clearCacheMiddleware: ${err.stack}`, "CACHE_ERROR");
+      console.error("clearCacheMiddleware error:", err);
+      next(err);
+    }
+  });
+
+  app.use((req, res, next) => {
+    try {
+      cacheMiddleware(req, res, next);
+    } catch (err) {
+      logToFile(`Error in cacheMiddleware: ${err.stack}`, "CACHE_ERROR");
+      console.error("cacheMiddleware error:", err);
+      next(err);
+    }
+  });
+
+  logToFile("Cache middlewares loaded successfully", "CACHE");
+} catch (err) {
+  console.error("Failed to load cache middlewares:", err);
+  logToFile(`Failed to load cache middlewares: ${err.stack}`, "CACHE_ERROR");
+}
+
 
 const edithomepageRoutes = require("./routes/adpage_routes/editHomePageRoutes");
 const doubleAdRoutes = require("./routes/adpage_routes/doubleAdPageRoutes");
