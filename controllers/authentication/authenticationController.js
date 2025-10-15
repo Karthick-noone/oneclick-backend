@@ -101,6 +101,10 @@ exports.staffLogin = (req, res) => {
     if (err) return res.status(500).json({ message: "Database error" });
     if (!staff) return res.status(400).json({ message: "Invalid credentials" });
 
+    if (staff.status !== "active") {
+      return res.status(403).json({ message: "This account is inactive, contact admin" });
+    }
+
     res.status(200).json({
       message: "Staff login successful",
       staff: {
@@ -112,6 +116,7 @@ exports.staffLogin = (req, res) => {
     });
   });
 };
+
 
 
 

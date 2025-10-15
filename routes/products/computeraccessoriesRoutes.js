@@ -30,3 +30,5 @@ router.delete('/deletecomputeraccessories/image/:id', computeraccessoriesControl
 router.delete('/deletecomputeraccessories/:id', computeraccessoriesController.deletecomputeraccessoriesProduct);
 
 module.exports = router;
+
+

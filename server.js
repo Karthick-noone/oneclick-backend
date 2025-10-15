@@ -187,13 +187,93 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-// Error Handler Middleware
+// ======= Product Deep-Link Route =======
+const https = require("https");
+
+// ======= Product Deep-Link Route =======
+app.get("/backend/shop/:productId", (req, res) => {
+  const { productId } = req.params;
+  const userAgent = req.headers['user-agent'] || "";
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+  const isAndroid = /Android/i.test(userAgent);
+
+  const appDeepLink = `seataxi://product/${productId}`;
+  const playStoreUrl = `https://play.google.com/store/apps/details?id=com.oneclick.seasense`;
+  const appStoreUrl = `https://apps.apple.com/app/your-app-id`;
+  const webProductUrl = `https://oneclickteck.com/shop/${productId}`;
+
+  // Function to check if web product exists
+  function checkWebProduct(url, callback) {
+    https
+      .get(url, { method: "HEAD" }, (resp) => {
+        callback(resp.statusCode === 200);
+      })
+      .on("error", () => callback(false));
+  }
+
+  if (isIOS || isAndroid) {
+    checkWebProduct(webProductUrl, (exists) => {
+      if (exists) {
+        // Product exists → open web first
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Opening Product...</title>
+            <script>
+              window.location = "${webProductUrl}";
+            </script>
+          </head>
+          <body>
+            <div style="text-align:center; padding:50px;">
+              <h2>Opening Product...</h2>
+              <p>If the web page doesn't load, try again later.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      } else {
+        // Product does not exist → fallback to app store
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Redirecting to SeaTaxi</title>
+            ${isIOS ? `<meta name="apple-itunes-app" content="app-id=YOUR_APP_ID">` : ""}
+            <script>
+              window.location = "${appDeepLink}";
+              setTimeout(function() {
+                window.location = "${isIOS ? appStoreUrl : playStoreUrl}";
+              }, 1000);
+            </script>
+          </head>
+          <body>
+            <div style="text-align:center; padding:50px;">
+              <h2>Opening SeaTaxi App...</h2>
+              <p>If the app doesn't open, you'll be redirected to ${isIOS ? "App Store" : "Play Store"}.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+    });
+  } else {
+    // Desktop → redirect directly to web
+    res.redirect(webProductUrl);
+  }
+});
+
+// ======= Fallback for unknown routes =======
+app.get('*', (req, res) => res.redirect('https://oneclickteck.com'));
+
+// ===== Error Handler =====
 app.use((err, req, res, next) => {
   const errorMessage = `Error at ${req.method} ${req.originalUrl}: ${err.stack}`;
   console.error(errorMessage);
   logToFile(errorMessage, "ERROR");
   res.status(500).json({ message: "Internal Server Error", error: err.message });
 });
+
 
 // Process Level Error Logging
 process.on("unhandledRejection", (reason, promise) => {
