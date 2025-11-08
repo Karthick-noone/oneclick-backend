@@ -47,12 +47,14 @@ exports.addsecondhandproductsProduct = (req, res) => {
     os,
     others,
     productType,
+    branch_id,
+    user_role, branch_name, actor_name, contact_person
   } = req.body;
 
   const category = "secondhandproducts";
   const images = req.files.map((file) => file.filename);
   const prod_id = generateProductId();
-
+  const branchIdNum =branch_id
   const productData = {
     productStatus,
     deliverycharge,
@@ -66,6 +68,8 @@ exports.addsecondhandproductsProduct = (req, res) => {
     prod_price: price,
     prod_img: JSON.stringify(images),
     status: "available",
+    branchIdNum,
+    user_role, branch_name, actor_name, contact_person
   };
 
   secondhandproductsModel.addProduct(productData, (err, message) => {
@@ -104,7 +108,8 @@ exports.addsecondhandproductsProduct = (req, res) => {
 
 // 3. Fetch all secondhandproducts products for admin
 exports.fetchsecondhandproductsProducts = (req, res) => {
-  secondhandproductsModel.fetchAllProducts((err, products) => {
+  const {branch_id, userRole } = req.query
+  secondhandproductsModel.fetchAllProducts(branch_id, userRole, (err, products) => {
     if (err) return res.status(err.status).send(err.message);
     res.json(products);
   });

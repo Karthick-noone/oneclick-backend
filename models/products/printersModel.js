@@ -3,33 +3,87 @@ const fs = require('fs');
 const path =require ('path')
 // 1. Add a product
 exports.addProduct = (productData, callback) => {
-  const sql = "INSERT INTO oneclick_product_category (productStatus, deliverycharge, subtitle, offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  console.log("[Printer][Insert] Incoming Data:", productData);
+
+  const sql = `
+    INSERT INTO oneclick_product_category
+    (productStatus, deliverycharge, subtitle, offer_label, actual_price, category, prod_id, prod_name, prod_features, prod_price, prod_img, status, branch_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
   db.query(sql, Object.values(productData), (err, result) => {
     if (err) {
-      console.error("Error inserting product into database:", err);
+      console.error("[Printer][Insert] ERROR:", err);
       return callback({ status: 500, message: "Error adding product" });
     }
-    callback(null, "Product added with multiple images");
+
+    console.log("[Printer][Insert] SUCCESS — ID:", result.insertId);
+
+    // --- notification logic ---
+    if (productData.user_role === "branch_admin" || productData.user_role === "Staff") {
+
+      const message = `Printers: "${productData.prod_name}" added by ${productData.contact_person}(${productData.user_role === "branch_admin" ? "Branch Admin" : "Staff"}).`;
+
+      const notifySQL = `
+        INSERT INTO oneclick_notifications (type, message, is_read, created_at)
+        VALUES ('product_insert', ?, 0, NOW())
+      `;
+
+      db.query(notifySQL, [message], () => {
+        return callback(null, "Product added with multiple images");
+      });
+
+    } else {
+      return callback(null, "Product added with multiple images");
+    }
   });
 };
 
 
+
 // 2. Fetch all products
-exports.fetchAllProducts = (callback) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'printers' ORDER BY id DESC";
-  db.query(sql, (err, results) => {
+exports.fetchAllProducts = (branch_id, userRole, callback) => {
+  let sql = `
+    SELECT *
+    FROM oneclick_product_category
+    WHERE category = 'printers'
+  `;
+
+  const params = [];
+
+  // Branch logic same as computers
+  if (branch_id && branch_id !== "null") {
+    sql += " AND branch_id = ?";
+    params.push(branch_id);
+    // console.log("🟢 CCTV → Branch Admin → branch_id =", branch_id);
+
+  } else if (userRole !== "Admin") {
+    sql += " AND 1=0";
+    // console.log("🚫 CCTV → no branch_id and not admin → no access");
+
+  } else {
+    console.log("🟢 CCTV → Admin → fetching all CCTV products");
+  }
+
+  sql += " ORDER BY id DESC";
+
+  // console.log("🧾 CCTV final SQL:", sql);
+  // console.log("📌 CCTV params:", params);
+
+  db.query(sql, params, (err, results) => {
     if (err) {
-      console.error("Error fetching products:", err);
+      // console.error("❌ CCTV error fetching products:", err);
       return callback({ status: 500, message: "Failed to fetch products" });
     }
+
     const products = results.map((product) => ({
       ...product,
       prod_img: JSON.parse(product.prod_img),
     }));
+
     callback(null, products);
   });
 };
-
 // 3. Fetch approved products
 exports.fetchApprovedProducts = (callback) => {
   const sql = "SELECT * FROM oneclick_product_category WHERE category = 'printers' AND productStatus = 'approved' ORDER BY id DESC";

@@ -38,12 +38,15 @@ exports.addcomputeraccessoriesProduct = (req, res) => {
       label,
       deliverycharge,
       subtitle,
+      branch_id,
+      user_role, branch_name, actor_name, contact_person
     } = req.body;
   
     // Hardcoding category as 'computeraccessories'
     const category = "ComputerAccessories";  // Set category as computeraccessories
   
     const images = req.files.map((file) => file.filename);
+  const branchIdNum = branch_id;
   
     computeraccessoriesModel.addProduct({
       productStatus,
@@ -59,6 +62,8 @@ exports.addcomputeraccessoriesProduct = (req, res) => {
       prod_price: price,
       prod_img: JSON.stringify(images),
       status: "available",
+      branchIdNum,
+      user_role, branch_name, actor_name, contact_person
     }, (err, message) => {
       if (err) return res.status(err.status).send(err.message);
       res.send(message);
@@ -68,7 +73,8 @@ exports.addcomputeraccessoriesProduct = (req, res) => {
 
 // 3. Fetch all computeraccessories products for admin
 exports.fetchcomputeraccessoriesProducts = (req, res) => {
-  computeraccessoriesModel.fetchAllProducts((err, products) => {
+  const {branch_id, userRole} =req.query
+  computeraccessoriesModel.fetchAllProducts(branch_id, userRole, (err, products) => {
     if (err) return res.status(err.status).send(err.message);
     res.json(products);
   });

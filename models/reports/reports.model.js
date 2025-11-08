@@ -157,14 +157,14 @@ exports.getProductCountByCategory = (callback) => {
     SELECT 
       category, 
       COUNT(*) AS total_products
-    FROM oneclick_product_category
-    GROUP BY category
+    FROM oneclick_product_category WHERE branch_id IS NULL
+    GROUP BY category 
   `;
   db.query(query, callback);
 };
 
 exports.getTotalProducts = (callback) => {
-  const query = `SELECT COUNT(*) AS total_products FROM oneclick_product_category`;
+  const query = `SELECT COUNT(*) AS total_products FROM oneclick_product_category WHERE branch_id IS NULL`;
   db.query(query, callback);
 };
 

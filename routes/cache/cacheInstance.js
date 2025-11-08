@@ -7,17 +7,17 @@ function cacheMiddleware(req, res, next) {
 
   const cacheKey = req.originalUrl;
   if (apiCache.has(cacheKey)) {
-    console.log(` Cache HIT: ${cacheKey}`);
+    // console.log(` Cache HIT: ${cacheKey}`);
     return res.json(apiCache.get(cacheKey));
   }
 
-  console.log(` Cache MISS: ${cacheKey}`);
+  // console.log(` Cache MISS: ${cacheKey}`);
 
   // Override res.json to store response in cache
   const originalJson = res.json.bind(res);
   res.json = (data) => {
     apiCache.set(cacheKey, data);
-    console.log(` Cache STORED: ${cacheKey}`);
+    // console.log(` Cache STORED: ${cacheKey}`);
     return originalJson(data);
   };
 
@@ -27,7 +27,7 @@ function cacheMiddleware(req, res, next) {
 // Clear cache on data-changing methods
 function clearCacheMiddleware(req, res, next) {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
-    console.log(` Clearing all GET caches due to ${req.method} ${req.originalUrl}`);
+    // console.log(` Clearing all GET caches due to ${req.method} ${req.originalUrl}`);
     apiCache.flushAll();
   }
   next();

@@ -21,13 +21,13 @@ function cacheMiddleware(req, res, next) {
   const cacheKey = req.originalUrl;
   if (apiCache.has(cacheKey)) {
     const msg = `✅ Cache HIT: ${cacheKey}`;
-    console.log(msg);
+    // console.log(msg);
     logToFile(msg, "CACHE_HIT");
     return res.json(apiCache.get(cacheKey));
   }
 
   const msg = `❌ Cache MISS: ${cacheKey}`;
-  console.log(msg);
+  // console.log(msg);
   logToFile(msg, "CACHE_MISS");
 
   // Override res.json to store response in cache
@@ -36,7 +36,7 @@ function cacheMiddleware(req, res, next) {
     try {
       apiCache.set(cacheKey, data);
       const storeMsg = `📦 Cache STORED: ${cacheKey}`;
-      console.log(storeMsg);
+      // console.log(storeMsg);
       logToFile(storeMsg, "CACHE_STORE");
     } catch (err) {
       const errorMsg = `⚠️ Failed to store cache for ${cacheKey}: ${err.message}`;
@@ -53,7 +53,7 @@ function cacheMiddleware(req, res, next) {
 function clearCacheMiddleware(req, res, next) {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
     const msg = `🧹 Clearing all GET caches due to ${req.method} ${req.originalUrl}`;
-    console.log(msg);
+    // console.log(msg);
     logToFile(msg, "CACHE_CLEAR");
     try {
       apiCache.flushAll();

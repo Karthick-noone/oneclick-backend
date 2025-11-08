@@ -38,13 +38,15 @@ exports.addprinteraccessoriesProduct = (req, res) => {
       label,
       deliverycharge,
       subtitle,
+      branch_id,
+      user_role, branch_name, actor_name, contact_person
     } = req.body;
   
     // Hardcoding category as 'printeraccessories'
     const category = "PrinterAccessories";  // Set category as printeraccessories
   
     const images = req.files.map((file) => file.filename);
-  
+    const branchIdNum = branch_id
     printeraccessoriesModel.addProduct({
       productStatus,
       deliverycharge,
@@ -59,6 +61,8 @@ exports.addprinteraccessoriesProduct = (req, res) => {
       prod_price: price,
       prod_img: JSON.stringify(images),
       status: "available",
+      branchIdNum,
+      user_role, branch_name, actor_name, contact_person
     }, (err, message) => {
       if (err) return res.status(err.status).send(err.message);
       res.send(message);
@@ -68,7 +72,8 @@ exports.addprinteraccessoriesProduct = (req, res) => {
 
 // 3. Fetch all printeraccessories products for admin
 exports.fetchprinteraccessoriesProducts = (req, res) => {
-  printeraccessoriesModel.fetchAllProducts((err, products) => {
+  const {branch_id, userRole} = req.query
+  printeraccessoriesModel.fetchAllProducts(branch_id, userRole, (err, products) => {
     if (err) return res.status(err.status).send(err.message);
     res.json(products);
   });

@@ -120,12 +120,16 @@ const buylaterRoutes = require("./routes/buylater/buylater.routes");
 const placeOrderRoutes = require("./routes/place_order/placeorder.routes");
 const ordersRoutes = require("./routes/orders/orders.routes");
 const reportRoutes = require("./routes/reports/reports.routes");
+const BranchReportRoutes = require("./routes/reports/branchReports.routes");
 const staffRoutes = require("./routes/staffs/staffs.routes");
 const accessoriesRoutes = require("./routes/accessories/accessories.routes");
 const priceOfferRoutes = require("./routes/price_offer/price_offer.routes");
 const productBannerRoutes = require("./routes/offerspage_routes/productBannerRoutes");
 const otpRoutes = require("./routes/otp/otpRoutes");
 const productStatusRoutes = require("./routes/products/productStatus.routes");
+const branchRoutes = require("./routes/branch/branch.route.js");
+const gstRoutes = require("./routes/gst/gst.route");
+const notificationsRouter = require('./routes/notifications/notification.route');
 
 // Register Routes
 logToFile("Registering routes...", "ROUTES");
@@ -168,12 +172,16 @@ app.use("/backend", buylaterRoutes);
 app.use("/backend", placeOrderRoutes);
 app.use("/backend", ordersRoutes);
 app.use("/backend", reportRoutes);
+app.use("/backend/branch", BranchReportRoutes);
 app.use("/backend", staffRoutes);
 app.use("/backend", accessoriesRoutes);
 app.use("/backend", priceOfferRoutes);
 app.use("/backend", productBannerRoutes);
 app.use("/backend", otpRoutes);
 app.use("/backend", productStatusRoutes);
+app.use("/backend/api/branch", branchRoutes);
+app.use("/backend/api/gst", gstRoutes);
+app.use('/backend/notifications', notificationsRouter);
 
 logToFile("All routes registered successfully", "ROUTES");
 

@@ -37,13 +37,15 @@ exports.addprintersProduct = (req, res) => {
       label,
       deliverycharge,
       subtitle,
+      branch_id,
+      user_role, branch_name, actor_name, contact_person
     } = req.body;
   
     // Hardcoding category as 'printers'
     const category = "Printers";  // Set category as printers
   
     const images = req.files.map((file) => file.filename);
-  
+    const branchIdNum =branch_id
     printersModel.addProduct({
       productStatus,
       deliverycharge,
@@ -57,6 +59,8 @@ exports.addprintersProduct = (req, res) => {
       prod_price: price,
       prod_img: JSON.stringify(images),
       status: "available",
+      branchIdNum,
+      user_role, branch_name, actor_name, contact_person
     }, (err, message) => {
       if (err) return res.status(err.status).send(err.message);
       res.send(message);
@@ -66,7 +70,8 @@ exports.addprintersProduct = (req, res) => {
 
 // 3. Fetch all printers products for admin
 exports.fetchprintersProducts = (req, res) => {
-  printersModel.fetchAllProducts((err, products) => {
+  const {branch_id, userRole } =req.query
+  printersModel.fetchAllProducts(branch_id, userRole, (err, products) => {
     if (err) return res.status(err.status).send(err.message);
     res.json(products);
   });

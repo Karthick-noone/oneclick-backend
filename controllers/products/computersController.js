@@ -15,7 +15,8 @@ const {
   insertFeatures,
   updateFeatures,
   fetchProductImage,
-  deleteProduct
+  deleteProduct,
+  getAllComputers
 } = require("../../models/products/computersModel");
 
 const generateProductId = () => {
@@ -51,26 +52,63 @@ exports.uploadComputerImages = (req, res) => {
 };
 
 exports.addComputerProduct = (req, res) => {
+  console.log("\n==================== ADD COMPUTER PRODUCT ====================");
+  console.log("[Controller] Incoming body:", req.body);
+  console.log("[Controller] Incoming files:", req.files);
+
   const {
     name, price, category, actual_price, label, deliverycharge, productStatus,
-    subtitle, memory, storage, processor, display, os, others,
-  } = req.body;
+    subtitle, memory, storage, processor, display, os, others, branch_id,
+    user_role, branch_name, actor_name, contact_person,  } = req.body;
 
   const images = req.files.map((file) => file.filename);
   const prod_id = generateProductId();
+  const branchIdNum = branch_id;
+
+  console.log("[Controller] Generated prod_id:", prod_id);
+  console.log("[Controller] Images:", images);
 
   insertComputerProduct(
     {
-      productStatus, deliverycharge, subtitle, label, actual_price,
-      prod_id, name, price, images,
+      productStatus,
+      deliverycharge,
+      subtitle,
+      label,
+      actual_price,
+      prod_id,
+      name,
+      price,
+      images,
+      branch_id: branchIdNum,
+
+      // required for notification logic
+      user_role,
+      branch_name,
+      actor_name,
+      contact_person,
+      user_role
     },
     (err, productResult) => {
-      if (err) return res.status(500).send("Error adding product");
+      if (err) {
+        console.error("[Controller] ERROR inserting product:", err);
+        return res.status(500).send("Error adding product");
+      }
+
+      console.log("[Controller] Product Insert Success →", productResult.insertId);
 
       insertComputerFeatures(
         { prod_id, memory, storage, processor, display, os, others },
         (err) => {
-          if (err) return res.status(500).send("Error adding features");
+          if (err) {
+            console.error("[Controller] ERROR inserting features:", err);
+            return res.status(500).send("Error adding features");
+          }
+
+          console.log("[Controller] Features Insert Success");
+
+          console.log("✅ FINAL: Product + Features + Notification Done");
+          console.log("==============================================================\n");
+
           res.send("Product and features added successfully");
         }
       );
@@ -78,8 +116,11 @@ exports.addComputerProduct = (req, res) => {
   );
 };
 
+
 exports.fetchAllComputers = (req, res) => {
-  fetchAllComputers((err, results) => {
+  const { branch_id, userRole } = req.query;
+
+  getAllComputers(branch_id, userRole, (err, results) => {
     if (err) return res.status(500).json({ message: "Failed to fetch products" });
 
     const products = results.map((product) => ({
@@ -90,6 +131,7 @@ exports.fetchAllComputers = (req, res) => {
     res.json(products);
   });
 };
+
 
 exports.fetchComputers = (req, res) => {
   const sql = `

@@ -143,8 +143,8 @@ const Coupon = {
   insertCopiedProduct: (newProdId, newImageJson, id, callback) => {
     const query = `
     INSERT INTO oneclick_product_category 
-    (prod_id, prod_name, category, subtitle, prod_features, actual_price, prod_price, deliverycharge, offer_label, prod_img, productStatus)
-    SELECT ?, prod_name, category, subtitle, prod_features, actual_price, prod_price, deliverycharge, offer_label, ?, productStatus
+    (prod_id, prod_name, category, subtitle, prod_features, actual_price, prod_price, deliverycharge, offer_label, prod_img, productStatus, branch_id)
+    SELECT ?, prod_name, category, subtitle, prod_features, actual_price, prod_price, deliverycharge, offer_label, ?, productStatus, branch_id
     FROM oneclick_product_category 
     WHERE id = ?
   `;

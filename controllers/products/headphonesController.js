@@ -37,13 +37,16 @@ exports.addHeadphonesProduct = (req, res) => {
       label,
       deliverycharge,
       subtitle,
+      branch_id,
+      user_role, branch_name, actor_name, contact_person
     } = req.body;
   
     // Hardcoding category as 'Headphones'
     const category = "Headphones";  // Set category as Headphones
   
     const images = req.files.map((file) => file.filename);
-  
+    const branchIdNum = branch_id;
+
     headphonesModel.addProduct({
       productStatus,
       deliverycharge,
@@ -57,6 +60,8 @@ exports.addHeadphonesProduct = (req, res) => {
       prod_price: price,
       prod_img: JSON.stringify(images),
       status: "available",
+      branchIdNum,
+      user_role, branch_name, actor_name, contact_person
     }, (err, message) => {
       if (err) return res.status(err.status).send(err.message);
       res.send(message);
@@ -66,7 +71,8 @@ exports.addHeadphonesProduct = (req, res) => {
 
 // 3. Fetch all Headphones products for admin
 exports.fetchHeadphonesProducts = (req, res) => {
-  headphonesModel.fetchAllProducts((err, products) => {
+  const {branch_id, userRole } = req.query
+  headphonesModel.fetchAllProducts(branch_id, userRole, (err, products) => {
     if (err) return res.status(err.status).send(err.message);
     res.json(products);
   });

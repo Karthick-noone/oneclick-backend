@@ -13,7 +13,7 @@ const {
   updateFeatures,
   fetchProductImage,
   deleteProduct,
-  fetchMobiles 
+  fetchMobiles
 } = require("../../models/products/mobilesModel");
 
 const generateProductId = () => "PRD" + Math.floor(10000 + Math.random() * 90000);
@@ -37,22 +37,68 @@ exports.uploadMobileImages = (req, res) => {
 };
 
 exports.addMobile = (req, res) => {
+  console.log("\n==================== ADD MOBILE PRODUCT ====================");
+  console.log("[Controller][Mobile] Incoming Body:", req.body);
+  console.log("[Controller][Mobile] Incoming Files:", req.files);
+
   const {
     name, price, actual_price, label, deliverycharge, productStatus, subtitle,
-    memory, storage, processor, camera, display, battery, os, network, others
+    memory, storage, processor, camera, display, battery, os, network, others, branch_id,
+    user_role, branch_name, actor_name, contact_person
   } = req.body;
 
   const prod_id = generateProductId();
   const images = req.files.map(file => file.filename);
+  const branchIdNum = branch_id;
 
-  insertMobileProduct({ prod_id, name, price, actual_price, label, deliverycharge, productStatus, subtitle, images }, (err) => {
-    if (err) return res.status(500).send("Error adding product");
+  console.log("[Controller][Mobile] Generated prod_id:", prod_id);
+  console.log("[Controller][Mobile] Images:", images);
+  console.log("[Controller][Mobile] branch_id:", branchIdNum);
 
-    insertMobileFeatures({ prod_id, memory, storage, processor, camera, display, battery, os, network, others }, (err) => {
-      if (err) return res.status(500).send("Error adding features");
-      res.send("Product and features added successfully");
-    });
-  });
+  insertMobileProduct(
+    {
+      prod_id,
+      name,
+      price,
+      actual_price,
+      label,
+      deliverycharge,
+      productStatus,
+      subtitle,
+      images,
+      branch_id: branchIdNum,
+      user_role,
+      branch_name,
+      actor_name,
+      contact_person
+    },
+    (err) => {
+
+      if (err) {
+        console.error("[Controller][Mobile] ERROR inserting product:", err);
+        return res.status(500).send("Error adding product");
+      }
+
+      console.log("[Controller][Mobile] Product Insert Success → Now inserting features");
+
+      insertMobileFeatures(
+        { prod_id, memory, storage, processor, camera, display, battery, os, network, others },
+        (err) => {
+
+          if (err) {
+            console.error("[Controller][Mobile] ERROR inserting features:", err);
+            return res.status(500).send("Error adding features");
+          }
+
+          console.log("[Controller][Mobile] Features Insert Success");
+          console.log("✅ FINAL: Mobile Product + Features + Notification Done");
+          console.log("==============================================================\n");
+
+          res.send("Product and features added successfully");
+        }
+      );
+    }
+  );
 };
 
 exports.fetchMobiles = (req, res) => {
@@ -195,20 +241,31 @@ exports.deleteMobile = (req, res) => {
 
 
 
-
 exports.adminFetchMobiles = (req, res) => {
-  fetchMobiles((err, results) => {
+  const { branch_id, userRole } = req.query;
+  // console.log("\n🚀 [Controller] GET /adminfetchmobiles called");
+  // console.log("➡️  branch_id:", branch_id);
+  // console.log("➡️  userRole:", userRole);
+
+  fetchMobiles(branch_id, userRole, (err, results) => {
     if (err) {
-      console.error("Error fetching products:", err);
+      console.error("❌ [Controller] Error fetching mobiles:", err);
       return res.status(500).json({ message: "Failed to fetch products" });
     }
 
-    // Parse the prod_img JSON string to an array for each product
-    const products = results.map((product) => ({
-      ...product,
-      prod_img: JSON.parse(product.prod_img), // Convert to an array
-    }));
+    // console.log("🧩 [Controller] Raw Results Count:", results.length);
 
+    const products = results.map((product) => {
+      let parsedImages = [];
+      try {
+        parsedImages = JSON.parse(product.prod_img);
+      } catch (e) {
+        console.warn(`⚠️ [Controller] Invalid JSON in prod_img for prod_id ${product.prod_id}`);
+      }
+      return { ...product, prod_img: parsedImages };
+    });
+
+    // console.log(`✅ [Controller] Returning ${products.length} formatted products.`);
     res.json(products);
   });
 };
