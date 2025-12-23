@@ -4,7 +4,7 @@ const fetch = require("node-fetch");
 const GSTModel = {
   fetchGSTDetails: async (gstin, callback) => {
     console.log("📡 [Model] Fetching GST details for:", gstin);
-    const url = `http://sheet.gstincheck.co.in/check/adf83afe7d456ba5524b2cf758cfa4ef/${gstin}`;
+    const url = `http://sheet.gstincheck.co.in/check/7bff804535e5662952b76ad055476c85/${gstin}`;
 
     try {
       const response = await fetch(url);

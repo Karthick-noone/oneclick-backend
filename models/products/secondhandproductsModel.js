@@ -107,7 +107,6 @@ exports.fetchAllProducts = (branch_id, userRole, callback) => {
   });
 };
 
-
 exports.fetchApprovedProducts = (callback) => {
   const sql = `
     SELECT pc.*, mf.memory, mf.camera, mf.storage, mf.battery, mf.display, mf.network, 
@@ -124,14 +123,46 @@ exports.fetchApprovedProducts = (callback) => {
       return callback({ status: 500, message: "Failed to fetch approved products" });
     }
 
-    const products = results.map((product) => ({
+    let products = results.map((product) => ({
       ...product,
-      prod_img: JSON.parse(product.prod_img),
+      prod_img: JSON.parse(product.prod_img || "[]"),
     }));
 
-    callback(null, products);
+    // ⭐ Fetch margin rules
+    const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+    db.query(marginSql, (mErr, marginRules) => {
+      if (mErr) {
+        console.error("[Margin] Error loading margin rules:", mErr);
+        return callback(null, products); // fallback: return original list
+      }
+
+      // ⭐ Apply margin logic
+      const updatedProducts = products.map((p) => {
+        const basePrice = Number(p.prod_price);
+
+        // Super admin product → no margin
+        if (!p.branch_id) {
+          return { ...p, prod_price: basePrice };
+        }
+
+        // Branch admin product → apply margin
+        const rule = marginRules.find(
+          (r) => basePrice >= r.range_from && basePrice <= r.range_to
+        );
+
+        const finalPrice = rule
+          ? basePrice + Number(rule.margin_amount)
+          : basePrice;
+
+        return { ...p, prod_price: finalPrice };
+      });
+
+      callback(null, updatedProducts);
+    });
   });
 };
+
 
 
 exports.getOldImages = (productId, callback) => {

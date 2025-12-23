@@ -34,6 +34,8 @@ const placeOrder = (req, res) => {
   const files = req.files || [];
   let items;
 
+  // console.log("📦 Raw cartItems:", cartItems);
+
   try {
     items = Array.isArray(cartItems) ? cartItems : JSON.parse(cartItems);
   } catch (e) {
@@ -46,13 +48,33 @@ const placeOrder = (req, res) => {
 
   const unique_id = generateUniqueId();
   const invoice = `INV-${Date.now()}`;
-  const affectedTables = [];
+
+  // ✅ branch_id comes from first item (because cartItems is array)
+  const branch_id = items[0]?.branch_id || null;
+  // console.log("✅ Extracted branch_id from items:", branch_id);
 
   insertOrder(
-    [invoice, payment_method, payment_id, unique_id, user_id, total_amount, shipping_address, address_id, status, "Order Placed"],
+    [
+      invoice,
+      payment_method,
+      payment_id,
+      unique_id,
+      user_id,
+      total_amount,
+      shipping_address,
+      address_id,
+      status,
+      "Order Placed",
+      branch_id
+    ],
     (err) => {
+      // console.log("---- ORDER INSERT LOG ----");
+      // console.log("invoice:", invoice);
+      // console.log("unique_id:", unique_id);
+      // console.log("branch_id:", branch_id);
+      // console.log("--------------------------");
+
       if (err) return res.status(500).json({ message: "Error inserting order", error: err.message });
-      affectedTables.push("oneclick_orders");
 
       const productValues = items.map(item => [
         item.prod_id,
@@ -62,9 +84,10 @@ const placeOrder = (req, res) => {
         item.prod_description,
       ]);
 
+      // console.log("productValues:", productValues);
+
       upsertProducts(productValues, (err) => {
         if (err) return res.status(500).json({ message: "Error inserting/updating products", error: err.message });
-        affectedTables.push("oneclick_products");
 
         const itemValues = items.map(item => [
           unique_id,
@@ -74,9 +97,10 @@ const placeOrder = (req, res) => {
           item.is_buy_together ? 1 : 0,
         ]);
 
+        // console.log("itemValues:", itemValues);
+
         insertOrderItems(itemValues, (err) => {
           if (err) return res.status(500).json({ message: "Error inserting order items", error: err.message });
-          affectedTables.push("oneclick_order_items");
 
           const imageValues = [];
 
@@ -94,7 +118,6 @@ const placeOrder = (req, res) => {
           if (imageValues.length > 0) {
             insertProductImages(imageValues, (err) => {
               if (err) return res.status(500).json({ message: "Error inserting product images", error: err.message });
-              affectedTables.push("oneclick_product_images");
               return res.status(200).json({ message: "Order placed successfully", unique_id });
             });
           } else {
@@ -105,6 +128,7 @@ const placeOrder = (req, res) => {
     }
   );
 };
+
 
 
 

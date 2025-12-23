@@ -95,13 +95,69 @@ exports.updateProductImages = (id, images, cb) => {
 
 exports.fetchMobilesFromDB = (cb) => {
   const sql = `
-    SELECT p.*, f.memory, f.storage, f.processor, f.camera, f.display, f.battery, f.os, f.network, f.others 
+    SELECT 
+      p.*, 
+      f.memory, f.storage, f.processor, f.camera, f.display, f.battery, f.os, f.network, f.others 
     FROM oneclick_product_category p 
-    LEFT JOIN oneclick_mobile_features f ON p.prod_id = f.prod_id 
-    WHERE p.category = 'mobiles' AND productStatus = 'approved'
-    ORDER BY p.id DESC`;
-  db.query(sql, cb);
+    LEFT JOIN oneclick_mobile_features f ON p.prod_id = f.prod_id
+    LEFT JOIN oneclick_branches b ON p.branch_id = b.id
+    WHERE 
+      p.category = 'Mobiles' 
+      AND p.productStatus = 'approved'
+      AND (
+            p.branch_id IS NULL      /* no branch link -> allow */
+         OR b.status = 'active'      /* branch exists AND active -> allow */
+      )
+    ORDER BY p.id DESC
+  `;
+
+  console.log("[fetchMobilesFromDB] Executing SQL...");
+
+  db.query(sql, (err, rows) => {
+    if (err) {
+      console.error("[fetchMobilesFromDB] ERROR:", err);
+      return cb(err);
+    }
+
+    console.log("[fetchMobilesFromDB] Results Count:", rows.length);
+
+    // ⭐ Fetch margin rules
+    const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+    db.query(marginSql, (mErr, marginRules) => {
+      if (mErr) {
+        console.error("[Margin] Error loading margin rules:", mErr);
+        // Return original rows if margin rules fail
+        return cb(null, rows);
+      }
+
+      // ⭐ Apply margin logic
+      const updatedRows = rows.map((p) => {
+        const basePrice = Number(p.prod_price);
+
+        // Super admin product → no margin
+        if (!p.branch_id) {
+          return { ...p, prod_price: basePrice };
+        }
+
+        // Branch product → apply margin
+        const rule = marginRules.find(
+          (r) => basePrice >= r.range_from && basePrice <= r.range_to
+        );
+
+        const finalPrice = rule
+          ? basePrice + Number(rule.margin_amount)
+          : basePrice;
+
+        return { ...p, prod_price: finalPrice };
+      });
+
+      cb(null, updatedRows);
+    });
+  });
 };
+
+
 
 
 exports.checkProductExists = (prod_id, cb) => {

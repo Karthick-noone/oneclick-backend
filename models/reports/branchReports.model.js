@@ -88,19 +88,23 @@ exports.deleteUser = (id, callback) => {
   db.query("DELETE FROM oneclick_users WHERE id = ?", [id], callback);
 };
 
-
 exports.getPendingPayments = (callback) => {
-  const sql = "SELECT total_amount FROM oneclick_orders WHERE status != 'Paid'";
+  const sql = `
+    SELECT total_amount, branch_id
+    FROM oneclick_orders
+    WHERE status != 'Paid'
+  `;
 
   db.query(sql, (error, results) => {
     if (error) {
       console.error("Error fetching pending payments:", error);
-      callback(error, null); // Call the callback with error
+      callback(error, null);
     } else {
-      callback(null, results); // Call the callback with results
+      callback(null, results);
     }
   });
 };
+
 
 // Fetch product categories for Pie Chart
 exports.getProductCategories = (callback) => {

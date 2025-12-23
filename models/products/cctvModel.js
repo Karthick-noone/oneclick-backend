@@ -85,21 +85,74 @@ exports.fetchAllProducts = (branch_id, userRole, callback) => {
 };
 
 
-// 3. Fetch approved products
 exports.fetchApprovedProducts = (callback) => {
-  const sql = "SELECT * FROM oneclick_product_category WHERE category = 'cctv' AND productStatus = 'approved' ORDER BY id DESC";
+
+  const sql = `
+    SELECT p.*
+    FROM oneclick_product_category p
+    LEFT JOIN oneclick_branches b ON p.branch_id = b.id
+    WHERE 
+      p.category = 'cctv'
+      AND p.productStatus = 'approved'
+      AND (
+            p.branch_id IS NULL      /* no branch -> allow */
+         OR b.status = 'active'      /* branch active -> allow */
+      )
+    ORDER BY p.id DESC
+  `;
+
+  console.log("[fetchApprovedProducts] Executing SQL...");
+
   db.query(sql, (err, results) => {
     if (err) {
-      console.error("Error fetching products:", err);
+      console.error("[fetchApprovedProducts] ERROR fetching products:", err);
       return callback({ status: 500, message: "Failed to fetch products" });
     }
-    const products = results.map((product) => ({
+
+    console.log("[fetchApprovedProducts] Results Count:", results.length);
+
+    let products = results.map((product) => ({
       ...product,
-      prod_img: JSON.parse(product.prod_img),
+      prod_img: JSON.parse(product.prod_img || "[]"),
     }));
-    callback(null, products);
+
+    // ⭐ Fetch margin rules
+    const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+    db.query(marginSql, (mErr, marginRules) => {
+      if (mErr) {
+        console.error("[Margin] Error loading margin rules:", mErr);
+        // return original (fallback)
+        return callback(null, products);
+      }
+
+      // ⭐ Apply margin logic
+      const updatedProducts = products.map((p) => {
+        const basePrice = Number(p.prod_price);
+
+        // Super admin product → NO margin
+        if (!p.branch_id) {
+          return { ...p, prod_price: basePrice };
+        }
+
+        // Branch admin product → apply margin
+        const rule = marginRules.find(
+          (r) => basePrice >= r.range_from && basePrice <= r.range_to
+        );
+
+        const finalPrice = rule
+          ? basePrice + Number(rule.margin_amount)
+          : basePrice;
+
+        return { ...p, prod_price: finalPrice };
+      });
+
+      callback(null, updatedProducts);
+    });
   });
 };
+
+
 
 exports.getOldImages = (productId, callback) => {
     const sql = "SELECT prod_img FROM oneclick_product_category WHERE id = ?";

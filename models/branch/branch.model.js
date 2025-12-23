@@ -1,4 +1,4 @@
-const db = require("../../db"); // MySQL connection
+const db = require("../../config/db"); // MySQL connection
 const bcrypt = require("bcryptjs");
 
 // Check if gstin, phone, or email already exists

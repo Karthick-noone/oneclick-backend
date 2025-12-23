@@ -9,13 +9,14 @@ exports.getAllOrders = async (req, res) => {
         order_id, user_id, total_amount, shipping_address,
         order_date, status, payment_method, payment_id, unique_id,
         order_item_id, product_name, quantity, price,
-        invoice, product_description
+        invoice, product_description, branch_id
       } = row;
 
       if (!acc[order_id]) {
         acc[order_id] = {
           order_id, user_id, total_amount, shipping_address,
           order_date, status, invoice, payment_method, payment_id, unique_id,
+          branch_id,
           items: [],
         };
       }
@@ -53,6 +54,7 @@ exports.getAllOrders = async (req, res) => {
     }));
 
     res.json(finalOrders);
+    console.log("Final Orders", finalOrders)
   } catch (err) {
     console.error("Error fetching orders:", err);
     res.status(500).json({ message: "Error fetching orders" });

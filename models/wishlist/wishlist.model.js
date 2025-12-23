@@ -91,36 +91,82 @@ const fetchWishlist = (email, username, callback) => {
 };
 
   
-  // Function to fetch wishlist products with details and features
-  const fetchWishlistWithFeatures = (email, username, wishlist, callback) => {
-    const placeholders = wishlist.map(() => "?").join(",");
-    const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
-  
-    db.query(query, wishlist, (err, productResults) => {
+// Function to fetch wishlist products with details and features
+const fetchWishlistWithFeatures = (email, username, wishlist, callback) => {
+  const placeholders = wishlist.map(() => "?").join(",");
+  const query = `SELECT * FROM oneclick_product_category WHERE id IN (${placeholders})`;
+
+  db.query(query, wishlist, (err, productResults) => {
+    if (err) return callback(err);
+
+    const featureProductIds = productResults
+      .filter((product) => product.category === "Mobiles" || product.category === "Computers")
+      .map((product) => product.prod_id);
+
+    if (featureProductIds.length === 0) {
+      // ⭐ APPLY MARGIN HERE ALSO FOR NON-FEATURE PRODUCTS
+      return applyMarginToWishlistProducts(productResults, callback);
+    }
+
+    const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => "?").join(",")})`;
+
+    db.query(featureQuery, featureProductIds, (err, featureResults) => {
       if (err) return callback(err);
-  
-      const featureProductIds = productResults
-        .filter((product) => product.category === "Mobiles" || product.category === "Computers")
-        .map((product) => product.prod_id);
-  
-      if (featureProductIds.length === 0) {
-        return callback(null, productResults);
-      }
-  
-      const featureQuery = `SELECT * FROM oneclick_mobile_features WHERE prod_id IN (${featureProductIds.map(() => "?").join(",")})`;
-  
-      db.query(featureQuery, featureProductIds, (err, featureResults) => {
-        if (err) return callback(err);
-  
-        const productsWithFeatures = productResults.map((product) => {
-          const features = featureResults.find((feature) => feature.prod_id === product.prod_id);
-          return features ? { ...product, ...features } : product;
-        });
-  
-        return callback(null, productsWithFeatures);
+
+      const productsWithFeatures = productResults.map((product) => {
+        const features = featureResults.find((feature) => feature.prod_id === product.prod_id);
+        return features ? { ...product, ...features } : product;
       });
+
+      // ⭐ FINAL CALL WITH MARGIN ADDED
+      return applyMarginToWishlistProducts(productsWithFeatures, callback);
     });
-  };
+  });
+};
+const applyMarginToWishlistProducts = (products, callback) => {
+  // Fetch margin rules first
+  const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+  db.query(marginSql, (err, marginRules) => {
+    if (err) {
+      console.error("❌ Error fetching margin rules:", err);
+      return callback(null, products); // fallback: no margin
+    }
+
+    const updatedList = products.map((p) => {
+      let basePrice = Number(p.prod_price);
+
+      // No branch_id → super admin → NO margin
+      if (!p.branch_id) {
+        p.prod_price = basePrice;
+        return p;
+      }
+
+      // Find matching rule
+      const rule = marginRules.find(
+        (m) => basePrice >= m.range_from && basePrice <= m.range_to
+      );
+
+      if (!rule) {
+        p.prod_price = basePrice;
+        return p;
+      }
+
+      const marginAdded = Number(rule.margin_amount);
+      const finalPrice = basePrice + marginAdded;
+
+      console.log(
+        `📌 Wishlist Margin Applied: Base ₹${basePrice} + ₹${marginAdded} = ₹${finalPrice}`
+      );
+
+      p.prod_price = finalPrice;
+
+      return p;
+    });
+
+    return callback(null, updatedList);
+  });
+};
 
 
   module.exports = {

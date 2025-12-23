@@ -131,7 +131,10 @@ function getProductDetails(productIdsWithQuantities, callback) {
     if (err) return callback(err);
     if (result.length === 0) return callback(new Error("Products not found"));
 
-    const combinedResults = result.map(product => {
+    // ---------------------------
+    // ⭐ EXISTING CODE (unchanged)
+    // ---------------------------
+    let combinedResults = result.map(product => {
       const matched = productIdsWithQuantities.find(p => p.prod_id === product.prod_id);
       return {
         ...product,
@@ -140,8 +143,62 @@ function getProductDetails(productIdsWithQuantities, callback) {
       };
     });
 
-    callback(null, combinedResults);
+    // ---------------------------
+    // ⭐ NEW: FETCH MARGIN RULES
+    // ---------------------------
+    const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+    db.query(marginSql, (err, marginRules) => {
+      if (err) {
+        console.error("❌ Error loading margin rules:", err);
+        // Return original result on error
+        return callback(null, combinedResults);
+      }
+
+      console.log("\n====== APPLYING MARGIN FOR BUY-TOGETHER PRODUCTS ======");
+
+      // ---------------------------
+      // ⭐ APPLY MARGIN LOGIC
+      // ---------------------------
+      combinedResults = combinedResults.map(product => {
+        const basePrice = Number(product.prod_price);
+
+        console.log(`\n🛒 Product: ${product.prod_name} (${product.prod_id})`);
+        console.log(`   Base Price: ₹${basePrice}`);
+        console.log(`   Branch: ${product.branch_id || "Super Admin"}`);
+
+        // 1️⃣ Super Admin → No margin
+        if (!product.branch_id) {
+          console.log("   ✔ No margin (Super Admin)");
+          return { ...product, prod_price: basePrice };
+        }
+
+        // 2️⃣ Branch product → Check rule
+        const rule = marginRules.find(
+          r => basePrice >= r.range_from && basePrice <= r.range_to
+        );
+
+        if (!rule) {
+          console.log("   ⚠ No margin rule → Price unchanged");
+          return { ...product, prod_price: basePrice };
+        }
+
+        const finalPrice = basePrice + Number(rule.margin_amount);
+
+        console.log(
+          `   📌 Margin Applied: ₹${rule.margin_amount} → Final: ₹${finalPrice}`
+        );
+
+        return { ...product, prod_price: finalPrice };
+      });
+
+      console.log("\n====== DONE APPLYING MARGINS ======\n");
+
+      // Return updated results
+      return callback(null, combinedResults);
+    });
   });
 }
+
 
 module.exports = UserOrders;

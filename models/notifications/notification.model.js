@@ -1,23 +1,26 @@
 // models/notifications/notification.model.js
-const db = require('../../db'); // adjust path if needed
+const db = require('../../config/db'); // adjust path if needed
 
 const NotificationModel = {
-  getAll() {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT id, type, message, is_read, created_at
-        FROM oneclick_notifications
-        ORDER BY created_at DESC
-      `;
-      db.query(sql, (err, rows) => {
-        if (err) {
-          console.error('[Notifications][Model][getAll] DB Error:', err);
-          return reject(err);
-        }
-        resolve(rows);
-      });
+getAll() {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT id, type, message, is_read, created_at
+      FROM oneclick_notifications
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      ORDER BY created_at DESC
+    `;
+
+    db.query(sql, (err, rows) => {
+      if (err) {
+        console.error('[Notifications][Model][getAll] DB Error:', err);
+        return reject(err);
+      }
+      resolve(rows);
     });
-  },
+  });
+},
+
 
   markAsRead(id) {
     return new Promise((resolve, reject) => {

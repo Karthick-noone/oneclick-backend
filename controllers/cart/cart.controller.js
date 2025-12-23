@@ -1,4 +1,5 @@
 const CartModel = require("../../models/cart/cart.model");
+const db = require("../../config/db");
 
 const {
   clearUserCart,
@@ -103,7 +104,8 @@ const getCartItems = (req, res) => {
           return res.status(500).json({ error: "Error fetching product details" });
         }
 
-        const productsWithQuantity = productResults.map((product) => {
+        // 1️⃣ Apply quantity mapping
+        let productsWithQuantity = productResults.map((product) => {
           const cartItem = cartItems.find((item) =>
             typeof item === "string" && item.startsWith(`${product.id}-`)
           );
@@ -112,26 +114,80 @@ const getCartItems = (req, res) => {
           return { ...product, quantity };
         });
 
-        const featureProdIds = productsWithQuantity
-          .filter((product) => ["Mobiles", "Computers"].includes(product.category))
-          .map((product) => product.prod_id);
+        // 2️⃣ APPLY MARGIN LOGIC TO CART PRODUCTS
+        const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
 
-        if (featureProdIds.length === 0) {
-          return res.json({ products: productsWithQuantity });
-        }
-
-        CartModel.getFeaturesByProdIds(featureProdIds, (err, featureResults) => {
+        db.query(marginSql, (err, marginRules) => {
           if (err) {
-            console.error("Error fetching features:", err);
-            return res.status(500).json({ error: "Error fetching product features" });
+            console.error("Error fetching margin rules:", err);
+            // proceed without margin
+            marginRules = [];
           }
 
-          const enrichedProducts = productsWithQuantity.map((product) => {
-            const features = featureResults.find((f) => f.prod_id === product.prod_id);
-            return features ? { ...product, ...features } : product;
+          console.log("\n------ APPLYING CART MARGIN LOGIC ------");
+
+          productsWithQuantity = productsWithQuantity.map((p) => {
+            // Parse JSON images safely
+            try {
+              p.prod_img = JSON.parse(p.prod_img || "[]");
+            } catch (e) {
+              p.prod_img = [];
+            }
+
+            const basePrice = Number(p.prod_price);
+
+            console.log(`\n🛒 Cart Product: ${p.prod_name} (ID: ${p.id})`);
+            console.log(`   Base Price: ₹${basePrice}`);
+            console.log(`   Branch ID: ${p.branch_id || "Super Admin"}`);
+
+            // Super admin → NO margin
+            if (!p.branch_id) {
+              console.log("   ✔ Super Admin Product → No margin");
+              return { ...p, prod_price: basePrice };
+            }
+
+            // Branch admin product → apply margin
+            const rule = marginRules.find(
+              (m) => basePrice >= m.range_from && basePrice <= m.range_to
+            );
+
+            if (!rule) {
+              console.log("   ⚠ No margin rule matched → unchanged");
+              return { ...p, prod_price: basePrice };
+            }
+
+            const finalPrice = basePrice + Number(rule.margin_amount);
+
+            console.log(
+              `   📌 Margin Applied: ₹${rule.margin_amount} → Final: ₹${finalPrice}`
+            );
+
+            return { ...p, prod_price: finalPrice };
           });
 
-          res.json({ products: enrichedProducts });
+          // 3️⃣ LOAD FEATURES FOR MOBILE & COMPUTERS
+          const featureProdIds = productsWithQuantity
+            .filter((product) => ["Mobiles", "Computers"].includes(product.category))
+            .map((product) => product.prod_id);
+
+          if (featureProdIds.length === 0) {
+            return res.json({ products: productsWithQuantity });
+          }
+
+          CartModel.getFeaturesByProdIds(featureProdIds, (err, featureResults) => {
+            if (err) {
+              console.error("Error fetching features:", err);
+              return res.status(500).json({ error: "Error fetching product features" });
+            }
+
+            // Merge features
+            const enrichedProducts = productsWithQuantity.map((product) => {
+              const features = featureResults.find((f) => f.prod_id === product.prod_id);
+              return features ? { ...product, ...features } : product;
+            });
+
+            return res.json({ products: enrichedProducts });
+          });
         });
       });
     });

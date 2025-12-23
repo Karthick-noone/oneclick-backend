@@ -83,6 +83,7 @@ exports.fetchApprovedwatchProducts = (req, res) => {
   watchModel.fetchApprovedProducts((err, products) => {
     if (err) return res.status(err.status).send(err.message);
     res.json(products);
+    console.log("Watches", products)
   });
 };
 

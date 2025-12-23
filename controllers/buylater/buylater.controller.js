@@ -1,5 +1,6 @@
 // controllers/buyLater.controller.js
 const BuyLaterModel = require("../../models/buylater/buylater.model");
+const db = require("../../config/db");
 
 const storeBuyLater = (req, res) => {
   const { productIds, userId } = req.body;
@@ -129,24 +130,71 @@ const getBuyLaterItems = (req, res) => {
       return res.json({ buyLater: [] });
     }
 
-    // Reverse the order to show the last added item first
+    // Reverse order (latest first)
     buyLaterItems = buyLaterItems.reverse();
 
-    // Fetch product details based on buy_later items
+    // Fetch product details
     BuyLaterModel.getProductDetailsByIds(buyLaterItems, (productErr, productResults) => {
       if (productErr) {
         return res.status(500).json({ error: "Database error while fetching product details", details: productErr });
       }
 
-      // Reorder productResults to match the reversed buyLaterItems order
-      const orderedProducts = buyLaterItems.map(id =>
-        productResults.find(product => product.id === id)
-      ).filter(product => product); // Remove undefined entries
+      console.log("\n==================== BUY LATER PRODUCTS (Before Margin) ====================");
+      console.log("Products fetched:", productResults.length);
 
-      res.json({ buyLater: orderedProducts });
+      // 1️⃣ Fetch margin rules
+      const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+      db.query(marginSql, (err, marginRules) => {
+        if (err) {
+          console.error("Error fetching margin rules:", err);
+          marginRules = [];
+        }
+
+        console.log("Margin Rules:", marginRules);
+
+        // 2️⃣ Apply margin logic to each product
+        const productsWithMargin = productResults.map((p) => {
+          const basePrice = Number(p.prod_price);
+
+          console.log(`\n🛍 BUY LATER: ${p.prod_name} (ID: ${p.id})`);
+          console.log(`   Base Price: ₹${basePrice}`);
+          console.log(`   Branch ID: ${p.branch_id || "Super Admin"}`);
+
+          // Super Admin → no margin
+          if (!p.branch_id) {
+            console.log("   ✔ Super Admin Product → No margin applied");
+            return { ...p, prod_price: basePrice };
+          }
+
+          // Branch admin product → apply margin
+          const rule = marginRules.find(
+            (m) => basePrice >= m.range_from && basePrice <= m.range_to
+          );
+
+          if (!rule) {
+            console.log("   ⚠ No matching margin rule → Price unchanged");
+            return { ...p, prod_price: basePrice };
+          }
+
+          const finalPrice = basePrice + Number(rule.margin_amount);
+
+          console.log(`   📌 Margin Applied: ₹${rule.margin_amount} → Final: ₹${finalPrice}`);
+
+          return { ...p, prod_price: finalPrice };
+        });
+
+        // 3️⃣ Return sorted final response
+        const orderedProducts = buyLaterItems
+          .map((id) => productsWithMargin.find((p) => p.id === id))
+          .filter(Boolean);
+
+        res.json({ buyLater: orderedProducts });
+      });
     });
   });
 };
+
 
 
 const addToCart = (req, res) => {

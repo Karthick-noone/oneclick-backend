@@ -10,6 +10,31 @@ const port = process.env.PORT || 5001;
 
 const logFilePath = path.join(__dirname, "server.log");
 
+
+
+function log(message, type = "INFO") {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] [${type}] ${message}\n`;
+  fs.appendFileSync(logFilePath, logEntry);
+}
+
+// helper to log require() failures
+function safeRequire(filePath) {
+  try {
+    log(`Loading file: ${filePath}`, "REQUIRE");
+    const moduleFile = require(filePath);
+    log(`Loaded successfully: ${filePath}`, "REQUIRE_OK");
+    return moduleFile;
+  } catch (err) {
+    log(`FAILED to load: ${filePath} → ${err.stack}`, "REQUIRE_FAIL");
+    console.error(`❌ Error loading ${filePath}`);
+    console.error(err);
+    return null; // prevents server crash
+  }
+}
+
+
+
 // === Process-level Error Logging (add at the top) ===
 process.on("unhandledRejection", (reason, promise) => {
   const msg = `Unhandled Rejection at: ${promise}, reason: ${reason}`;
@@ -80,6 +105,18 @@ try {
   logToFile(`Failed to load cache middlewares: ${err.stack}`, "CACHE_ERROR");
 }
 
+// ======================
+// ROUTE LOADING HELPERS
+// ======================
+function loadRoute(routePath, routeBase = "/backend") {
+  const route = safeRequire(routePath);
+  if (route) {
+    app.use(routeBase, route);
+    log(`Route mounted → ${routeBase} from ${routePath}`, "ROUTE_OK");
+  } else {
+    log(`FAILED TO MOUNT ROUTE → ${routePath}`, "ROUTE_FAIL");
+  }
+}
 
 const edithomepageRoutes = require("./routes/adpage_routes/editHomePageRoutes");
 const doubleAdRoutes = require("./routes/adpage_routes/doubleAdPageRoutes");
@@ -130,10 +167,12 @@ const productStatusRoutes = require("./routes/products/productStatus.routes");
 const branchRoutes = require("./routes/branch/branch.route.js");
 const gstRoutes = require("./routes/gst/gst.route");
 const notificationsRouter = require('./routes/notifications/notification.route');
+const marginRoutes = require("./routes/pricemargins/margins.route");
 
 // Register Routes
 logToFile("Registering routes...", "ROUTES");
 
+app.use("/backend/api/margins", marginRoutes);
 app.use("/backend", edithomepageRoutes);
 app.use("/backend", doubleAdRoutes);
 app.use("/backend", offersRoutes);

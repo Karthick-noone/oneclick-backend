@@ -59,7 +59,7 @@ exports.addComputerProduct = (req, res) => {
   const {
     name, price, category, actual_price, label, deliverycharge, productStatus,
     subtitle, memory, storage, processor, display, os, others, branch_id,
-    user_role, branch_name, actor_name, contact_person,  } = req.body;
+    user_role, branch_name, actor_name, contact_person, } = req.body;
 
   const images = req.files.map((file) => file.filename);
   const prod_id = generateProductId();
@@ -132,33 +132,106 @@ exports.fetchAllComputers = (req, res) => {
   });
 };
 
-
 exports.fetchComputers = (req, res) => {
   const sql = `
-    SELECT p.prod_id, p.prod_name, p.id, p.category, p.prod_price, p.actual_price,
-      p.offer_price, p.offer_start_time, p.offer_end_time, p.prod_img, p.status,
-      p.productStatus, p.deliverycharge, p.subtitle, p.offer_label,
-      f.memory, f.storage, f.processor, f.display, f.os, f.others
+    SELECT p.*, f.*, b.status AS branch_status
     FROM oneclick_product_category p
     LEFT JOIN oneclick_mobile_features f ON p.prod_id = f.prod_id
-    WHERE p.category = 'computers' AND p.productStatus = 'approved'
+    LEFT JOIN oneclick_branches b ON p.branch_id = b.id
+    WHERE 
+      p.category = 'Computers' 
+      AND p.productStatus = 'approved'
+      AND (p.branch_id IS NULL OR b.status='active')
     ORDER BY p.id DESC
   `;
 
+  console.log("\n==================== FETCH COMPUTERS (CUSTOMERS) ====================");
+
+  // 1️⃣ FETCH PRODUCTS
   db.query(sql, (err, results) => {
     if (err) {
-      console.error("Error fetching products:", err);
+      console.error("❌ Error fetching products:", err);
       return res.status(500).json({ message: "Failed to fetch products" });
     }
 
-    const products = results.map((product) => ({
-      ...product,
-      prod_img: JSON.parse(product.prod_img || "[]"),
+    console.log(`📦 Products fetched: ${results.length}`);
+
+    let products = results.map((p) => ({
+      ...p,
+      prod_img: JSON.parse(p.prod_img || "[]"),
     }));
 
-    res.json(products);
+    // 2️⃣ FETCH MARGIN RULES
+    const marginSql = "SELECT * FROM oneclick_margin_settings ORDER BY range_from ASC";
+
+    db.query(marginSql, (err, marginRules) => {
+      if (err) {
+        console.error("❌ Error loading margin rules:", err);
+        marginRules = [];
+      }
+
+      console.log(`📘 Margin rules loaded: ${marginRules.length}`);
+      marginRules.forEach((rule) => {
+        console.log(
+          `   ➤ Range: ${rule.range_from} - ${rule.range_to}, Margin: ₹${rule.margin_amount}`
+        );
+      });
+
+      console.log("\n---------------- APPLYING MARGIN LOGIC ----------------");
+
+      // 3️⃣ APPLY MARGINS WITH LOGGING
+      products = products.map((p) => {
+        const basePrice = Number(p.prod_price);
+        const fromBranch = !!p.branch_id;
+
+        console.log(`\n🛒 PRODUCT: ${p.prod_name} (ID: ${p.prod_id})`);
+        console.log(`   ℹ Base Price: ₹${basePrice}`);
+        console.log(
+          `   👤 Source: ${fromBranch ? "Branch Admin" : "Super Admin"}`
+        );
+
+        if (!fromBranch) {
+          console.log("   ✔ No margin (Super Admin product)");
+          return {
+            ...p,
+            prod_price: basePrice,
+          };
+        }
+
+        // Branch product → Apply margin
+        const rule = marginRules.find(
+          (m) => basePrice >= m.range_from && basePrice <= m.range_to
+        );
+
+        if (!rule) {
+          console.log("   ⚠ No matching margin rule → Price unchanged");
+          return {
+            ...p,
+            prod_price: basePrice,
+          };
+        }
+
+        console.log(
+          `   📌 Margin Applied → ₹${rule.margin_amount} (Range: ${rule.range_from}-${rule.range_to})`
+        );
+
+        const newPrice = basePrice + Number(rule.margin_amount);
+
+        console.log(`   💰 Final Price → ₹${newPrice}`);
+
+        return {
+          ...p,
+          prod_price: newPrice,
+        };
+      });
+
+      console.log("\n==================== DONE APPLYING MARGINS ====================\n");
+
+      res.json(products);
+    });
   });
 };
+
 
 exports.updateComputerImage = (req, res) => {
   const productId = req.params.id;
