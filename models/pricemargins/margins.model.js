@@ -29,6 +29,27 @@ const MarginModel = {
         });
     },
 
+    // Update margin rule
+    update: (id, { range_from, range_to, margin_amount }) => {
+        const sql = `
+        UPDATE oneclick_margin_settings
+        SET range_from = ?, range_to = ?, margin_amount = ?
+        WHERE id = ?
+    `;
+
+        return new Promise((resolve, reject) => {
+            db.query(
+                sql,
+                [range_from, range_to, margin_amount, id],
+                (err, results) => {
+                    if (err) return reject(err);
+                    resolve(results);
+                }
+            );
+        });
+    },
+
+
     // Delete a margin rule
     delete: (id) => {
         return new Promise((resolve, reject) => {
